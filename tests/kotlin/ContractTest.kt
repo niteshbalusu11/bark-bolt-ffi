@@ -80,3 +80,102 @@ class ContractTest {
         assertFailsWith<IllegalStateException> { wallet.balance() }
     }
 }
+
+private val fixtureDirectory: java.io.File get() = java.io.File(System.getProperty("bark.fixtures", "tests/fixtures"))
+private data class NitroVector(val index: UInt, val fields: Map<String,String>)
+private fun cryptoFixture(): Triple<String,String,List<NitroVector>> {
+    val text = java.io.File(fixtureDirectory,"nitro-v0.0.144-crypto.json").readText()
+    fun string(name: String) = Regex("\"$name\": \"([^\"]+)\"").find(text)!!.groupValues[1]
+    val vectors = Regex("\\{[^{}]*\"index\"[^{}]*}").findAll(text).map { match ->
+        val index = Regex("\"index\": ([0-9]+)").find(match.value)!!.groupValues[1].toUInt()
+        val fields = Regex("\"([A-Za-z]+)\": \"([^\"]+)\"").findAll(match.value).associate { it.groupValues[1] to it.groupValues[2] }
+        NitroVector(index,fields)
+    }.toList()
+    return Triple(string("mnemonic"),string("message"),vectors)
+}
+
+class NoahContractTest {
+    @Test fun offlineNitroGoldenVectors() {
+        val (mnemonic,message,vectors) = cryptoFixture()
+        assertEquals(6,vectors.size)
+        for (network in Network.entries) for (v in vectors) {
+            val key = derivePublicKeyFromMnemonic(mnemonic,network,v.index)
+            val signature = signMessageWithMnemonic(message,mnemonic,network,v.index)
+            assertEquals(v.fields["offlinePublicKey"],key)
+            assertEquals(v.fields["offlineSignature"],signature)
+            assertNotEquals(v.fields["walletPublicKey"],key)
+            assertTrue(verifyMessage(message,signature,key))
+            assertFalse(verifyMessage("$message!",signature,key))
+        }
+        assertFailsWith<BarkError> { derivePublicKeyFromMnemonic("invalid",Network.REGTEST,0u) }
+        assertFailsWith<BarkError> { verifyMessage(message,"00","00") }
+    }
+
+    @Test fun schema42SnapshotWithoutWallet() = runBlocking<Unit> {
+        val directory = java.nio.file.Files.createTempDirectory("bark-snapshot-contract").toFile()
+        try {
+            val file = java.io.File(directory,"db.sqlite")
+            java.io.File(fixtureDirectory,"noah-v2-schema42.sqlite").copyTo(file)
+            val before = file.readBytes()
+            val info = validateWalletSnapshot(file.path,null)
+            assertEquals(42u,info.schemaVersion)
+            assertEquals("regtest",info.network)
+            assertEquals(file.length().toULong(),info.sizeBytes)
+            assertEquals("02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",info.mailboxPubkey)
+            val digest = java.security.MessageDigest.getInstance("SHA-256").digest(before).joinToString("") { "%02x".format(it) }
+            assertEquals(digest,info.sha256)
+            assertContentEquals(before,file.readBytes())
+            assertFailsWith<BarkError> { validateWalletSnapshot(file.path,WalletSnapshotExpectation(network="bitcoin")) }
+        } finally { directory.deleteRecursively() }
+    }
+
+    @org.junit.Test(timeout=30000) fun walletNitroVectorsAndBackupObserver() = runBlocking<Unit> {
+        org.junit.Assume.assumeTrue(System.getenv("BARK_REGTEST") == "1")
+        withTimeout(25000) {
+            val (mnemonic,message,vectors) = cryptoFixture()
+            val directory = java.nio.file.Files.createTempDirectory("bark-noah-contract").toFile()
+            val config = Config(serverAddress="http://127.0.0.1:${System.getenv("ARK_PORT") ?: "3635"}",bitcoindAddress="http://127.0.0.1:${System.getenv("BITCOIN_PORT") ?: "19443"}",bitcoindUser="second",bitcoindPass="ark")
+            val args = WalletOpenArgs(runDaemon=false,datadir=directory.path,createWithoutServer=true,skipRecovery=true)
+            try {
+                Wallet.open(Network.REGTEST,mnemonic,config,args).use { wallet ->
+                    assertFailsWith<BarkError> { wallet.peekPublicKey(0u) }
+                    assertFailsWith<BarkError> { wallet.signMessage(message,0u) }
+                    wallet.stateChanges().use { holder ->
+                        assertTrue(holder.isActive())
+                        assertEquals("initial",holder.nextChange()!!.reason)
+                        val cancelled = async(Dispatchers.Unconfined) { holder.nextChange() }
+                        delay(50)
+                        assertFailsWith<BarkError> { holder.nextChange() }
+                        holder.cancelNextChangeWait()
+                        assertNull(cancelled.await())
+                        val aborted = launch { holder.nextChange() }
+                        delay(50); aborted.cancelAndJoin()
+                        for (index in 0u..7u) {
+                            val stored = wallet.deriveStoreNextKeypair()
+                            assertEquals(index,stored.index)
+                            vectors.find { it.index == index }?.let { v ->
+                                assertEquals(v.fields["walletPublicKey"],stored.publicKey)
+                                assertEquals(stored.publicKey,wallet.peekPublicKey(index))
+                                val signature = wallet.signMessage(message,index)
+                                assertEquals(v.fields["walletSignature"],signature)
+                                assertTrue(verifyMessage(message,signature,stored.publicKey))
+                                assertFalse(verifyMessage("$message!",signature,stored.publicKey))
+                            }
+                        }
+                        assertEquals("databaseChanged",holder.nextChange()!!.reason)
+                        val snapshot = wallet.createSnapshot(java.io.File(directory,"snapshot.sqlite").path)
+                        assertEquals(snapshot.sha256,validateWalletSnapshot(snapshot.path,null).sha256)
+                        assertFailsWith<BarkError> { wallet.createSnapshot(snapshot.path) }
+                        assertFailsWith<BarkError> { validateWalletSnapshot(java.io.File(directory,"db.sqlite").path,null) }
+                        val stopped = async(Dispatchers.Unconfined) { holder.nextChange() }
+                        delay(50); holder.stop()
+                        assertNull(stopped.await()); assertFalse(holder.isActive())
+                    }
+                }
+                Wallet.open(Network.REGTEST,mnemonic,config,WalletOpenArgs(runDaemon=false,datadir=directory.path,createIfNotExists=false)).use { wallet ->
+                    assertEquals(vectors.first().fields["walletPublicKey"],wallet.peekPublicKey(0u))
+                }
+            } finally { directory.deleteRecursively() }
+        }
+    }
+}

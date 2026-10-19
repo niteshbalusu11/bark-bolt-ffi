@@ -11,7 +11,12 @@ dependencies {
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
     testImplementation(kotlin("test-junit"))
 }
-tasks.test { inputs.property("regtest", System.getenv("BARK_REGTEST") ?: ""); environment("BARK_REGTEST", System.getenv("BARK_REGTEST") ?: "") }
+tasks.test {
+    inputs.property("regtest", System.getenv("BARK_REGTEST") ?: "")
+    inputs.dir(rootProject.file("tests/fixtures"))
+    systemProperty("bark.fixtures", rootProject.file("tests/fixtures").absolutePath)
+    environment("BARK_REGTEST", System.getenv("BARK_REGTEST") ?: "")
+}
 publishing { publications { create<MavenPublication>("jvm") {
     from(components["java"])
     groupId = project.group.toString(); artifactId = "bark-bolt-ffi-jvm-$nativeHost"; version = project.version.toString()
@@ -21,6 +26,7 @@ tasks.register<JavaExec>("testPackaged") {
     dependsOn(tasks.testClasses, tasks.jar)
     classpath = files(tasks.jar) + (sourceSets.test.get().runtimeClasspath - sourceSets.main.get().output)
     mainClass.set("org.junit.runner.JUnitCore")
-    args("ContractTest")
+    args("ContractTest", "NoahContractTest")
+    systemProperty("bark.fixtures", rootProject.file("tests/fixtures").absolutePath)
     environment("BARK_REGTEST", System.getenv("BARK_REGTEST") ?: "")
 }

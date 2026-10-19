@@ -69,7 +69,7 @@ are tracked in `api-baseline.json` and checked against strict host generation.
 Generated files are never patched; the Swift concurrency adapter is handwritten
 in `sdk/swift-support`. There is no UniFFI runtime, JNA or browser product.
 
-SQLite uses the existing `bark.sqlite` filename. Open an existing wallet with
+SQLite uses `db.sqlite`, with compatibility for the older `bark.sqlite` filename. Open an existing wallet with
 its original seed/network/datadir; do not silently create a replacement seed.
 The apps keep seeds in device-only Keychain or Keystore-encrypted private
 storage. A recovered seed can recover funds into a new database while historic
@@ -142,3 +142,63 @@ build dates; the Bark image was published on October 18 in America/New_York.
 Android consumers should restrict `defaultConfig.ndk.abiFilters` to
 `arm64-v8a`, `armeabi-v7a`, and `x86_64`, as the example does. This prevents a
 transitive dependency's x86 library from advertising an ABI without Bark JNI.
+
+## Noah native migration (Nitro Ark v0.0.144)
+
+Amounts are unsigned 64-bit satoshis. Fee rates use these explicit units:
+
+| API | Unit |
+| --- | --- |
+| `Config.fallbackFeeRate` | sat/kwu; Nitro sat/kvB `10000` becomes `2500` |
+| `OnchainWallet.feeRates()` (`fast`, `regular`, `slow`) | sat/kwu |
+| Onchain `send`, `drain`, custom-wallet transaction callbacks | sat/vB |
+| Emergency-exit estimates and `progressExits` | sat/vB |
+
+To open an **existing** Noah wallet, preflight that `<datadir>/db.sqlite` exists,
+pass the original mnemonic and network, and set `createIfNotExists = false`.
+Do this before opening the onchain wallet as well. Do not create a fresh database
+when an existing wallet is expected. Older Bark `bark.sqlite` files are supported
+by the compatibility filename selection; Noah uses `db.sqlite`.
+
+Wallet `peekPublicKey`, `deriveStoreNextKeypair` and `signMessage` use Bark's
+`m/350'/0'/index` keychain. Peeking/signing an unstored index fails. Deriving the
+next key persists it and returns only its compressed public key and index.
+Top-level `derivePublicKeyFromMnemonic` and `signMessageWithMnemonic` work offline
+and use Nitro's separate `m/350/index` path with an empty BIP39 passphrase. These
+keys deliberately differ from wallet keys. For either path, `u32` indices with
+bit 31 set become hardened children: `2147483648` means `0'`, `4294967295` means
+`2147483647'`. The purpose `350` in the offline path is never hardened.
+Signatures are deterministic ECDSA over Bitcoin's `signed_msg_hash(message)`,
+encoded as lowercase DER hex. `verifyMessage` returns false for mismatched valid
+signatures, and throws for malformed DER/public-key hex. No API exports private
+keys. The same public keys/signatures result on all supported networks.
+
+`createSnapshot(destinationPath)` exports plaintext SQLite suitable as the
+`db.sqlite` member of a Noah v2 backup. It serializes creation process-wide,
+uses SQLite Online Backup (128 pages/step, 10ms pause, 30s continuous-busy limit),
+checks integrity/foreign keys, fsyncs and atomically publishes without overwrite.
+The SHA256 is lowercase hex over the plaintext database; `mailboxPubkey` is the
+server mailbox key. Encrypt/package the resulting file in the app's backup flow.
+Top-level `validateWalletSnapshot(path, expected)` works without an open wallet,
+rejects live DB aliases, reads the input into a private temporary copy beside it,
+checks schema/integrity/FKs, migrates that copy and loads typed Bark/BDK state.
+It supports Nitro's schema 42. The input directory must be writable for temporary
+validation files. The input bytes remain unchanged; expected identity is optional
+and explicit. The API validates an extracted database, not a `.noahbackup` ZIP.
+The input must be self-contained: nonempty `-wal` or `-journal` sidecars are
+rejected rather than silently omitted or recovered by mutating the input.
+Export with `createSnapshot` before packaging a live database. The 30s timeout
+counts continuous busy/locked time, not total elapsed backup time.
+
+`wallet.stateChanges()` returns an independent `StateChangeSubscription`. Receive
+with `nextChange()` in a loop; reasons match Nitro: `initial`, `databaseChanged`,
+`resyncRequired`, with monotonic sequence numbers. It polls `PRAGMA data_version`
+on an independent read-only connection every 750ms, so commits can coalesce and
+rollbacks do not emit changes. Temporary SQLite busy/locked polls retry on the
+next tick. Treat `resyncRequired` as a request for a full
+state refresh and resubscribe. Only one pending wait per holder is allowed;
+`cancelNextChangeWait()` returns nil/null for that wait and permits reuse. Host
+task cancellation also releases the wait. `stop()` permanently stops observation,
+unblocks receivers and sets `isActive()` false. Events already queued still drain
+before nil/null, matching Nitro; close Kotlin holders on teardown.
+Use these notifications to schedule backups after any committed state change.

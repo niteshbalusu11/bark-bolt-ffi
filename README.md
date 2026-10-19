@@ -110,5 +110,6 @@ documents the restored commands, latest action pins and preservation checks.
 
 Forked from [ark-bitcoin/bark-ffi](https://gitlab.com/ark-bitcoin/bark-ffi).
 Original history and [MIT license](LICENSE) are retained. [Nitro Ark](https://github.com/smolcars/react-native-nitro-ark)'s RegTest
-layout informed the isolated backend; its [MIT notice](regtest/LICENSE) is retained.
+layout informed the isolated backend; its snapshot and state-observer code also
+informs the Noah compatibility APIs. Its [MIT notice](regtest/LICENSE) is retained.
 Its reference checkout/volumes are untouched.

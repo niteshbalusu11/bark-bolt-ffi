@@ -37,9 +37,9 @@ pub struct NotificationHolder {
 }
 
 /// RAII guard that clears `wait_in_progress` on drop, including on panic.
-struct WaitGuard<'a> {
-    wait_in_progress: &'a AtomicBool,
-    cancel: &'a Mutex<Option<oneshot::Sender<()>>>,
+pub(crate) struct WaitGuard<'a> {
+    pub(crate) wait_in_progress: &'a AtomicBool,
+    pub(crate) cancel: &'a Mutex<Option<oneshot::Sender<()>>>,
 }
 
 impl Drop for WaitGuard<'_> {

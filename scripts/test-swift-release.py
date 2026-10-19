@@ -6,6 +6,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+import os
 
 ROOT = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser(description=__doc__)
@@ -22,4 +23,5 @@ let package = Package(name: "ReleaseConsumer", platforms: [.macOS(.v13)],
         .product(name: "BarkBoltFFI", package: "bark-bolt-ffi")], path: "Tests")])
 ''' % options.revision)
     shutil.copytree(ROOT / 'tests/swift/Tests', consumer / 'Tests')
-    subprocess.run(['swift', 'test', '--disable-keychain', '--disable-netrc', '--package-path', str(consumer)], check=True, timeout=600)
+    environment = dict(os.environ, BARK_CONTRACT_FIXTURES=str(ROOT / 'tests/fixtures'))
+    subprocess.run(['swift', 'test', '--disable-keychain', '--disable-netrc', '--package-path', str(consumer)], check=True, timeout=600, env=environment)

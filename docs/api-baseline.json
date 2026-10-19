@@ -1024,6 +1024,110 @@
       "signature": "pub fn clear_logger()",
       "source": "src/muniffi/logger.rs",
       "line": 111
+    },
+    {
+      "owner": null,
+      "name": "derive_public_key_from_mnemonic",
+      "async": false,
+      "signature": "pub fn derive_public_key_from_mnemonic( mnemonic: String, network: Network, index: u32, ) -> Result<String, BarkError>",
+      "source": "src/crypto.rs",
+      "line": 34
+    },
+    {
+      "owner": null,
+      "name": "sign_message_with_mnemonic",
+      "async": false,
+      "signature": "pub fn sign_message_with_mnemonic( message: String, mnemonic: String, network: Network, index: u32, ) -> Result<String, BarkError>",
+      "source": "src/crypto.rs",
+      "line": 47
+    },
+    {
+      "owner": null,
+      "name": "verify_message",
+      "async": false,
+      "signature": "pub fn verify_message( message: String, signature_der_hex: String, public_key_hex: String, ) -> Result<bool, BarkError>",
+      "source": "src/crypto.rs",
+      "line": 59
+    },
+    {
+      "owner": null,
+      "name": "validate_wallet_snapshot",
+      "async": true,
+      "signature": "pub async fn validate_wallet_snapshot( path: String, expected: Option<WalletSnapshotExpectation>, ) -> Result<WalletSnapshotInfo, BarkError>",
+      "source": "src/backup.rs",
+      "line": 58
+    },
+    {
+      "owner": "Wallet",
+      "name": "peek_public_key",
+      "async": true,
+      "signature": "pub async fn peek_public_key(&self, index: u32) -> Result<String, BarkError>",
+      "source": "src/ffi/wallet.rs",
+      "line": 181
+    },
+    {
+      "owner": "Wallet",
+      "name": "derive_store_next_keypair",
+      "async": true,
+      "signature": "pub async fn derive_store_next_keypair(&self) -> Result<types::StoredPublicKey, BarkError>",
+      "source": "src/ffi/wallet.rs",
+      "line": 194
+    },
+    {
+      "owner": "Wallet",
+      "name": "sign_message",
+      "async": true,
+      "signature": "pub async fn sign_message(&self, message: String, index: u32) -> Result<String, BarkError>",
+      "source": "src/ffi/wallet.rs",
+      "line": 206
+    },
+    {
+      "owner": "Wallet",
+      "name": "create_snapshot",
+      "async": true,
+      "signature": "pub async fn create_snapshot( &self, destination_path: String, ) -> Result<crate::WalletSnapshotInfo, BarkError>",
+      "source": "src/ffi/wallet.rs",
+      "line": 1083
+    },
+    {
+      "owner": "Wallet",
+      "name": "state_changes",
+      "async": false,
+      "signature": "pub fn state_changes(&self) -> Result<crate::StateChangeSubscription, BarkError>",
+      "source": "src/ffi/wallet.rs",
+      "line": 1077
+    },
+    {
+      "owner": "StateChangeSubscription",
+      "name": "next_change",
+      "async": true,
+      "signature": "pub async fn next_change(&self) -> Result<Option<StateChangeEvent>, BarkError>",
+      "source": "src/core/state_changes.rs",
+      "line": 105
+    },
+    {
+      "owner": "StateChangeSubscription",
+      "name": "cancel_next_change_wait",
+      "async": false,
+      "signature": "pub fn cancel_next_change_wait(&self)",
+      "source": "src/core/state_changes.rs",
+      "line": 126
+    },
+    {
+      "owner": "StateChangeSubscription",
+      "name": "stop",
+      "async": false,
+      "signature": "pub fn stop(&self)",
+      "source": "src/core/state_changes.rs",
+      "line": 134
+    },
+    {
+      "owner": "StateChangeSubscription",
+      "name": "is_active",
+      "async": false,
+      "signature": "pub fn is_active(&self) -> bool",
+      "source": "src/core/state_changes.rs",
+      "line": 148
     }
   ],
   "records": [
@@ -1186,6 +1290,22 @@
     {
       "name": "WalletOpenArgs",
       "source": "src/muniffi/wallet.rs"
+    },
+    {
+      "name": "StoredPublicKey",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "WalletSnapshotInfo",
+      "source": "src/backup.rs"
+    },
+    {
+      "name": "WalletSnapshotExpectation",
+      "source": "src/backup.rs"
+    },
+    {
+      "name": "StateChangeEvent",
+      "source": "src/core/state_changes.rs"
     }
   ],
   "enums": [
@@ -1268,5 +1388,32 @@
         "log"
       ]
     }
-  ]
+  ],
+  "bark_revision": "bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c",
+  "nitro_reference": "v0.0.144 (10bcf3ec9325696601de10f833fab747f0a5ec4c)",
+  "field_contracts": {
+    "StoredPublicKey": [
+      "public_key",
+      "index"
+    ],
+    "WalletSnapshotInfo": [
+      "path",
+      "size_bytes",
+      "sha256",
+      "network",
+      "wallet_fingerprint",
+      "server_pubkey",
+      "mailbox_pubkey",
+      "schema_version"
+    ],
+    "WalletSnapshotExpectation": [
+      "network",
+      "wallet_fingerprint",
+      "server_pubkey"
+    ],
+    "StateChangeEvent": [
+      "sequence",
+      "reason"
+    ]
+  }
 }

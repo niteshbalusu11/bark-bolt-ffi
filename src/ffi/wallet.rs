@@ -62,6 +62,7 @@ pub struct WalletOpenArgs {
 /// - Callback onchain dispatch
 pub struct Wallet {
     core: Arc<CoreWallet>,
+    db_path: Arc<std::path::PathBuf>,
 }
 
 impl Wallet {
@@ -71,7 +72,13 @@ impl Wallet {
         Fut: Future<Output = T> + Send + 'static,
         T: Send + 'static,
     {
-        run_async(action(self.core.clone()))
+        // Bark sync futures are too large to nest by value on Swift worker stacks.
+        let future = Box::pin(action(self.core.clone()));
+        let db_path = self.db_path.clone();
+        run_async(async move {
+            let _db_path = db_path;
+            future.await
+        })
     }
 }
 
@@ -175,6 +182,42 @@ impl Wallet {
     // ------------------------------------------------------------------------
     // Address
     // ------------------------------------------------------------------------
+
+    /// Bark's m/350'/0'/index key, only if already persisted in this wallet.
+    pub async fn peek_public_key(&self, index: u32) -> Result<String, BarkError> {
+        self.run(move |core| async move {
+            Ok(core
+                .inner()
+                .peek_keypair(index)
+                .await?
+                .public_key()
+                .to_string())
+        })
+        .await
+    }
+
+    /// Derive and persist the next Bark wallet key. Never returns a private key.
+    pub async fn derive_store_next_keypair(&self) -> Result<types::StoredPublicKey, BarkError> {
+        self.run(|core| async move {
+            let (key, index) = core.inner().derive_store_next_keypair().await?;
+            Ok(types::StoredPublicKey {
+                public_key: key.public_key().to_string(),
+                index,
+            })
+        })
+        .await
+    }
+
+    /// Sign with a persisted wallet key using Bitcoin signed-message hash and DER hex.
+    pub async fn sign_message(&self, message: String, index: u32) -> Result<String, BarkError> {
+        self.run(move |core| async move {
+            Ok(crate::crypto::sign(
+                &message,
+                &core.inner().peek_keypair(index).await?,
+            ))
+        })
+        .await
+    }
 
     pub async fn new_address(&self) -> Result<String, BarkError> {
         self.run(|core| async move { core.new_address().await })
@@ -1036,6 +1079,32 @@ impl Wallet {
         NotificationHolder::new(self.core.inner())
     }
 
+    /// Observe every committed database change, including keys, metadata and BDK state.
+    pub fn state_changes(&self) -> Result<crate::StateChangeSubscription, BarkError> {
+        Ok(crate::StateChangeSubscription::new(&self.db_path)?)
+    }
+
+    /// Export a consistent, plaintext SQLite snapshot for Noah backup v2.
+    /// Refuses existing destinations and live database aliases.
+    pub async fn create_snapshot(
+        &self,
+        destination_path: String,
+    ) -> Result<crate::WalletSnapshotInfo, BarkError> {
+        let source = self.db_path.clone();
+        run_async(async move {
+            tokio::task::spawn_blocking(move || {
+                crate::backup::create_wallet_snapshot_blocking(
+                    &source,
+                    std::path::Path::new(&destination_path),
+                )
+            })
+            .await
+            .context("snapshot worker failed")?
+            .map_err(BarkError::from)
+        })
+        .await
+    }
+
     // ------------------------------------------------------------------------
     // Daemon
     // ------------------------------------------------------------------------
@@ -1077,12 +1146,18 @@ impl Wallet {
         onchain: Option<Arc<tokio::sync::RwLock<dyn bark::onchain::OnchainWalletTrait>>>,
     ) -> Result<Self, BarkError> {
         run_async(async move {
+            let path = crate::ffi::db::sqlite_path(&args.datadir);
+            if !args.create_if_not_exists && !path.is_file() {
+                return Err(BarkError::from("existing wallet database is missing"));
+            }
+            let db = open_sqlite_db(&args.datadir)?;
+            let db_path = crate::backup::register_live_database(&path)?;
             let core = CoreWallet::open(
                 network,
                 mnemonic_or_seed,
                 config,
                 CoreOpenArgs {
-                    persister: Some(open_sqlite_db(&args.datadir)?),
+                    persister: Some(db),
                     datadir: Some(args.datadir),
                     lock_manager: None,
                     onchain,
@@ -1095,8 +1170,47 @@ impl Wallet {
             .await?;
             Ok(Self {
                 core: Arc::new(core),
+                db_path,
             })
         })
         .await
+    }
+}
+
+#[cfg(test)]
+mod noah_tests {
+    use super::*;
+    #[test]
+    fn regtest_wallet_keys_snapshots_and_subscription() {
+        if std::env::var("BARK_REGTEST").as_deref() != Ok("1") {
+            return;
+        }
+        crate::ffi::runtime::TOKIO_RT.block_on(async {
+            let directory = tempfile::tempdir().unwrap();
+            let fixture: serde_json::Value = serde_json::from_str(include_str!("../../tests/fixtures/nitro-v0.0.144-crypto.json")).unwrap();
+            let config: Config = serde_json::from_value(serde_json::json!({"server_address":"http://127.0.0.1:3635", "bitcoind_address":"http://127.0.0.1:19443","bitcoind_user":"second","bitcoind_pass":"ark"})).unwrap();
+            let wallet = Wallet::open(Network::Regtest, fixture["mnemonic"].as_str().unwrap().into(), config, WalletOpenArgs { run_daemon:false,datadir:directory.path().to_string_lossy().into(),create_if_not_exists:true,create_without_server:true,skip_recovery:true }).await.unwrap();
+            assert!(wallet.peek_public_key(0).await.is_err());
+            assert!(wallet.sign_message("test".into(),0).await.is_err());
+            let subscription = wallet.state_changes().unwrap();
+            assert_eq!(subscription.next_change().await.unwrap().unwrap().reason,"initial");
+            for index in 0..=7 {
+                let stored = wallet.derive_store_next_keypair().await.unwrap();
+                assert_eq!(stored.index,index);
+                if let Some(vector) = fixture["vectors"].as_array().unwrap().iter().find(|v| v["index"].as_u64() == Some(index as u64)) {
+                    assert_eq!(stored.public_key,vector["walletPublicKey"].as_str().unwrap());
+                    assert_eq!(wallet.peek_public_key(index).await.unwrap(),stored.public_key);
+                    assert_eq!(wallet.sign_message(fixture["message"].as_str().unwrap().into(),index).await.unwrap(),vector["walletSignature"].as_str().unwrap());
+                }
+            }
+            let changed = tokio::time::timeout(std::time::Duration::from_secs(3),subscription.next_change()).await.unwrap().unwrap().unwrap();
+            assert_eq!(changed.reason,"databaseChanged");
+            let snapshot = directory.path().join("snapshot.sqlite");
+            let created = wallet.create_snapshot(snapshot.to_string_lossy().into()).await.unwrap();
+            let validated = crate::validate_wallet_snapshot(created.path.clone(),None).await.unwrap();
+            assert_eq!(created.sha256,validated.sha256);
+            assert!(crate::validate_wallet_snapshot(directory.path().join("db.sqlite").to_string_lossy().into(),None).await.is_err());
+            subscription.stop();
+        });
     }
 }

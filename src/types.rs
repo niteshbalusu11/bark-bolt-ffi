@@ -2149,3 +2149,9 @@ mod tests {
         );
     }
 }
+/// A persisted wallet key; private key material never crosses the FFI.
+#[boltffi::data]
+pub struct StoredPublicKey {
+    pub public_key: String,
+    pub index: u32,
+}

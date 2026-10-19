@@ -44,4 +44,13 @@ for kind in ['records', 'enums', 'callbacks']:
 for source in [swift, kotlin]:
     assert re.search(r'\b(?:func|fun) signPsbt\s*\(', source), 'Missing master sign-only callback'
     assert re.search(r'\b(?:vtxoSwept|VtxoSwept)\b', source), 'Missing master swept exit state'
-print(f"API parity: {len(baseline['exports'])} original exports, 40 records, 14 enums, 2 callbacks present in both hosts; openWithOnchain/signPsbt/VtxoSwept added")
+for record, fields in baseline.get('field_contracts', {}).items():
+    for language, source in [('Swift', swift), ('Kotlin', kotlin)]:
+        start = re.search(r'\b(?:struct|class) ' + record + r'\b', source)
+        assert start, f'{language}: missing {record}'
+        following = source[start.end():]
+        end = re.search(r'\n(?:public )?(?:data )?(?:struct|class|enum|interface|protocol) \w+', following)
+        scope = following[:end.start()] if end else following
+        for field in fields:
+            assert re.search(r'\b(?:let|var|val) ' + camel(field) + r'\s*:', scope), f'{language}: missing {record}.{camel(field)}'
+print(f"API parity: {len(baseline['exports'])} exports, {len(baseline['records'])} records, {len(baseline['enums'])} enums, {len(baseline['callbacks'])} callbacks present in both hosts")
