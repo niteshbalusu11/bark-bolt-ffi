@@ -22,15 +22,15 @@ XCFramework. Kotlin: build the AAR/JVM JAR below, or download [versioned release
 
 ## Local build
 
-Install Rust 1.90, protobuf (`protoc`), JDK17 and the Android SDK/NDK28.2.13676358.
+Install Rust 1.90, protobuf (`protoc`), Just, jq, JDK17 and the Android SDK/NDK28.2.13676358.
 Apple builds need Xcode; the example project uses XcodeGen. Homebrew tools must
 be on PATH. Install the pinned BoltFFI CLI with:
 
 ```sh
 scripts/install-boltffi.sh
 export BOLTFFI="$PWD/target/tools/boltffi"
-scripts/build-sdk.sh apple --overlay boltffi.local.toml
-scripts/build-sdk.sh android --overlay boltffi.local.toml
+just build-ios --overlay boltffi.local.toml
+just build-android --overlay boltffi.local.toml
 ```
 
 The local overlay selects Apple silicon/Android arm64. Omit it for the full ABI
@@ -51,15 +51,23 @@ an Apple developer account. Device signing needs your normal Apple team setup.
 ## RegTest
 
 ```sh
-python3 scripts/regtest.py start
-python3 scripts/regtest.py reference-smoke
-python3 scripts/regtest.py status
-python3 scripts/regtest.py mine 6
-python3 scripts/regtest.py fund ADDRESS 0.1
-python3 scripts/regtest.py stop
+just setup-everything
+just status
+just bcli getblockchaininfo
+just bark balance
+just generate 6
+just send-to ADDRESS 0.1
+just stop
 ```
 
-Docker Compose uses isolated `bark-bolt-ffi` volumes. Commands never reset wallets.
+The Justfile delegates to `scripts/ark-dev.sh`, adapted from Nitro Ark's original
+setup. `setup-everything` starts/funds Bitcoin, Ark, the reference Bark wallet and
+Lightning, reusing existing wallets and channels. The familiar `up`, `down`,
+`create-wallet`, `create-bark-wallet`, `fund-aspd`, `setup-lightning`, `aspd`,
+`lncli` and `cln` recipes are available through `just --list`.
+
+Docker Compose uses isolated `bark-bolt-ffi` volumes. Normal `just down` preserves
+wallet volumes; setup never forcibly replaces a wallet.
 Bitcoin RPC is `http://127.0.0.1:19443` (`second` / `ark`, RegTest credentials only),
 Ark is `http://127.0.0.1:3635`. Android reaches these through `adb reverse`; iOS
 simulators use host loopback. Fund an app's onchain address, mine, sync and board.
@@ -68,13 +76,15 @@ The SDK performs wallet operations; the helper only funds/mines test coins.
 With both apps installed, run real cross-platform acceptance:
 
 ```sh
-python3 scripts/app-regtest.py --ios-device SIMULATOR_UDID --android-device emulator-5554
-python3 scripts/app-regtest.py --extended --ios-device SIMULATOR_UDID
+just test-regtest --ios-device SIMULATOR_UDID --android-device emulator-5554
+just test-regtest --extended --ios-device SIMULATOR_UDID
 ```
 
 Each run uses a new private app wallet account. Recovery phrases stay in Keychain
 or Android Keystore-encrypted private storage and never enter test output. The
 debug command bridge is excluded/disabled in release apps.
+The test driver remains Python for device JSON polling and assertions; every
+backend setup/funding/mining/RPC operation goes through the same Bash script.
 
 ## CI
 

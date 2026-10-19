@@ -19,10 +19,11 @@ Create the AVD once; reuse it subsequently. Find identifiers with
 `xcrun simctl list devices available` and `adb devices`. Readiness is bounded:
 
 ```sh
-python3 scripts/wait-devices.py --ios-device IOS_UDID --android-device emulator-5554
+just wait-devices --ios-device IOS_UDID --android-device emulator-5554
 ```
 
-Build/install apps from README, then run scripts/app-regtest.py with those IDs.
+Install Just and jq, build/install apps from README, then run
+`just test-regtest` with those IDs.
 The driver configures adb reverse for the selected RegTest ports. T3 users can
 open both devices in the Device panel; verification in this migration used the
 agent-device launcher returned by device_open for interactive navigation.
@@ -31,7 +32,7 @@ Full Actions integration needs these tools on an isolated macOS ARM64 account
 or machine that runs only trusted repository code. Start one bounded job with:
 
 ```sh
-python3 scripts/ci-regtest-runner.py --ios-device IOS_UDID --android-device emulator-5554
+just ci-regtest --ios-device IOS_UDID --android-device emulator-5554
 ```
 
 The helper requires authenticated GitHub CLI repository-admin access. Before
@@ -41,7 +42,11 @@ no default labels, then dispatches `integration.yml` on `main` with that label.
 The workflow rejects other events/refs. No separate `gh workflow run` is needed.
 After one job the runner unregisters and removes its temporary files. CI uses a
 unique Compose project; teardown removes only that run's containers and volumes.
-Local `regtest.py stop` preserves developer wallets.
+Local `just stop` and ordinary `just down` preserve developer wallet volumes.
+
+The Just recipes retain Python internally for mobile JSON polling/assertions,
+device readiness and the runner's archive/environment validation. RegTest service
+setup, wallet funding, mining and CLI access live only in `scripts/ark-dev.sh`.
 
 The listener receives an explicit build/device environment without inherited
 GH tokens, SSH agent variables or unrelated credentials. This is **not a sandbox**:

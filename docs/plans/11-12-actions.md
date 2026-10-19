@@ -1,6 +1,6 @@
 # Tasks 11–12: hosted builds and full RegTest integration
 
-Paths: .github/workflows/, scripts/build-sdk.sh, scripts/regtest.py,
+Paths: .github/workflows/, scripts/build-sdk.sh, scripts/ark-dev.sh, justfile,
 scripts/app-regtest.py and build/test documentation.
 
 Push/PR jobs run Rust formatting, Clippy, tests and audit on Ubuntu; Linux builds
@@ -39,7 +39,7 @@ from successful SDK installation.
 Final integration cleanup: the manual workflow creates a new Compose project
 named from github.run_id. After evidence upload, remove only that job's services
 and volumes with `down --volumes`, instead of retaining test databases on a
-persistent runner. Local scripts/regtest.py stop continues to preserve wallets,
+persistent runner. Local `just stop` continues to preserve wallets,
 and original/reference projects are untouched.
 
 Hosted Apple finding: Xcode16.4/Swift6.1 annotates XCUIApplication APIs MainActor,

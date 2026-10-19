@@ -1,6 +1,6 @@
 # Production migration checklist
 
-Status: all tasks 00–15 complete. Bark master, BoltFFI Swift/Kotlin SDKs, native
+Status: tasks 00–15 complete; task16 restores Just/Bash tooling and updates Actions. Bark master, BoltFFI Swift/Kotlin SDKs, native
 apps, RegTest acceptance, GitHub Actions, cleanup and published release consumers
 pass. [Current evidence](validation/2026-10-19-master.md) records exact sources,
 runs, artifacts and scope limits. [Release v0.1.0](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.1.0)
@@ -330,6 +330,22 @@ record failing/passing regressions, two independent fresh restores per platform,
 and [green paired RegTest CI](https://github.com/smolcars/bark-bolt-ffi/actions/runs/39249668162).
 The ephemeral runner and its per-run containers/volumes were removed. Published
 v0.1.0 artifacts remain unchanged; these source fixes are on main.
+
+### 16 — Restore Just/Bash RegTest tooling and update GitHub Actions
+
+- [ ] Use Nitro Ark's familiar Just recipes/Bash commands and latest stable actions.
+
+**Engineering plan:** [Just/Bash and Actions](plans/16-just-and-current-actions.md)
+records the retained interfaces, volume/seed invariants, exact upstream action
+releases and checks.
+
+**Implement:** restore the root Justfile and scripts/ark-dev.sh; delete the Python
+stack manager; route mobile automation through Bash; update all action pins and
+active instructions. Keep Python only for structured mobile/runner helpers.
+
+**Done when:** shell safety/lint checks, real repeated setup with preserved seed,
+full paired app acceptance and both updated CI workflows pass; changes are pushed
+and evidence is recorded.
 
 ## Dependency order
 

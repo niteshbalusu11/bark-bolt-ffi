@@ -16,7 +16,9 @@ untouched. Bootstrap Postgres/server state and fund the server with mature coins
 set up a funded CLN/LND channel. Use bounded health/readiness loops and idempotent
 wallet creation instead of fixed sleeps or deleting wallet directories.
 
-Paths: `regtest/compose.yaml`, server configuration and `scripts/regtest.py`.
+Paths: `regtest/compose.yaml`, server configuration and `scripts/ark-dev.sh`.
+Task16 restores the original Justfile/Bash entry points in place of the initial
+Python stack manager; current setup is `just setup-everything`.
 Validation: healthy services, exact versions/digests, reference CLI handshake,
 funding/boarding, a real payment, channel liquidity and repeatable setup.
 

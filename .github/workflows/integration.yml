@@ -24,12 +24,12 @@ jobs:
       CARGO_BUILD_JOBS: 2
       RUSTUP_TOOLCHAIN: 1.90.0
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - run: scripts/install-boltffi.sh
-      - run: BOLTFFI="$PWD/target/tools/boltffi" scripts/build-sdk.sh apple --overlay boltffi.local.toml
-      - run: BOLTFFI="$PWD/target/tools/boltffi" scripts/build-sdk.sh android --overlay boltffi.local.toml
+      - run: BOLTFFI="$PWD/target/tools/boltffi" just build-ios --overlay boltffi.local.toml
+      - run: BOLTFFI="$PWD/target/tools/boltffi" just build-android --overlay boltffi.local.toml
       - run: swift test --package-path tests/swift && ./gradlew :sdk:jvm:test :examples:android:assembleDebug
       - run: xcodegen generate --spec examples/ios/project.yml
       - name: Build and install both apps
@@ -39,11 +39,11 @@ jobs:
           adb -s "$ANDROID_SERIAL" install -r examples/android/build/outputs/apk/debug/android-debug.apk
       - run: |
           set -o pipefail
-          python3 scripts/app-regtest.py --extended | tee app-regtest-results.jsonl
+          just test-regtest --extended | tee app-regtest-results.jsonl
       - if: always()
-        run: docker compose -f regtest/compose.yaml logs --tail=200 > regtest.log
+        run: just logs --tail=200 > regtest.log
       - if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: cross-platform-regtest-evidence
           retention-days: 3
@@ -51,4 +51,4 @@ jobs:
             app-regtest-results.jsonl
             regtest.log
       - if: always()
-        run: docker compose --profile cli -f regtest/compose.yaml down --volumes
+        run: just down --volumes

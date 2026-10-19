@@ -8,17 +8,38 @@ import shlex
 import shutil
 import subprocess
 import time
-import regtest
 
 BUNDLE = 'io.github.niteshbalusu11.bark.example'
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def run(args, *, env=None, check=True):
-    result = subprocess.run(args, text=True, capture_output=True, env=env, timeout=180)
+def run(args, *, env=None, check=True, timeout=180):
+    result = subprocess.run(args, text=True, capture_output=True, env=env, timeout=timeout)
     if check and result.returncode:
         raise RuntimeError(result.stderr.strip() or result.stdout.strip())
     return result.stdout.strip()
+
+
+def rpc(command, *args):
+    value = run([str(ROOT / 'scripts/ark-dev.sh'), command, *map(str, args)])
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError:
+        return value
+
+
+def wait_for(label, action, ready, timeout=120):
+    end = time.monotonic() + timeout
+    last = None
+    while time.monotonic() < end:
+        try:
+            last = action()
+            if ready(last):
+                return last
+        except RuntimeError as error:
+            last = str(error)
+        time.sleep(1)
+    raise RuntimeError(f'{label} not ready after {timeout}s: {last}')
 
 
 class App:
@@ -73,26 +94,26 @@ def smoke(apps):
         failed = app.command('send', destination='invalid', amount=1000, allow_error=True)
         assert not failed['ok'] and failed.get('error'), 'Invalid address must fail with a message'
         address = state[app.platform]['onchainAddress']
-        regtest.fund(address, 0.1)
-    regtest.mine(6)
+        rpc('send-to', address, 0.1)
+    rpc('generate', 6)
     for app in apps:
         app.command('sync')
         board = app.command('board', amount=2000000)
         assert board['notifications'] > 0, 'Board must emit real wallet notifications'
-    regtest.mine(6)
+    rpc('generate', 6)
     for app in apps:
-        result = regtest.wait_for(f'{app.platform} board', lambda: app.command('sync'),
+        result = wait_for(f'{app.platform} board', lambda: app.command('sync'),
                                  lambda r: r['spendable'] >= 1900000)
         state[app.platform] = result
     for sender in apps:
         receiver = next((app for app in apps if app is not sender), None)
-        target = state[receiver.platform]['arkAddress'] if receiver else regtest.bark('address')
+        target = state[receiver.platform]['arkAddress'] if receiver else rpc('bark', 'address')
         before = state[sender.platform]['spendable']
         sent = sender.command('send', destination=target, amount=10000)
         assert sent['spendable'] < before
         if receiver:
             previous = state[receiver.platform]['spendable']
-            received = regtest.wait_for('Ark receive', lambda: receiver.command('sync'), lambda r: r['spendable'] >= previous + 10000)
+            received = wait_for('Ark receive', lambda: receiver.command('sync'), lambda r: r['spendable'] >= previous + 10000)
             state[receiver.platform] = received
         state[sender.platform] = sent
     for app in apps:
@@ -105,33 +126,33 @@ def smoke(apps):
 
 def extended(apps):
     for app in apps:
-        invoice = regtest.lnd('addinvoice', '--amt=1000')
+        invoice = rpc('lncli', 'addinvoice', '--amt=1000')
         paid = app.command('send', destination=invoice['payment_request'], amount=1000)
         invoice_hash = invoice['r_hash']
-        assert regtest.lnd('lookupinvoice', invoice_hash)['settled']
+        assert rpc('lncli', 'lookupinvoice', invoice_hash)['settled']
         inbound = app.command('invoice', amount=2000)
-        regtest.lnd('payinvoice', '--force', inbound['invoice'])
+        rpc('lncli', 'payinvoice', '--force', inbound['invoice'])
         claimed = app.command('claim')
         # The daemon may already own the claim; wait for its committed balance.
-        regtest.wait_for('Lightning receive credit', lambda: app.command('sync'),
+        wait_for('Lightning receive credit', lambda: app.command('sync'),
                          lambda result: result['spendable'] > paid['spendable'])
-        payments = regtest.lnd('listpayments')['payments']
+        payments = rpc('lncli', 'listpayments')['payments']
         assert any(p['payment_hash'] == inbound['paymentHash'] and p['status'] == 'SUCCEEDED' for p in payments)
         app.command('refresh')
-        regtest.mine(6)
+        rpc('generate', 6)
         app.command('sync')
-        address = regtest.bitcoin('getnewaddress', wallet='miner')
+        address = rpc('bcli', 'getnewaddress')
         original = app.command('sync')
         restored = app.command('restore')
         assert restored['spendable'] == original['spendable'] > 0, 'Seed recovery must recover spendable Ark funds'
         assert restored['historyCount'] == 0, 'Fresh recovery before exits must not reuse persisted movement history'
         offboard = app.command('offboard', destination=address)
-        regtest.mine(6)
-        assert regtest.bitcoin('getrawtransaction', offboard['txid'], 'true')['confirmations'] > 0
+        rpc('generate', 6)
+        assert rpc('bcli', 'getrawtransaction', offboard['txid'], 'true')['confirmations'] > 0
         app.command('sync')
         # Ensure an independent remaining VTXO exists for unilateral exit.
         app.command('board', amount=500000)
-        regtest.mine(6)
+        rpc('generate', 6)
         app.command('sync')
         estimate = app.command('estimate')
         assert estimate['totalFee'] > 0
@@ -141,12 +162,12 @@ def extended(apps):
             progress = app.command('progressExit')
             if progress['claimable']:
                 break
-            regtest.mine(6)
+            rpc('generate', 6)
         else:
             raise AssertionError('Exit failed to mature within 120 blocks')
         claim = app.command('drainExit', destination=address)
-        regtest.mine(6)
-        assert regtest.bitcoin('getrawtransaction', claim['txid'], 'true')['confirmations'] > 0
+        rpc('generate', 6)
+        assert rpc('bcli', 'getrawtransaction', claim['txid'], 'true')['confirmations'] > 0
         old = app.command('sync')
         restored = app.command('restore')
         assert restored['fingerprint'] == old['fingerprint']
@@ -177,7 +198,7 @@ def main():
         for app in apps:
             app.command(options.action, **json.loads(options.request))
         return
-    regtest.bootstrap()
+    print(run([str(ROOT / 'scripts/ark-dev.sh'), 'setup-everything'], timeout=900), flush=True)
     smoke(apps)
     if options.extended:
         extended(apps)
