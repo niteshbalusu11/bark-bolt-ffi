@@ -179,3 +179,102 @@ class NoahContractTest {
         }
     }
 }
+
+private fun regtestCommand(vararg args: String): String {
+    val script = java.io.File(fixtureDirectory.parentFile.parentFile,"scripts/ark-dev.sh")
+    val process = ProcessBuilder(listOf("bash",script.path) + args).redirectError(java.lang.ProcessBuilder.Redirect.INHERIT).start()
+    val output = process.inputStream.bufferedReader().readText().trim()
+    check(process.waitFor() == 0) { "RegTest command failed" }
+    return output
+}
+
+class NoahP1ContractTest {
+    @Test fun pureVtxoDecoding() {
+        val hex = java.io.File(fixtureDirectory,"board-vtxo.hex").readText().trim()
+        val vtxo = decodeVtxo(hex)
+        assertEquals(10000uL,vtxo.amountSats)
+        assertTrue(vtxo.state is VtxoState.Unknown)
+        assertFalse(vtxo.registered)
+        assertEquals(66,vtxo.serverPubkey.length)
+        assertEquals(2016u,vtxo.exitDelta)
+        assertEquals(64,vtxo.anchorPoint.txid.length)
+        assertEquals(64,vtxo.point.txid.length)
+        val bytes = hex.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+        assertEquals(vtxo.id,decodeVtxo(java.util.Base64.getEncoder().encodeToString(bytes)).id)
+        assertFailsWith<BarkError> { decodeVtxo("invalid") }
+        assertFailsWith<BarkError> { parseArkAddress("invalid") }
+    }
+
+    @org.junit.Test(timeout=90000) fun liveFeatureParity() = runBlocking<Unit> {
+        org.junit.Assume.assumeTrue(System.getenv("BARK_REGTEST") == "1")
+        val directory = java.nio.file.Files.createTempDirectory("bark-noah-p1").toFile()
+        val config = Config(serverAddress="http://127.0.0.1:${System.getenv("ARK_PORT") ?: "3635"}",bitcoindAddress="http://127.0.0.1:${System.getenv("BITCOIN_PORT") ?: "19443"}",bitcoindUser="second",bitcoindPass="ark",vtxoExitMargin=2u)
+        val mnemonic = generateMnemonic()
+        try {
+            OnchainWallet.default(Network.REGTEST,mnemonic,config,directory.path).use { onchain ->
+                Wallet.openWithOnchain(Network.REGTEST,mnemonic,config,WalletOpenArgs(runDaemon=false,datadir=directory.path,createWithoutServer=true,skipRecovery=true),onchain).use { wallet ->
+                    val address = onchain.newAddress()
+                    assertTrue(onchain.isMine(address))
+                    assertFailsWith<BarkError> { onchain.isMine("invalid") }
+                    assertFailsWith<BarkError> { onchain.drain(address,ULong.MAX_VALUE) }
+                    regtestCommand("send-to",address,"0.005")
+                    onchain.sync()
+                    val board = wallet.boardAmount(100000uL)
+                    assertTrue(board.vtxoIds.isNotEmpty())
+                    regtestCommand("generate","6"); wallet.sync()
+                    val movement = wallet.history().first()
+                    wallet.updateHistoryMetadata(movement.id,"{\"note\":\"Noah Kotlin\"}")
+                    assertTrue(wallet.history().first { it.id==movement.id }.metadataJson.contains("Noah Kotlin"))
+                    assertFailsWith<BarkError> { wallet.updateHistoryMetadata(movement.id,"[]") }
+                    val recipientDirectory = java.io.File(directory,"recipient")
+                    Wallet.open(Network.REGTEST,generateMnemonic(),config,WalletOpenArgs(runDaemon=false,datadir=recipientDirectory.path,createWithoutServer=true,skipRecovery=true)).use { recipient ->
+                        val receiveAddress = recipient.newAddress()
+                        wallet.sendArkoorPayment(receiveAddress,10000uL)
+                        recipient.sync()
+                        val received = recipient.history().flatMap { it.receivedOnAddresses }.filter { it.paymentMethod.value == receiveAddress }
+                        assertEquals(10000uL,received.sumOf { it.amountSats })
+                        assertTrue(received.all { it.paymentMethod.methodType.isNotEmpty() })
+                    }
+                    val arkAddress = wallet.newAddressWithIndex()
+                    val parsed = parseArkAddress(arkAddress.address)
+                    assertEquals(wallet.peekPublicKey(arkAddress.index),parsed.userPubkey)
+                    assertTrue(parsed.arkId.isNotEmpty())
+                    assertTrue(wallet.arkInfo()!!.mailboxPubkey.isNotEmpty())
+                    val auth = wallet.mailboxAuthorization(authorizationExpiry=2000000000L)
+                    assertEquals(2000000000L,auth.expiry)
+                    assertEquals(auth.mailboxId,wallet.mailboxAuthorizationAt(2000000000L).mailboxId)
+                    assertFailsWith<BarkError> { wallet.mailboxAuthorizationAt(Long.MAX_VALUE) }
+                    assertTrue(wallet.syncPendingRounds().isEmpty())
+                    val receive = wallet.bolt11Invoice(2000uL,"Noah parity",null)
+                    val pending = wallet.lightningReceiveState(receive.paymentHash)
+                    assertEquals(receive.invoice,pending.invoice)
+                    assertEquals(2000uL,pending.amountSats)
+                    assertTrue(pending.htlcVtxoIds.isEmpty())
+                    assertNull(pending.movementId)
+                    wallet.cancelLightningReceive(receive.paymentHash)
+                    val id = wallet.spendableVtxos().first().id
+                    wallet.startExitForVtxos(listOf(id))
+                    val status = wallet.getExitStatus(id,true,true)!!
+                    assertTrue(status.transactions.isNotEmpty())
+                    assertEquals(status.transactionCount.toInt(),status.transactions.size)
+                    assertTrue(status.transactions.all { it.parentTxHex.isNotEmpty() })
+                    assertTrue(wallet.getExitStatus(id,false,false)!!.transactions.isEmpty())
+                    wallet.cancelExit(id)
+                    wallet.dangerousDropVtxo(id)
+                    assertFailsWith<BarkError> { wallet.getVtxoById(id) }
+                    assertFailsWith<BarkError> { wallet.dangerousDropVtxo("invalid") }
+                    onchain.sync()
+                    val destination = regtestCommand("bcli","getnewaddress")
+                    assertFalse(onchain.isMine(destination))
+                    val txid = onchain.drain(destination,null)
+                    assertTrue(onchain.transactions().any { it.txid==txid })
+                    regtestCommand("generate","1"); onchain.sync()
+                    assertEquals(0uL,onchain.balance().totalSats)
+                    regtestCommand("send-to",address,"0.002"); onchain.sync()
+                    assertTrue(wallet.boardAll().vtxoIds.isNotEmpty())
+                    regtestCommand("generate","6"); wallet.sync()
+                }
+            }
+        } finally { directory.deleteRecursively() }
+    }
+}

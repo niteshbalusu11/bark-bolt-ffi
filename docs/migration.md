@@ -196,3 +196,50 @@ state refresh and resubscribe. Only one pending wait per holder is allowed;
 task cancellation also releases the wait. `stop()` permanently stops observation,
 unblocks receivers and sets `isActive()` false; close Kotlin holders on teardown.
 Use these notifications to schedule backups after any committed state change.
+
+Noah P1 API changes:
+
+- Movement `sentToAddresses` / `receivedOnAddresses` now contain
+  `MovementDestination { paymentMethod: { methodType, value }, amountSats }`.
+  Sum `amountSats` directly; payment methods are no longer JSON strings.
+  `updateHistoryMetadata(movementId, patchJson)` accepts a JSON object up to
+  16KiB in UTF-8 and delegates merging to Bark.
+- `OnchainWallet.isMine(address)` checks ownership. `drain(address, feeRateSatPerVb?)`
+  uses BDK's actual drain and returns its txid; omit the sat/vB rate for the
+  chain's regular rate. BDK validates the configured address network. Custom
+  callback backends support ownership via scriptPubkey but have no configured
+  network and do not implement `drain`.
+- `decodeVtxo(hexOrBase64)` is pure. All VTXOs expose `serverPubkey`, `exitDelta`
+  (blocks), `anchorPoint` and `point` (structured txid/vout). Pure decoding sets
+  state to `Unknown` and registered to false because these local DB facts are
+  not encoded. `dangerousDropVtxo(id)` deliberately invokes Bark's destructive
+  recovery operation; use it only when forgetting that VTXO is intended.
+- `syncPendingRounds()` advances pending rounds and reports `PendingRoundStatus`
+  sorted by round ID, including the `RoundOutcome`, funding txid, error,
+  `isFinal` and `isSuccess`. On this Bark revision `unsignedFundingTxids` is
+  empty: the upstream status enum does not carry unsigned funding transactions.
+  Capture terminal results before they disappear from pending-round listings.
+- `boardAmount` / `boardAll` return `PendingBoard.vtxoIds`, containing every
+  created VTXO ID. The singular `vtxoId` field is removed.
+- `getExitStatus(..., includeTransactions: true)` now returns transaction
+  packages, with parent/child txids and raw hex, child origin, and the tracked
+  `ExitTxStatus` while the current state is `Processing`. Outside Processing,
+  package status is absent; use the enclosing exit state. Omit transactions for
+  a lightweight status; its transaction list is empty.
+- `mailboxAuthorization(authorizationExpiry: Int64/Long)` is a handwritten host
+  overload for an **absolute Unix timestamp in seconds**. It calls generated
+  `mailboxAuthorizationAt`, returning `{ mailboxId, expiry, encoded }` with the
+  actual absolute expiry and hex-encoded authorization. The existing
+  `mailboxAuthorization(expirySecs: UInt32/UInt)` keeps its relative-seconds
+  contract and returns encoded hex. Kotlin consumers import the overload from
+  `io.github.niteshbalusu11.bark` (the wildcard import includes it).
+- `ArkInfo.mailboxPubkey` is the server mailbox public key.
+  `parseArkAddress(address)` returns user pubkey, Ark ID and test-network flag
+  without network access. In-progress Lightning sends/receives expose HTLC IDs
+  and movement ID when Bark has created them, alongside invoice and amount.
+  Settled receives retain invoice/amount but their upstream fact table does not
+  retain HTLC IDs/movement ID; consult history for those. A settled send's
+  upstream fact contains only payment hash and preimage, as before.
+
+P2 trusted/untrusted pending balances and BOLT11 payment-secret exposure remain
+subject to a product decision.

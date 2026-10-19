@@ -30,7 +30,8 @@ jobs:
       - run: scripts/install-boltffi.sh
       - run: BOLTFFI="$PWD/target/tools/boltffi" just build-ios --overlay boltffi.local.toml
       - run: BOLTFFI="$PWD/target/tools/boltffi" just build-android --overlay boltffi.local.toml
-      - run: swift test --package-path tests/swift && ./gradlew :sdk:jvm:test :examples:android:assembleDebug
+      - run: just setup-everything
+      - run: BARK_REGTEST=1 swift test --package-path tests/swift && BARK_REGTEST=1 ./gradlew :sdk:jvm:test :examples:android:assembleDebug
       - run: xcodegen generate --spec examples/ios/project.yml
       - name: Build and install both apps
         run: |

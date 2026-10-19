@@ -175,3 +175,138 @@ extension ContractTests {
         XCTAssertFalse(holder.isActive())
     }
 }
+
+private func regtestCommand(_ arguments: String...) throws -> String {
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: "/bin/bash")
+    process.arguments = [fixtures.deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("scripts/ark-dev.sh").path] + arguments
+    let output = Pipe()
+    process.standardOutput = output
+    try process.run()
+    let data = output.fileHandleForReading.readDataToEndOfFile()
+    process.waitUntilExit()
+    guard process.terminationStatus == 0 else { throw BarkError(message: "RegTest command failed") }
+    return String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+}
+
+extension ContractTests {
+    func testPureVtxoDecode() throws {
+        let hex = try String(contentsOf: fixtures.appendingPathComponent("board-vtxo.hex"), encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
+        let vtxo = try decodeVtxo(hexOrBase64: hex)
+        XCTAssertEqual(vtxo.amountSats, 10000)
+        XCTAssertEqual(vtxo.state, .unknown)
+        XCTAssertFalse(vtxo.registered)
+        XCTAssertEqual(vtxo.serverPubkey.count, 66)
+        XCTAssertEqual(vtxo.exitDelta, 2016)
+        XCTAssertEqual(vtxo.anchorPoint.txid.count, 64)
+        XCTAssertEqual(vtxo.point.txid.count, 64)
+        let bytes = stride(from: 0, to: hex.count, by: 2).map { offset -> UInt8 in
+            let a = hex.index(hex.startIndex, offsetBy: offset)
+            let b = hex.index(a, offsetBy: 2)
+            return UInt8(hex[a..<b], radix: 16)!
+        }
+        XCTAssertEqual(try decodeVtxo(hexOrBase64: Data(bytes).base64EncodedString()).id, vtxo.id)
+        XCTAssertThrowsError(try decodeVtxo(hexOrBase64: "invalid"))
+        XCTAssertThrowsError(try parseArkAddress(address: "invalid"))
+    }
+
+    func testLiveNoahFeatureParity() async throws {
+        guard ProcessInfo.processInfo.environment["BARK_REGTEST"] == "1" else { throw XCTSkip("requires live RegTest") }
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let env = ProcessInfo.processInfo.environment
+        let config = Config(serverAddress: "http://127.0.0.1:\(env["ARK_PORT"] ?? "3635")", bitcoindAddress: "http://127.0.0.1:\(env["BITCOIN_PORT"] ?? "19443")", bitcoindUser: "second", bitcoindPass: "ark", vtxoExitMargin: 2)
+        let mnemonic = try generateMnemonic()
+        let onchain = try await OnchainWallet.default(network: .regtest, mnemonic: mnemonic, config: config, datadir: directory.path)
+        let wallet = try await Wallet.openWithOnchain(network: .regtest, mnemonicOrSeed: mnemonic, config: config, args: WalletOpenArgs(runDaemon: false, datadir: directory.path, createWithoutServer: true, skipRecovery: true), onchain: onchain)
+        let address = try await onchain.newAddress()
+        let mine = try await onchain.isMine(address: address)
+        XCTAssertTrue(mine)
+        do { _ = try await onchain.isMine(address: "invalid"); XCTFail("Expected address error") } catch is BarkError {}
+        do { _ = try await onchain.drain(address: address, feeRateSatPerVb: UInt64.max); XCTFail("Expected fee overflow") } catch is BarkError {}
+        _ = try regtestCommand("send-to", address, "0.005")
+        _ = try await onchain.sync()
+        let board = try await wallet.boardAmount(amountSats: 100000)
+        XCTAssertFalse(board.vtxoIds.isEmpty)
+        _ = try regtestCommand("generate", "6")
+        try await wallet.sync()
+        let history = try await wallet.history()
+        let movement = try XCTUnwrap(history.first)
+        try await wallet.updateHistoryMetadata(movementId: movement.id, patchJson: "{\"note\":\"Noah Swift\"}")
+        let updated = try await wallet.history().first { $0.id == movement.id }
+        XCTAssertTrue(try XCTUnwrap(updated).metadataJson.contains("Noah Swift"))
+        do { try await wallet.updateHistoryMetadata(movementId: movement.id, patchJson: "[]"); XCTFail("Expected patch validation") } catch is BarkError {}
+        do {
+            let recipient = try await Wallet.open(network: .regtest, mnemonicOrSeed: generateMnemonic(), config: config, args: WalletOpenArgs(runDaemon: false, datadir: directory.appendingPathComponent("recipient").path, createWithoutServer: true, skipRecovery: true))
+            let receiveAddress = try await recipient.newAddress()
+            try await wallet.sendArkoorPayment(arkAddress: receiveAddress, amountSats: 10000)
+            try await recipient.sync()
+            let incomingHistory = try await recipient.history()
+            let received = incomingHistory.flatMap(\.receivedOnAddresses).filter { $0.paymentMethod.value == receiveAddress }
+            XCTAssertEqual(received.reduce(UInt64(0)) { $0 + $1.amountSats }, 10000)
+            XCTAssertTrue(received.allSatisfy { !$0.paymentMethod.methodType.isEmpty })
+        }
+        let arkAddress = try await wallet.newAddressWithIndex()
+        let parsed = try parseArkAddress(address: arkAddress.address)
+        let key = try await wallet.peekPublicKey(index: arkAddress.index)
+        XCTAssertEqual(parsed.userPubkey, key)
+        XCTAssertFalse(parsed.arkId.isEmpty)
+        let info = try await wallet.arkInfo()
+        XCTAssertFalse(try XCTUnwrap(info).mailboxPubkey.isEmpty)
+        let auth = try wallet.mailboxAuthorization(authorizationExpiry: 2000000000)
+        XCTAssertEqual(auth.expiry, 2000000000)
+        XCTAssertEqual(auth.mailboxId, try wallet.mailboxAuthorizationAt(authorizationExpiry: 2000000000).mailboxId)
+        XCTAssertThrowsError(try wallet.mailboxAuthorizationAt(authorizationExpiry: Int64.max))
+        let rounds = try await wallet.syncPendingRounds()
+        XCTAssertTrue(rounds.isEmpty)
+        let invoice = try await wallet.bolt11Invoice(amountSats: 2000, description: "Noah parity", token: nil)
+        let pending = try await wallet.lightningReceiveState(paymentHash: invoice.paymentHash)
+        XCTAssertEqual(pending.invoice, invoice.invoice)
+        XCTAssertEqual(pending.amountSats, 2000)
+        XCTAssertTrue(pending.htlcVtxoIds.isEmpty)
+        XCTAssertNil(pending.movementId)
+        try await wallet.cancelLightningReceive(paymentHash: invoice.paymentHash)
+        let id = try XCTUnwrap(board.vtxoIds.first)
+        try await wallet.startExitForVtxos(vtxoIds: [id])
+        let possible = try await wallet.getExitStatus(vtxoId: id, includeHistory: true, includeTransactions: true)
+        let status = try XCTUnwrap(possible)
+        XCTAssertFalse(status.transactions.isEmpty)
+        XCTAssertEqual(Int(status.transactionCount), status.transactions.count)
+        XCTAssertTrue(status.transactions.allSatisfy { !$0.parentTxHex.isEmpty })
+        let compact = try await wallet.getExitStatus(vtxoId: id, includeHistory: false, includeTransactions: false)
+        XCTAssertTrue(try XCTUnwrap(compact).transactions.isEmpty)
+        _ = try await wallet.cancelExit(vtxoId: id)
+        try await wallet.dangerousDropVtxo(id: id)
+        do { _ = try await wallet.getVtxoById(vtxoId: id); XCTFail("Expected missing VTXO") } catch is BarkError {}
+        do { try await wallet.dangerousDropVtxo(id: "invalid"); XCTFail("Expected invalid VTXO") } catch is BarkError {}
+        _ = try await onchain.sync()
+        let destination = try regtestCommand("bcli", "getnewaddress")
+        let owned = try await onchain.isMine(address: destination)
+        XCTAssertFalse(owned)
+        let txid = try await onchain.drain(address: destination)
+        let transactions = try await onchain.transactions()
+        XCTAssertTrue(transactions.contains { $0.txid == txid })
+        _ = try regtestCommand("generate", "1")
+        _ = try await onchain.sync()
+        let balance = try await onchain.balance()
+        XCTAssertEqual(balance.totalSats, 0)
+        _ = try regtestCommand("send-to", address, "0.002")
+        _ = try await onchain.sync()
+        let all = try await wallet.boardAll()
+        XCTAssertFalse(all.vtxoIds.isEmpty)
+        _ = try regtestCommand("generate", "6")
+        try await wallet.sync()
+    }
+}
+
+extension ContractTests {
+    func testWalletSyncOnSwiftWorkerStack() async throws {
+        guard ProcessInfo.processInfo.environment["BARK_REGTEST"] == "1" else { throw XCTSkip("requires live RegTest") }
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let env = ProcessInfo.processInfo.environment
+        let config = Config(serverAddress: "http://127.0.0.1:\(env["ARK_PORT"] ?? "3635")", bitcoindAddress: "http://127.0.0.1:\(env["BITCOIN_PORT"] ?? "19443")", bitcoindUser: "second", bitcoindPass: "ark")
+        let wallet = try await Wallet.open(network: .regtest, mnemonicOrSeed: generateMnemonic(), config: config, args: WalletOpenArgs(runDaemon: false, datadir: directory.path, createWithoutServer: true, skipRecovery: true))
+        try await wallet.sync()
+    }
+}

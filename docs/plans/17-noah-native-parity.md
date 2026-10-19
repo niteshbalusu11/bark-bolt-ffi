@@ -48,6 +48,21 @@ only available Lightning details, never private keys or the P2 payment secret.
 Document fee units and absolute expiry. Validate Rust and both host contracts,
 build apps after changed result shapes, and run live RegTest for transactions.
 
+Refinement before P1 code: keep sentToAddresses/receivedOnAddresses names but
+replace their elements with MovementDestination { paymentMethod: PaymentMethod
+{ type, value }, amountSats }. Metadata patches must be JSON objects <=16KiB,
+matching Nitro; Bark performs the merge. PendingBoard gains vtxoIds and drops
+the lossy singular field. Pure decode returns state=Unknown and registered=false
+because those are local DB facts; wallet VTXOs retain their stored state.
+Anchor/point are available on both full and Bare VTXOs, so all wallet views
+expose them without fetching genesis.
+Round status uses a typed outcome with funding txid/error and terminal flags;
+the current pin has no unsigned funding txid status, so its list is empty.
+Exit packages include parent/child raw hex and their statuses without another
+network lookup. Absolute mailbox expiry gets a distinct Rust export (Rust has
+no overloads); document the generated host name. Drain/ownership queries retain
+network validation and return errors for unsupported callback backends.
+
 ## Release engineering plan
 
 One PR per P0/P1 group with small commits. After acceptance, bump to a fresh
@@ -57,6 +72,19 @@ SHA256SUMS and manifest. Verify downloaded artifacts and clean consumers; record
 actual hosted CI results separately from local results. Never overwrite v0.1.0.
 
 ## Actual outcomes and remaining limits
+
+Swift stack regression plan: the minimal live test
+`swift test --package-path tests/swift --filter testWalletSyncOnSwiftWorkerStack`
+reproduces SIGBUS on the Swift worker stack in Wallet::run. Box Bark's large
+future before wrapping it to retain the live DB registration; keep ownership
+and cancellation semantics unchanged. Re-run the exact reproducer and full
+funded Swift/Kotlin contracts before recording a fix. Backport this P0 fix to
+its PR as well as P1.
+
+CI refinement: after the isolated stack starts, the hosted Android job also
+runs Rust's live contracts. The paired integration workflow starts its backend
+before contracts and sets BARK_REGTEST=1 for Swift/Kotlin, so live host APIs are
+executed in addition to the app flows. No existing volumes are reset.
 
 P0 implemented: wallet and offline public-key/signature exports; safe SQLite
 snapshot export/validation and schema42 fixture; 750ms committed-state observer
@@ -78,3 +106,30 @@ Remaining P0 limits: no actual end-user `.noahbackup` archive was supplied;
 validation covers a matching schema42 plaintext fixture and real newly exported
 wallet snapshots. No physical devices were used for these contract tests.
 P1 and release acceptance are pending.
+
+## P1 actual outcomes (before independent review)
+
+Implemented all P1 exports and DTO fields; absolute mailbox host overloads are
+handwritten support files calling regenerated Rust bindings. No generated code
+is patched. Pure decoding uses Unknown local state. All boarding IDs and exit
+packages are retained. Pending round conversions cover every current outcome.
+The original derivation/SQLite schema and upstream transaction logic remain.
+
+Validation: full BARK_REGTEST=1 Rust suite passes 71 tests; warnings-denied
+Clippy passes. Swift compiles and passes 9 contracts including funded boarding,
+Ark receive/destination amount sums, metadata patch, BDK drain, exits/packages,
+destructive drop in a disposable wallet, absolute mailbox auth, and invoice
+details. Kotlin compiles and passes 8 contracts normally and from its actual
+JAR, including the same funded cases; the Android AAR and example APK build.
+The Swift stack reproducer failed with SIGBUS before boxing the inner future,
+then passed in 0.139s; all 9 Swift contracts pass after the fix. The fix is also
+backported to P0 PR #1 (357d773). Mailbox Schnorr auth is randomized, so its tests
+assert identity/expiry rather than byte equality across distinct signatures.
+Deterministic ECDSA golden signatures still compare exact bytes in all hosts.
+Eight Python tooling tests and strict API parity (149 exports, 50 records, 15
+enums, 2 callbacks) pass. Local full ABI release/hosted CI remain release gates.
+
+Remaining limits: terminal round outcomes have Rust conversion tests; empty
+pending-state calls run in both hosts. The pinned upstream does not expose
+unsigned round funding IDs or retain settled Lightning HTLC/movement details.
+P2 stays deferred. Independent Fable 5.1 High review and release are pending.

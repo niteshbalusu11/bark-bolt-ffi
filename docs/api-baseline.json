@@ -1128,6 +1128,70 @@
       "signature": "pub fn is_active(&self) -> bool",
       "source": "src/core/state_changes.rs",
       "line": 148
+    },
+    {
+      "owner": null,
+      "name": "decode_vtxo",
+      "async": false,
+      "signature": "pub fn decode_vtxo(hex_or_base64: String) -> Result<crate::Vtxo, BarkError>",
+      "source": "src/functions.rs",
+      "line": 82
+    },
+    {
+      "owner": null,
+      "name": "parse_ark_address",
+      "async": false,
+      "signature": "pub fn parse_ark_address(address: String) -> Result<crate::ParsedArkAddress, BarkError>",
+      "source": "src/functions.rs",
+      "line": 88
+    },
+    {
+      "owner": "Wallet",
+      "name": "update_history_metadata",
+      "async": true,
+      "signature": "pub async fn update_history_metadata( &self, movement_id: u32, patch_json: String, ) -> Result<(), BarkError>",
+      "source": "src/ffi/wallet.rs",
+      "line": 571
+    },
+    {
+      "owner": "Wallet",
+      "name": "dangerous_drop_vtxo",
+      "async": true,
+      "signature": "pub async fn dangerous_drop_vtxo(&self, id: String) -> Result<(), BarkError>",
+      "source": "src/ffi/wallet.rs",
+      "line": 581
+    },
+    {
+      "owner": "Wallet",
+      "name": "sync_pending_rounds",
+      "async": true,
+      "signature": "pub async fn sync_pending_rounds(&self) -> Result<Vec<types::PendingRoundStatus>, BarkError>",
+      "source": "src/ffi/wallet.rs",
+      "line": 891
+    },
+    {
+      "owner": "Wallet",
+      "name": "mailbox_authorization_at",
+      "async": false,
+      "signature": "pub fn mailbox_authorization_at( &self, authorization_expiry: i64, ) -> Result<types::MailboxAuthorization, BarkError>",
+      "source": "src/ffi/wallet.rs",
+      "line": 960
+    },
+    {
+      "owner": "OnchainWallet",
+      "name": "is_mine",
+      "async": true,
+      "signature": "pub async fn is_mine(&self, address: String) -> Result<bool, BarkError>",
+      "source": "src/ffi/onchain.rs",
+      "line": 144
+    },
+    {
+      "owner": "OnchainWallet",
+      "name": "drain",
+      "async": true,
+      "signature": "pub async fn drain( &self, address: String, #[boltffi::default(None)] fee_rate_sat_per_vb: Option<u64>, ) -> Result<String, BarkError>",
+      "source": "src/ffi/onchain.rs",
+      "line": 167
     }
   ],
   "records": [
@@ -1306,6 +1370,30 @@
     {
       "name": "StateChangeEvent",
       "source": "src/core/state_changes.rs"
+    },
+    {
+      "name": "PaymentMethod",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "MovementDestination",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "ParsedArkAddress",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "MailboxAuthorization",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "PendingRoundStatus",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "ExitTransactionPackage",
+      "source": "src/types.rs"
     }
   ],
   "enums": [
@@ -1364,6 +1452,10 @@
     {
       "name": "WalletNotification",
       "source": "src/types.rs"
+    },
+    {
+      "name": "RoundOutcome",
+      "source": "src/types.rs"
     }
   ],
   "callbacks": [
@@ -1414,6 +1506,70 @@
     "StateChangeEvent": [
       "sequence",
       "reason"
+    ],
+    "Movement": [
+      "sent_to_addresses",
+      "received_on_addresses"
+    ],
+    "MovementDestination": [
+      "payment_method",
+      "amount_sats"
+    ],
+    "PaymentMethod": [
+      "method_type",
+      "value"
+    ],
+    "Vtxo": [
+      "server_pubkey",
+      "exit_delta",
+      "anchor_point",
+      "point"
+    ],
+    "PendingBoard": [
+      "vtxo_ids"
+    ],
+    "ArkInfo": [
+      "mailbox_pubkey"
+    ],
+    "ParsedArkAddress": [
+      "user_pubkey",
+      "ark_id"
+    ],
+    "LightningSend": [
+      "invoice",
+      "amount_sats",
+      "htlc_vtxo_ids",
+      "movement_id"
+    ],
+    "LightningReceive": [
+      "invoice",
+      "amount_sats",
+      "htlc_vtxo_ids",
+      "movement_id"
+    ],
+    "ExitTransactionStatus": [
+      "transactions"
+    ],
+    "ExitTransactionPackage": [
+      "parent_txid",
+      "parent_tx_hex",
+      "child_txid",
+      "child_tx_hex",
+      "status"
+    ],
+    "PendingRoundStatus": [
+      "round_id",
+      "status",
+      "funding_txid",
+      "unsigned_funding_txids",
+      "error",
+      "is_final",
+      "is_success"
+    ],
+    "MailboxAuthorization": [
+      "expiry",
+      "encoded",
+      "mailbox_id"
     ]
   }
 }
