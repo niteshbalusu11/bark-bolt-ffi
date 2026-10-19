@@ -79,6 +79,23 @@ validation covers a matching schema42 plaintext fixture and real newly exported
 wallet snapshots. No physical devices were used for these contract tests.
 P1 and release acceptance are pending.
 
+## Independent review repair plan and outcome
+
+Fable 5.1 High reviewed the combined P0/P1 PRs at 249386e. Before changing code,
+plan a rollback-journal EXCLUSIVE-lock regression for the observer and a real
+uncheckpointed WAL validation regression. Retry transient BUSY/LOCKED on the
+next observer tick while preserving resyncRequired for other errors. Validation
+must never open/recover the input through SQLite: reject nonempty WAL/journal
+sidecars before and after the private copy. Preserve and document Nitro's queued
+event drain after stop; test it. Keep the specified backup pacing and upstream
+fee validation. Backport the two P0 repairs from the combined implementation.
+
+Both regressions failed before repair (resyncRequired; stale main-file success).
+On the combined branch, the repaired Rust suite passes all 74 tests with
+BARK_REGTEST=1, and warnings-denied Clippy passes all targets. See
+docs/validation/noah-review-20261019.md for each finding's disposition. Final
+release SDKs are rebuilt after repair before re-running both host contracts.
+
 ## Swift worker-stack fix
 
 Plan/paths: src/ffi/wallet.rs and Swift contracts. Retaining the DB registration
