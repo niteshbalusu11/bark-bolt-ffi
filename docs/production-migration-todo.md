@@ -1,6 +1,6 @@
 # Production migration checklist
 
-Status: planning and project bootstrap. The compatibility proof passes; production
+Status: project bootstrap complete; production migration planned. The compatibility proof passes; production
 bindings, native example apps and production CI have not been migrated.
 
 ## Agreed decisions
@@ -69,7 +69,7 @@ different claims. Record them separately; do not mark one from evidence of anoth
 
 ### 00 — Bootstrap the new project
 
-- [ ] Publish the initial source and plan commit.
+- [x] Publish the initial source and plan commit.
 
 **Engineering plan:** create the requested repository; preserve upstream history,
 license and compatibility evidence; establish main, GitHub origin and GitLab
@@ -303,4 +303,25 @@ The new private GitHub repository exists and the local checkout preserves source
 history/license. Earlier proof results are available in experiments/boltffi.
 For this plan, Docker responds, Nitro's Compose config parses and iOS device
 tooling is available. No RegTest services or mobile apps were started during
-planning. Task 00 remains open until the baseline commit/push is verified.
+planning.
+
+## Completion record — task 00
+
+**Engineering plan and affected paths:** preserve the upstream checkout/history,
+then create the requested private GitHub repository and add README.md, AGENTS.md,
+this checklist and the existing compatibility evidence.
+
+**Implemented:** created niteshbalusu11/bark-bolt-ffi, configured origin/upstream,
+established main and registered the local project in T3. Original reference
+checkouts were not changed.
+
+**Validation:** confirmed 14 engineering plans, 14 implementation sections and
+14 acceptance criteria; checked local documentation links and staged whitespace;
+verified local HEAD and the remote main ref both equal
+78768e0a71c6eae15e2f91e2e1d7acb435906a50. GitHub reports PRIVATE visibility and
+main as the default branch.
+
+**Artifacts:** https://github.com/niteshbalusu11/bark-bolt-ffi/commit/78768e0a71c6eae15e2f91e2e1d7acb435906a50
+
+**Remaining limits:** all production implementation tasks remain unchecked.
+This bootstrap does not claim a working production migration or passing app CI.
