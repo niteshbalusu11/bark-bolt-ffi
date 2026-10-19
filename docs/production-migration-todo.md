@@ -71,6 +71,17 @@ different claims. Record them separately; do not mark one from evidence of anoth
 
 ## Tasks
 
+### 17 — Noah native API parity
+
+- [ ] P0 keys/signatures, v2 snapshots and committed-state subscriptions.
+- [ ] P1 feature parity, structured amounts and transaction details.
+- [ ] Fresh tagged release with verified SDK artifacts and consumer contracts.
+
+Engineering plan and affected paths: [Noah native parity](plans/17-noah-native-parity.md).
+Nitro v0.0.144 compatibility is required for existing Noah app updates; this
+supersedes the earlier decision that Nitro schema compatibility was unnecessary.
+P2 remains deferred. Acceptance and evidence must be recorded per priority group.
+
 ### 00 — Bootstrap the new project
 
 - [x] Publish the initial source and plan commit.
