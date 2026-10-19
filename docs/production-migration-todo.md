@@ -73,13 +73,16 @@ different claims. Record them separately; do not mark one from evidence of anoth
 
 ### 18 — v0.3.0 full balance and no-write existing-wallet open
 
-- [ ] Expose all nine balance buckets and Bark-computed pending/total.
-- [ ] Validate existing-wallet identity before SQLite migrations or BDK writes.
-- [ ] Pass Rust, compiled Swift/Kotlin and live RegTest regression contracts.
+- [x] Expose all nine balance buckets and Bark-computed pending/total.
+- [x] Validate existing-wallet identity before SQLite migrations or BDK writes.
+- [x] Pass Rust, compiled Swift/Kotlin and live RegTest regression contracts.
+- [x] Fable 5.1 high reviews all changes; verify, plan and fix confirmed findings.
 - [ ] Publish v0.3.0 XCFramework, AAR, SHA256SUMS and SPM manifest; verify CI/consumers.
+- [ ] Notify the active Noah native rewrite thread after publication.
 
 Engineering plan and affected paths: [balance and existing open](plans/18-balance-and-existing-open.md).
-Execution results are pending; previous completed-release evidence remains historical.
+Final local contracts and review passed; hosted CI/publication and consumer handoff
+remain pending. [Execution evidence](validation/2026-10-19-v030.md).
 
 ### 17 — Noah native API parity
 

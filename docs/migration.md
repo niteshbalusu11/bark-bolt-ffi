@@ -174,9 +174,10 @@ behavior. Older `bark.sqlite` files retain compatibility filename selection.
 Noah's application-level read-only check can remain as defence in depth.
 The SDK never recovers a hot rollback journal or creates a missing WAL index
 during preflight: files requiring that recovery fail before any writes. Existing
-WAL/index pairs are read with SQLite's read-only connection; closed databases use
+WAL/index pairs, including zero-length WALs, are read with SQLite's read-only connection; closed WAL databases use
 an immutable connection to avoid creating sidecars. As with ordinary wallet open,
-the app must not replace the database concurrently with opening it.
+the app must serialize opening against foreign database writers and file
+replacement.
 
 ## Wallet balance in v0.3.0
 

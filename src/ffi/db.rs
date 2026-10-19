@@ -1,3 +1,4 @@
+use std::io::Read;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -23,10 +24,15 @@ pub(crate) fn validate_existing_wallet(
             .map(|m| m.len() > 0)
             .unwrap_or(false)
     };
-    // An immutable connection avoids creating WAL sidecars for a closed database.
+    let mut header = [0; 20];
+    std::fs::File::open(&path)?
+        .read_exact(&mut header)
+        .context("existing wallet database is empty or truncated")?;
+    let wal_mode = header[18] == 2 || header[19] == 2;
+    // An immutable connection avoids creating sidecars for a closed WAL database.
     // A live WAL needs its existing shared-memory index; never create one here.
-    let wal = nonempty("-wal");
-    if nonempty("-journal") || (wal && !nonempty("-shm")) {
+    let wal = PathBuf::from(format!("{}-wal", path.display())).exists();
+    if (wal_mode && nonempty("-journal")) || (wal && !nonempty("-shm")) {
         bail!("existing wallet requires SQLite journal recovery before identity validation");
     }
     let encoded: String = path
@@ -42,7 +48,7 @@ pub(crate) fn validate_existing_wallet(
         .collect();
     let uri = format!(
         "file:{encoded}?mode=ro{}",
-        if wal { "" } else { "&immutable=1" }
+        if wal_mode && !wal { "&immutable=1" } else { "" }
     );
     let connection = rusqlite::Connection::open_with_flags(
         uri,
@@ -54,7 +60,27 @@ pub(crate) fn validate_existing_wallet(
             [],
             |row| Ok((row.get(0)?, row.get(1)?)),
         )
-        .context("existing database does not contain initialized Bark wallet properties")?;
+        .map_err(|error| {
+            let context = match &error {
+                rusqlite::Error::QueryReturnedNoRows => {
+                    "existing database does not contain initialized Bark wallet properties"
+                }
+                rusqlite::Error::SqliteFailure(code, Some(message))
+                    if code.extended_code == rusqlite::ffi::SQLITE_ERROR
+                        && message == "no such table: bark_properties" =>
+                {
+                    "existing database does not contain initialized Bark wallet properties"
+                }
+                rusqlite::Error::SqliteFailure(code, _)
+                    if code.extended_code == rusqlite::ffi::SQLITE_READONLY_ROLLBACK
+                        || code.extended_code == rusqlite::ffi::SQLITE_READONLY_RECOVERY =>
+                {
+                    "existing wallet requires SQLite journal recovery before identity validation"
+                }
+                _ => "failed to read existing Bark wallet properties",
+            };
+            anyhow::Error::new(error).context(context)
+        })?;
     if stored_network.parse::<bitcoin::Network>()? != network {
         bail!("existing wallet network does not match requested network");
     }
@@ -198,6 +224,133 @@ mod tests {
             MNEMONIC
         )
         .is_err());
+        assert!(before == contents(directory.path()));
+    }
+
+    #[test]
+    fn persist_journal_wallet_identity_still_validates() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("db.sqlite");
+        std::fs::copy("tests/fixtures/noah-v2-schema42.sqlite", &path).unwrap();
+        let writer = rusqlite::Connection::open(&path).unwrap();
+        writer
+            .execute_batch(
+                "PRAGMA journal_mode=PERSIST; UPDATE bark_properties SET network='signet'; UPDATE bark_properties SET network='regtest'",
+            )
+            .unwrap();
+        assert!(
+            std::fs::metadata(directory.path().join("db.sqlite-journal"))
+                .unwrap()
+                .len()
+                > 0
+        );
+        let before = contents(directory.path());
+        super::validate_existing_wallet(
+            directory.path().to_str().unwrap(),
+            Network::Regtest,
+            MNEMONIC,
+        )
+        .unwrap();
+        assert!(before == contents(directory.path()));
+        assert!(super::validate_existing_wallet(
+            directory.path().to_str().unwrap(),
+            Network::Bitcoin,
+            MNEMONIC
+        )
+        .is_err());
+        assert!(before == contents(directory.path()));
+    }
+
+    #[test]
+    fn hot_journal_error_is_actionable_and_does_not_recover_input() {
+        let source = tempfile::tempdir().unwrap();
+        let source_path = source.path().join("db.sqlite");
+        std::fs::copy("tests/fixtures/noah-v2-schema42.sqlite", &source_path).unwrap();
+        let writer = rusqlite::Connection::open(&source_path).unwrap();
+        writer
+            .execute_batch("BEGIN IMMEDIATE; UPDATE bark_properties SET network='signet'")
+            .unwrap();
+        writer.cache_flush().unwrap();
+        let directory = tempfile::tempdir().unwrap();
+        std::fs::copy(&source_path, directory.path().join("db.sqlite")).unwrap();
+        std::fs::copy(
+            source.path().join("db.sqlite-journal"),
+            directory.path().join("db.sqlite-journal"),
+        )
+        .unwrap();
+        writer.execute_batch("ROLLBACK").unwrap();
+        let before = contents(directory.path());
+        let error = super::validate_existing_wallet(
+            directory.path().to_str().unwrap(),
+            Network::Regtest,
+            MNEMONIC,
+        )
+        .unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("requires SQLite journal recovery before identity validation"),
+            "{error:#}"
+        );
+        assert!(before == contents(directory.path()));
+    }
+
+    #[test]
+    fn empty_header_error_is_actionable() {
+        let directory = tempfile::tempdir().unwrap();
+        std::fs::write(directory.path().join("db.sqlite"), []).unwrap();
+        let before = contents(directory.path());
+        let error = super::validate_existing_wallet(
+            directory.path().to_str().unwrap(),
+            Network::Regtest,
+            MNEMONIC,
+        )
+        .unwrap_err();
+        assert!(
+            error.to_string().contains("empty or truncated"),
+            "{error:#}"
+        );
+        assert!(before == contents(directory.path()));
+    }
+
+    #[test]
+    fn zero_length_wal_requires_existing_index_without_creating_one() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("db.sqlite");
+        std::fs::copy("tests/fixtures/noah-v2-schema42.sqlite", &path).unwrap();
+        let writer = rusqlite::Connection::open(&path).unwrap();
+        writer
+            .execute_batch("PRAGMA journal_mode=WAL; PRAGMA wal_checkpoint(TRUNCATE)")
+            .unwrap();
+        assert_eq!(
+            std::fs::metadata(directory.path().join("db.sqlite-wal"))
+                .unwrap()
+                .len(),
+            0
+        );
+        let before = contents(directory.path());
+        super::validate_existing_wallet(
+            directory.path().to_str().unwrap(),
+            Network::Regtest,
+            MNEMONIC,
+        )
+        .unwrap();
+        assert!(before == contents(directory.path()));
+        drop(writer);
+        std::fs::write(directory.path().join("db.sqlite-wal"), []).unwrap();
+        let before = contents(directory.path());
+        let error = super::validate_existing_wallet(
+            directory.path().to_str().unwrap(),
+            Network::Regtest,
+            MNEMONIC,
+        )
+        .unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("requires SQLite journal recovery"),
+            "{error:#}"
+        );
         assert!(before == contents(directory.path()));
     }
 

@@ -33,8 +33,60 @@
 
 ## Actual results
 
-Implemented both interfaces and all Rust/Swift/Kotlin contracts. Rust live and
-Swift release contracts passed; Kotlin runtime, hosted CI and publication are
-in progress. [Execution evidence](../validation/2026-10-19-v030.md) records actual
+Implemented both interfaces and all Rust/Swift/Kotlin contracts. Final rebuilt
+SDKs passed 84 Rust, 12 Swift and 11 compiled/executed Kotlin contracts, plus
+11 packaged-JAR contracts. Both Fable 5.1 high review rounds completed and all
+findings are repaired. Hosted CI and publication are in progress. [Execution evidence](../validation/2026-10-19-v030.md) records actual
 commands, artifact checks and remaining release gates. Task 18 stays open until
 those gates pass.
+
+## Compatibility refinement before final publication
+
+The initial nonempty rollback-journal guard can reject valid SQLite PERSIST
+wallets whose successful commits leave a zeroed journal. Add a regression for
+that real database mode before changing `src/ffi/db.rs`. Use ordinary read-only
+SQLite for rollback-mode databases, letting SQLite distinguish hot/cold journals;
+use immutable mode only for a closed WAL-mode database (header bytes 18/19).
+Retain the missing-WAL-index guard. Validate source/directory immutability on
+rejection, rerun native contracts and rebuild/restage all release artifacts.
+
+## Requested review and consumer handoff
+
+Before publication, delegate review of the complete baseline-to-working-tree
+change to Claude Fable 5.1 with effort high. Independently reproduce/validate its
+findings, record a plan before any fixes, and rerun affected checks/rebuilds.
+After publishing and verifying v0.3.0, notify Noah's active native rewrite thread
+`4ff9b718-306c-496c-831f-8edfa1484899` with the release URL and migration details.
+Do not announce publication to that thread before the assets are public.
+
+## Fable review repairs (plan before implementation)
+
+Fable 5.1 high round 1 approved the balance mapping and read-only write ordering,
+with one should-fix and two suggestions. Validate each against the actual Rust
+SQLite build before accepting it.
+
+1. Hot rollback journal: create a real in-flight transaction, flush its pages,
+   copy main+journal to an isolated directory, roll back the source, and invoke
+   the preflight. If confirmed, distinguish missing properties from
+   SQLITE_READONLY_ROLLBACK and other read errors. Preserve all bytes/files on
+   rejection. Do not auto-recover or fall back to creation.
+2. Empty/truncated header: add specific context and assert its text from Rust,
+   Swift and Kotlin rejection contracts.
+3. Concurrent zero-length WAL: inspect Noah's journaling usage; prefer read-only
+   SQLite with existing WAL/index files even when the WAL has zero bytes. Only
+   an absent WAL should select immutable mode. Reject missing indexes without
+   creating them; test zero-length live and missing-index inputs.
+
+Affected paths: `src/ffi/db.rs`, host rejection contracts, temporary test fixtures
+if required, migration/validation documentation. No balance/transaction logic or
+API shape changes. Re-run targeted Rust repros, the full native checks, strict
+SDK builds, and Fable verification before release staging/publication.
+
+## Fable round 2 outcome and final test refinement
+
+Fable approves with no remaining blocker and verifies all three repairs closed.
+Its optional remaining suggestion is to pin the uninitialized-properties error
+for a foreign SQLite input. Add that assertion to both foreign-language
+rejection contracts (both factories), so the Rust diagnostic is checked across
+FFI while preserving the frozen native source. Run the already-planned compiled
+Swift and Kotlin suites on the rebuilt artifacts. No native behavior/API changes.

@@ -332,9 +332,9 @@ extension ContractTests {
             let before = try contents()
             let network: Network = scenario == "network" ? .bitcoin : .regtest
             let seed = scenario == "mnemonic" ? try generateMnemonic() : mnemonic
-            do { _ = try await OnchainWallet.openExisting(network: network, mnemonic: seed, config: config, datadir: directory.path); XCTFail("Expected \(scenario) rejection") } catch let error as BarkError { XCTAssertFalse(error.message.isEmpty) }
+            do { _ = try await OnchainWallet.openExisting(network: network, mnemonic: seed, config: config, datadir: directory.path); XCTFail("Expected \(scenario) rejection") } catch let error as BarkError { XCTAssertFalse(error.message.isEmpty); if scenario == "empty" { XCTAssertTrue(error.message.contains("empty or truncated")) }; if scenario == "foreign" { XCTAssertTrue(error.message.contains("initialized Bark wallet properties")) } }
             XCTAssertEqual(try contents(), before, "onchain: \(scenario)")
-            do { _ = try await Wallet.open(network: network, mnemonicOrSeed: seed, config: config, args: WalletOpenArgs(runDaemon: false, datadir: directory.path, createIfNotExists: false)); XCTFail("Expected \(scenario) rejection") } catch let error as BarkError { XCTAssertFalse(error.message.isEmpty) }
+            do { _ = try await Wallet.open(network: network, mnemonicOrSeed: seed, config: config, args: WalletOpenArgs(runDaemon: false, datadir: directory.path, createIfNotExists: false)); XCTFail("Expected \(scenario) rejection") } catch let error as BarkError { XCTAssertFalse(error.message.isEmpty); if scenario == "empty" { XCTAssertTrue(error.message.contains("empty or truncated")) }; if scenario == "foreign" { XCTAssertTrue(error.message.contains("initialized Bark wallet properties")) } }
             XCTAssertEqual(try contents(), before, "wallet: \(scenario)")
         }
     }

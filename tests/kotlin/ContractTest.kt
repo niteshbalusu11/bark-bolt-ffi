@@ -294,9 +294,13 @@ class V030ContractTest {
                 val before = contents()
                 val network = if (scenario=="network") Network.BITCOIN else Network.REGTEST
                 val seed = if (scenario=="mnemonic") generateMnemonic() else mnemonic
-                assertFailsWith<BarkError> { OnchainWallet.openExisting(network,seed,config,directory.path) }
+                val onchainError = assertFailsWith<BarkError> { OnchainWallet.openExisting(network,seed,config,directory.path) }
+                if (scenario=="empty") assertTrue(onchainError.message.contains("empty or truncated"))
+                if (scenario=="foreign") assertTrue(onchainError.message.contains("initialized Bark wallet properties"))
                 assertEquals(before,contents(),"onchain: $scenario")
-                assertFailsWith<BarkError> { Wallet.open(network,seed,config,WalletOpenArgs(runDaemon=false,datadir=directory.path,createIfNotExists=false)) }
+                val walletError = assertFailsWith<BarkError> { Wallet.open(network,seed,config,WalletOpenArgs(runDaemon=false,datadir=directory.path,createIfNotExists=false)) }
+                if (scenario=="empty") assertTrue(walletError.message.contains("empty or truncated"))
+                if (scenario=="foreign") assertTrue(walletError.message.contains("initialized Bark wallet properties"))
                 assertEquals(before,contents(),"wallet: $scenario")
             } finally { directory.deleteRecursively() }
         }
