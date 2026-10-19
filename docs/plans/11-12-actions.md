@@ -14,7 +14,7 @@ Full cross-platform integration uses a manually dispatched workflow on a macOS
 runner labelled bark-bolt-regtest, with Xcode, Docker, Android emulator/SDK and
 JDK17. This is explicit because hosted macOS runners cannot be assumed to run
 Linux service containers. Validate that job using an ephemeral runner on this
-machine; registration is scoped to the new private repo and executes only this
+machine; registration is scoped to this repo and executes only this
 repo's trusted workflow. It exits after one job and is not installed as a service.
 Default PR builds do not depend on the ephemeral runner remaining online.
 Document the prerequisites for a permanent integration runner separately.
@@ -27,7 +27,7 @@ First real CI findings: hosted Ubuntu does not put sdkmanager on PATH; add the
 pinned setup-android action/CLI12. cargo-audit0.21.2 cannot parse current CVSS4
 advisories; 0.22.2 supports Rust1.88+ and is pinned instead. The current database
 reports seven advisories across quinn-proto0.11.17 and rustls0.23.45. Update only
-to patched compatible versions (0.11.18 and 0.23.46), retain Bark0.7.1, run audit
+to patched compatible versions (0.11.18 and 0.23.46), retain the pinned Bark revision, run audit
 without ignoring advisories, then rebuild/test affected SDKs.
 
 Second hosted Android setup finding: setup-android v3 defaults to the removed
@@ -47,4 +47,13 @@ while the local newer XCTest headers allow the original synchronous test. Make
 the UI test method explicitly @MainActor, matching the framework's contract;
 retain Swift6 and run the test again. The app and SDK compiled on that runner.
 Hosted Android's full ABI build, JVM contracts, emulator UI and real RegTest
-smoke passed in run39195303038; Apple needs this correction and an actual rerun.
+smoke passed in run39195303038; the correction passed in master run39198273834. Final packaging/backend
+changes require run39201332568 and the paired integration run39201337865.
+
+Final cleanup finding: Compose down without the cli profile leaves the per-run
+wallet volume created by one-off Bark commands. Include --profile cli during
+CI teardown. Reproduce with the completed run's remaining wallet volume, execute
+the corrected command only for that exact CI project, assert no labelled
+volumes remain, then run the manual integration workflow with the correction.
+This changes teardown only; SDK binaries/source are unchanged. Keep the current
+hosted SDK run and do not restart native builds for documentation/teardown edits.
