@@ -215,6 +215,7 @@ class NoahP1ContractTest {
                 Wallet.openWithOnchain(Network.REGTEST,mnemonic,config,WalletOpenArgs(runDaemon=false,datadir=directory.path,createWithoutServer=true,skipRecovery=true),onchain).use { wallet ->
                     val address = onchain.newAddress()
                     assertTrue(onchain.isMine(address))
+                    assertFalse(onchain.isMine("1BoatSLRHtKNngkdXEeobR76b53LETtpyT"))
                     assertFailsWith<BarkError> { onchain.isMine("invalid") }
                     assertFailsWith<BarkError> { onchain.drain(address,ULong.MAX_VALUE) }
                     regtestCommand("send-to",address,"0.005")

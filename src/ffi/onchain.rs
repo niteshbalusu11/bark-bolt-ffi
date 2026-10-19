@@ -139,8 +139,8 @@ impl OnchainWallet {
         }
     }
 
-    /// Whether this wallet owns the address. BDK validates the configured network;
-    /// a callback wallet receives its scriptPubkey after address syntax validation.
+    /// Whether this wallet owns the scriptPubkey. Valid addresses from any network
+    /// are accepted for this read-only query, matching Nitro.
     pub async fn is_mine(&self, address: String) -> Result<bool, BarkError> {
         match &self.inner {
             OnchainWalletInner::Bdk(core) => {

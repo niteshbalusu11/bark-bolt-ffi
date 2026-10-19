@@ -222,6 +222,8 @@ extension ContractTests {
         let address = try await onchain.newAddress()
         let mine = try await onchain.isMine(address: address)
         XCTAssertTrue(mine)
+        let foreign = try await onchain.isMine(address: "1BoatSLRHtKNngkdXEeobR76b53LETtpyT")
+        XCTAssertFalse(foreign)
         do { _ = try await onchain.isMine(address: "invalid"); XCTFail("Expected address error") } catch is BarkError {}
         do { _ = try await onchain.drain(address: address, feeRateSatPerVb: UInt64.max); XCTFail("Expected fee overflow") } catch is BarkError {}
         _ = try regtestCommand("send-to", address, "0.005")

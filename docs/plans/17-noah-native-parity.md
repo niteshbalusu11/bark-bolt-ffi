@@ -60,8 +60,9 @@ Round status uses a typed outcome with funding txid/error and terminal flags;
 the current pin has no unsigned funding txid status, so its list is empty.
 Exit packages include parent/child raw hex and their statuses without another
 network lookup. Absolute mailbox expiry gets a distinct Rust export (Rust has
-no overloads); document the generated host name. Drain/ownership queries retain
-network validation and return errors for unsupported callback backends.
+no overloads); document the generated host name. Drain retains network
+validation; ownership queries validate syntax and inspect scriptPubkey, matching
+Nitro regardless of the address network. Callback backends cannot drain.
 
 ## Release engineering plan
 
@@ -166,3 +167,24 @@ information. After the fixes, BARK_REGTEST=1 cargo test --locked passes all 74
 tests and cargo clippy --locked --all-targets -- -D warnings passes. The stop
 queue regression passes with Nitro's documented drain behavior. Full release
 SDKs are rebuilding from the repaired source before host contracts run again.
+
+Release refinement before CI packaging changes: have the Android CI Gradle call
+generate both Maven POMs and upload them with the AAR/JVM JAR. Consume the actual
+Linux CI-generated POM rather than editing host-specific generated metadata.
+After final green checks, merge P0 then P1 as the user requested, and tag the
+merged main commit. Verify both the published checksums and clean Git consumer.
+
+Additional parity correction plan: Nitro v0.0.144 onchain.rs:24 uses
+assume_checked().script_pubkey() for is_mine, so a valid address from another
+network must be queried rather than rejected. In core/ffi onchain, parse syntax
+without require_network for this read-only query. Keep send/drain validation.
+Add a Rust regression re-encoding an owned RegTest script as a Bitcoin address
+and checking true, plus valid foreign-network non-owned addresses in Swift and
+Kotlin. First reproduce the network error, then run the full contracts and
+rebuild/re-stage release artifacts from the corrected source.
+
+Actual ownership correction outcome: the new Rust regression first failed with
+"bitcoin address is not valid on regtest". With syntax-only parsing for isMine,
+all 74 live Rust tests pass, including ownership of the same script encoded on
+Bitcoin and false for an unrelated valid Bitcoin address. Swift/Kotlin contracts
+include the foreign-network query; final rebuilt SDK execution remains a gate.

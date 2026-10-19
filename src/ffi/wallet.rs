@@ -1279,6 +1279,10 @@ mod noah_p1_tests {
             let wallet = Wallet::open_with_onchain(Network::Regtest,mnemonic,config.clone(),WalletOpenArgs { run_daemon:false,datadir:directory.path().to_string_lossy().into(),create_if_not_exists:true,create_without_server:true,skip_recovery:true },&onchain).await.unwrap();
             let address = onchain.new_address().await.unwrap();
             assert!(onchain.is_mine(address.clone()).await.unwrap());
+            let script = address.parse::<bitcoin::Address<bitcoin::address::NetworkUnchecked>>().unwrap().assume_checked().script_pubkey();
+            let bitcoin_address = bitcoin::Address::from_script(&script, bitcoin::Network::Bitcoin).unwrap().to_string();
+            assert!(onchain.is_mine(bitcoin_address).await.unwrap());
+            assert!(!onchain.is_mine("1BoatSLRHtKNngkdXEeobR76b53LETtpyT".into()).await.unwrap());
             assert!(onchain.is_mine("invalid".into()).await.is_err());
             assert!(onchain.drain(address.clone(),Some(u64::MAX)).await.is_err());
             regtest(&["send-to",&address,"0.005"]);

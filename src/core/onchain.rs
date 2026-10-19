@@ -146,12 +146,14 @@ impl OnchainWallet {
     }
 
     pub async fn is_mine(&self, address: String) -> Result<bool, BarkError> {
-        let address = parse_address(&address, self.network)?;
+        // Ownership is a script query, regardless of the address's network (Nitro).
+        let address: bitcoin::Address<bitcoin::address::NetworkUnchecked> =
+            address.parse().context("invalid address")?;
         Ok(self
             .wallet
             .read()
             .await
-            .is_mine(&address.script_pubkey())
+            .is_mine(&address.assume_checked().script_pubkey())
             .await?)
     }
 
