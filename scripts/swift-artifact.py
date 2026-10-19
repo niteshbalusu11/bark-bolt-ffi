@@ -33,7 +33,7 @@ def checksum(path):
 def source_digest():
     digest = hashlib.sha256()
     files = sorted((ROOT / 'src').rglob('*.rs')) + [ROOT / name for name in
-        ['Cargo.toml', 'Cargo.lock', 'boltffi.toml', 'rust-toolchain.toml', 'sdk/swift-support/Concurrency.swift']]
+        ['Cargo.toml', 'Cargo.lock', 'boltffi.toml', 'rust-toolchain.toml', 'sdk/swift-support/Concurrency.swift', 'scripts/build-sdk.sh']]
     for path in files:
         digest.update(str(path.relative_to(ROOT)).encode() + b'\0' + path.read_bytes() + b'\0')
     return digest.hexdigest()
@@ -44,7 +44,7 @@ def artifacts():
             if p.is_file() and p.name != 'provenance.json' and p.name != '.DS_Store'}
 
 
-def stage():
+def check_build():
     generated = ROOT / 'dist/apple'
     framework = generated / 'BarkBoltFFI.xcframework'
     info = plistlib.loads((framework / 'Info.plist').read_bytes())
@@ -61,10 +61,29 @@ def stage():
                 if len(architectures) > 1:
                     thin = Path(directory) / ('-'.join(str(v) for v in key) + '.a')
                     subprocess.run(['xcrun', 'lipo', str(binary), '-thin', arch, '-output', str(thin)], check=True)
+                commands = subprocess.check_output(['xcrun', 'otool', '-arch', 'all', '-l', str(thin)], text=True)
+                minimums = []
+                command = ''
+                for line in commands.splitlines():
+                    parts = line.split()
+                    if len(parts) == 2 and parts[0] == 'cmd':
+                        command = parts[1]
+                    if len(parts) == 2 and ((command == 'LC_BUILD_VERSION' and parts[0] == 'minos') or
+                        (command.startswith('LC_VERSION_MIN_') and parts[0] == 'version')):
+                        minimums.append(tuple(int(v) for v in parts[1].split('.')))
+                limit = (13, 0) if key[0] == 'macos' else (16, 0)
+                assert minimums and all(v[:2] <= limit for v in minimums), f'{key}: native deployment target exceeds {limit}: {max(minimums, default=())}'
                 expected = target_dir / TARGETS[key] / 'release/libbark_bolt_ffi.a'
                 assert checksum(thin) == checksum(expected), f'{key} is not the current release build'
                 seen.add(key)
         assert seen == set(TARGETS), f'Missing Apple slices: {set(TARGETS) - seen}'
+    print('Five release Apple ABI slices match Cargo output and declared deployment targets')
+    return framework
+
+
+def stage():
+    framework = check_build()
+    generated = framework.parent
     SDK.mkdir(parents=True, exist_ok=True)
     for name in ['FFI', 'Sources']:
         destination = SDK / name
@@ -83,7 +102,7 @@ def stage():
     (ROOT / 'Package.swift').write_text(package + '\n')
     (SDK / 'provenance.json').write_text(json.dumps({
         'version': '0.1.0', 'bark': '0.7.1-dev', 'bark_revision': 'bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c', 'boltffi': '0.31.1',
-        'rust': '1.90.0', 'profile': 'release', 'archive_sha256': archive_hash, 'source_sha256': source_digest(),
+        'rust': '1.90.0', 'minimum_ios': '16.0', 'minimum_macos': '13.0', 'profile': 'release', 'archive_sha256': archive_hash, 'source_sha256': source_digest(),
         'files': artifacts(), 'package_sha256': checksum(ROOT / 'Package.swift'),
     }, indent=2, sort_keys=True) + '\n')
     print(f'Staged release SwiftPM manifest and generated sources; archive: {archive.stat().st_size} bytes')
@@ -102,7 +121,11 @@ def verify():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--stage-release', action='store_true')
+    parser.add_argument('--check-build', action='store_true')
     options = parser.parse_args()
-    if options.stage_release:
-        stage()
-    verify()
+    if options.check_build:
+        check_build()
+    else:
+        if options.stage_release:
+            stage()
+        verify()

@@ -116,6 +116,7 @@ jobs:
           restore-keys: apple-${{ runner.arch }}-
       - run: scripts/install-boltffi.sh
       - run: BOLTFFI="$PWD/target/tools/boltffi" scripts/build-sdk.sh apple --release
+      - run: python3 scripts/swift-artifact.py --check-build
       - run: swift test --package-path tests/swift
       - run: xcodegen generate --spec examples/ios/project.yml
       - name: Test iOS app

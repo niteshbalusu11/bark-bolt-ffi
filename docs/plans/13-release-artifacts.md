@@ -57,3 +57,13 @@ must not depend on a public binary release existing for an unreleased commit.
 Rust CI verifies committed source/provenance; hosted Apple runs the same contract
 suite against the newly generated SDK. Run test-swift-release.py manually against
 the pushed release revision and record its result before final completion.
+
+Deployment gate finding: the clean ZIP consumer's linker warns that zstd C
+objects were built for macOS27 while the package advertises13. Set
+MACOSX_DEPLOYMENT_TARGET=13.0 for Darwin SDK builds (including JVM desktop JNI),
+so native C dependencies inherit the declared minimum. Record build-sdk.sh in
+the source provenance hash and gate every Apple archive's Mach-O deployment load
+commands against iOS16/macOS13 before staging. First run the gate on the existing
+archive to capture failure, then rebuild/restage and require no newer-OS linker
+warnings in a fresh consumer. This is a binary compatibility fix, not a wallet
+logic change. Re-run packaged contracts after rebuilding affected natives.

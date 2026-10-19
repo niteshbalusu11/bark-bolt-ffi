@@ -1,5 +1,5 @@
 {
-  "archive_sha256": "14afb3037fe89e7fd9068563f0135fb0fcc5a5f3362343312ef205aad9d1dc67",
+  "archive_sha256": "cc61b57d0b3888459a29296343566f8bfcf072d01924f46c62ab27d1a3d63af9",
   "bark": "0.7.1-dev",
   "bark_revision": "bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c",
   "boltffi": "0.31.1",
@@ -10,9 +10,11 @@
     "Sources/BoltFFI/BarkBoltFfiBoltFFI.swift": "aac8402464d59137d93277f477b4610484095cfd8d180d4a3147f0bb6ffa1533",
     "Sources/BoltFFI/Concurrency.swift": "defe435152b826509ce5b954697ccd5ff2d7ec499b212c6582cf845ff85990db"
   },
-  "package_sha256": "06e0d1eefe29ff868858367ca8d8b4e225e3402bd4fbdba641aef70314b32876",
+  "minimum_ios": "16.0",
+  "minimum_macos": "13.0",
+  "package_sha256": "8cb695339c44023c58e232a2662ed060f958e476b8e6d71bd788debbb014986f",
   "profile": "release",
   "rust": "1.90.0",
-  "source_sha256": "d174751b260436a11c040996936eb3f91cc46f1a59de938e4386fc395409a346",
+  "source_sha256": "5b85f203fb3d4d4d1613a83d22012690bddffa7ed49c2d513a15adc3a92a1da9",
   "version": "0.1.0"
 }

@@ -184,7 +184,7 @@ Transitive Cargo dependency names alone do not imply an unsupported product.
 
 ### 07 — Build the native iOS example
 
-- [ ] Create and run a SwiftUI app with the real SDK.
+- [x] Create and run a SwiftUI app with the real SDK.
 
 **Engineering plan:** design small screens/view-model states for RegTest config,
 create/restore/open, addresses/balances, boarding, Ark transfers, Lightning,
@@ -201,7 +201,7 @@ and screenshots.
 
 ### 08 — Build the native Android example
 
-- [ ] Create and run a Kotlin/Compose app with the real SDK.
+- [x] Create and run a Kotlin/Compose app with the real SDK.
 
 **Engineering plan:** mirror the iOS workflows with ViewModel/coroutine lifecycle
 handling, Keystore-protected seed storage, JNI cleanup and debug host networking.
@@ -428,3 +428,19 @@ Artifacts: docs/validation/2026-10-18.md and integration-39195200829.json; Actio
 retains full JSONL and sanitized backend logs for3 days.
 Remaining limits: LNURL/LNAddress and BOLT12 external fixtures were not run;
 minimum-OS and physical-device execution are not claimed.
+
+## Completion record — tasks 07 and 08
+
+Engineering plan and paths: docs/plans/07-08-native-apps.md; examples/ios,
+examples/android, PRODUCT.md and DESIGN.md.
+Implemented: native SwiftUI/Compose wallets, protected seed storage, persistent
+SQLite, loading/errors/pinned feedback, real SDK operations and debug-only test
+transport. Explicit iOS labels and accessible error details passed native review.
+Validation: both apps build/install/run; XCTest/Compose UI tests pass. Full
+master release-native RegTest passes on both devices, including new fee records,
+funded recovery and exit claims. Android minified release/lint and an external
+Maven AAR consumer build pass with the supported three-ABI filter.
+Artifacts: docs/validation/master-release-20261019-r1.json, native-ui-review.md
+and twelve actual screenshots.
+Remaining limits: physical devices/minimum OS runtimes were not executed.
+These are RegTest SDK examples; store distribution is outside the migration.

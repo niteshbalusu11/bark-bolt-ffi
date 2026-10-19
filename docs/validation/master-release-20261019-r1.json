@@ -1,0 +1,130 @@
+{
+  "source_commit": "e6547fcb9211a01a2ee9fdea580786c86826ffe6",
+  "native_profile": "release (iOS and Android)",
+  "raw_results_sha256": "d16b8124fa8fea7ae04ce51d72a17e3088f13175ccbd5cb916bccd3f8b6edb8d",
+  "result": {
+    "passed": true,
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "extended": true,
+    "run_id": "master-release-20261019-r1"
+  },
+  "platforms": {
+    "ios": {
+      "actions": [
+        "board",
+        "cancel",
+        "claim",
+        "drainExit",
+        "estimate",
+        "invoice",
+        "offboard",
+        "open",
+        "progressExit",
+        "refresh",
+        "restore",
+        "send",
+        "startExit",
+        "sync"
+      ],
+      "transactions": [
+        {
+          "action": "board",
+          "txid": "0672d69aef914a4ecb788dc2d7461643470289218d9e2a7c7e5076f314e2f64c"
+        },
+        {
+          "action": "offboard",
+          "txid": "2464dac43b4b636196748dc4e379656be82286409b649deb19b5e202df9e7aa1"
+        },
+        {
+          "action": "board",
+          "txid": "f497c10a77e3edef79d1a7d29a683e9934ce79f1932794dd26c125cffa28e486"
+        },
+        {
+          "action": "drainExit",
+          "txid": "cdfb999f010b34cb150e43d22716e3ea893346977dff1a00fd15b34ef3b4a4c6"
+        }
+      ],
+      "notification_counts": [
+        2,
+        2
+      ],
+      "exit_fee_estimates": [
+        {
+          "totalFee": 462,
+          "broadcastFee": 333,
+          "claimFee": 129
+        }
+      ],
+      "restore_balances": [
+        {
+          "ark": 1990572,
+          "onchain": 7999845
+        },
+        {
+          "ark": 1990572,
+          "onchain": 7499795
+        }
+      ]
+    },
+    "android": {
+      "actions": [
+        "board",
+        "cancel",
+        "claim",
+        "drainExit",
+        "estimate",
+        "invoice",
+        "offboard",
+        "open",
+        "progressExit",
+        "refresh",
+        "restore",
+        "send",
+        "startExit",
+        "sync"
+      ],
+      "transactions": [
+        {
+          "action": "board",
+          "txid": "9edd23da8bd17f5b1c7c39a919f9c5deaf1984e7b5f378a5a759c018af921416"
+        },
+        {
+          "action": "offboard",
+          "txid": "180be17190d7dd78eb9a396173141b5c98af04e21c50f19bd8f7dcaaf4518ba8"
+        },
+        {
+          "action": "board",
+          "txid": "8ea5aafd9c8a989c770cd82f497b473ea54cbc482e7660a5dbe3e2118085bbf7"
+        },
+        {
+          "action": "drainExit",
+          "txid": "09c75dea7b21db9e6fe69d18208694baa461e212564e723f93267336568a1a07"
+        }
+      ],
+      "notification_counts": [
+        2,
+        2
+      ],
+      "exit_fee_estimates": [
+        {
+          "totalFee": 462,
+          "broadcastFee": 333,
+          "claimFee": 129
+        }
+      ],
+      "restore_balances": [
+        {
+          "ark": 1990572,
+          "onchain": 7999845
+        },
+        {
+          "ark": 1990572,
+          "onchain": 7499795
+        }
+      ]
+    }
+  }
+}
