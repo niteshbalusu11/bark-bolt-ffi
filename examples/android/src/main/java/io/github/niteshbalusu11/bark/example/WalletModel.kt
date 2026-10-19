@@ -14,6 +14,7 @@ class WalletModel(application: Application) : AndroidViewModel(application) {
     var error by mutableStateOf<String?>(null); private set
     var busy by mutableStateOf(false); private set
     var opened by mutableStateOf(false); private set
+    var notificationsReceived by mutableStateOf(0); private set
     var spendable by mutableStateOf(0uL); private set
     var onchainBalance by mutableStateOf(0uL); private set
     var arkAddress by mutableStateOf(""); private set
@@ -46,7 +47,7 @@ class WalletModel(application: Application) : AndroidViewModel(application) {
         opened = true; sync(); status = "Connected · RegTest"
         val holder = ark.notifications(); notification = holder
         listen = viewModelScope.launch {
-            try { while (isActive && holder.nextNotification() != null) readBalances() }
+            try { while (isActive && holder.nextNotification() != null) { notificationsReceived++; readBalances() } }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (failure: Exception) { error = failure.message }
         }
@@ -127,8 +128,9 @@ class WalletModel(application: Application) : AndroidViewModel(application) {
                 }
                 else -> error("Unknown automation action")
             }
+            if (request.optString("action") == "board") withTimeout(3000) { while (notificationsReceived == 0) delay(20) }
             readBalances()
-            result.put("ok", true).put("arkAddress", arkAddress).put("onchainAddress", onchainAddress)
+            result.put("notifications", notificationsReceived).put("ok", true).put("arkAddress", arkAddress).put("onchainAddress", onchainAddress)
                 .put("spendable", spendable.toLong()).put("onchain", onchainBalance.toLong())
                 .put("historyCount", activity.size).put("fingerprint", checkNotNull(wallet).fingerprint())
         } catch (cancelled: CancellationException) { throw cancelled }

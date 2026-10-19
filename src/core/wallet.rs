@@ -21,8 +21,7 @@ use crate::error::BarkError;
 use crate::{types, Network};
 
 /// Core Bark wallet logic. No binding-specific behavior — pure async over
-/// `bark::Wallet`. UniFFI / WASM wrappers layer their own concerns on top
-/// (run_async, mailbox processor, JsError conversion, etc).
+/// `bark::Wallet`. The native adapter adds runtime offload, callbacks and lifetime control.
 #[derive(Clone)]
 pub struct Wallet {
     inner: bark::Wallet,
@@ -114,10 +113,10 @@ fn describe_state(state: &types::VtxoState) -> String {
     }
 }
 
-#[allow(dead_code)] // some methods are wired only via the uniffi layer
+#[allow(dead_code)] // some methods are wired only via the native adapter
 impl Wallet {
     /// Build from an already-constructed `bark::Wallet`. `pub(crate)` so binding
-    /// wrappers that construct the inner wallet themselves (e.g. the uniffi
+    /// wrappers that construct the inner wallet themselves (e.g. the native
     /// callback-onchain path) can reuse it.
     pub(crate) fn from_inner(inner: bark::Wallet) -> Self {
         Self {
@@ -625,9 +624,7 @@ impl Wallet {
     /// BOLT11 invoice via LNURL-pay and pays it. `comment` is forwarded as
     /// the LNURL-pay comment field; the endpoint may reject or truncate it.
     ///
-    /// Available on every target: `bark` resolves LNURL over its HTTP client,
-    /// which on wasm is the browser's `fetch` — so in a browser the endpoint
-    /// must allow cross-origin requests, or this fails with a network error.
+    /// Bark resolves LNURL using its native HTTP client.
     pub async fn pay_lightning_address(
         &self,
         lightning_address: String,
@@ -1865,7 +1862,7 @@ impl Wallet {
     /// `fundable` sees the current confirmed balance.
     ///
     /// Requires an onchain wallet that can simulate the CPFP walk (the BDK
-    /// wallet does; uniffi callback wallets do not and return an error).
+    /// wallet does; foreign callback wallets do not and return an error).
     pub async fn estimate_emergency_exit_fee(
         &self,
         vtxo_ids: Vec<String>,

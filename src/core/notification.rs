@@ -44,8 +44,9 @@ struct WaitGuard<'a> {
 
 impl Drop for WaitGuard<'_> {
     fn drop(&mut self) {
-        *self.cancel.lock().unwrap() = None;
+        let sender = self.cancel.lock().unwrap().take();
         self.wait_in_progress.store(false, Ordering::Release);
+        drop(sender);
     }
 }
 
@@ -129,7 +130,9 @@ impl NotificationHolder {
     /// This does NOT destroy the underlying `NotificationStream`; a subsequent
     /// call to `next_notification()` will work normally and wait for new events.
     pub fn cancel_next_notification_wait(&self) {
-        if let Some(tx) = self.cancel.lock().unwrap().take() {
+        // Waking a foreign continuation can resume it synchronously on Android.
+        let sender = self.cancel.lock().unwrap().take();
+        if let Some(tx) = sender {
             let _ = tx.send(());
         }
     }

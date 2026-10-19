@@ -45,8 +45,8 @@ impl From<BtcNetwork> for Network {
 // Logging
 // ============================================================================
 
-// Serde/TS names are lowercase (`"error"` | `"warn"` | `"info"` | `"debug"` |
-// `"trace"`), matching `as_str`. Kept out of the doc comment, which uniffi
+// Serde names are lowercase (`"error"` | `"warn"` | `"info"` | `"debug"` |
+// `"trace"`), matching `as_str`. Kept out of the doc comment, which the generator
 // copies into the native bindings, where the level is a native enum.
 /// Severity of a log record.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -1955,7 +1955,7 @@ mod tests {
         assert_eq!(ffi.lightning_send.min_fee_sats, 50);
         assert!(ffi.lightning_send.ppm_expiry_table.is_empty());
 
-        // Field naming contract for the wasm surface.
+        // Field naming contract for serialized wallet data.
         let json = serde_json::to_value(&ffi).unwrap();
         assert_eq!(json["board"]["minFeeSats"], 100);
         assert_eq!(

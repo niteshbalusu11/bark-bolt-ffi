@@ -13,7 +13,7 @@ use crate::ffi::runtime::run_async;
 use crate::types::OnchainBalance;
 use crate::Network;
 
-/// UniFFI-facing onchain wallet. Supports two backends:
+/// BoltFFI-facing onchain wallet. Supports two backends:
 /// - BDK (real onchain wallet via `bark::onchain::OnchainWallet`)
 /// - Callback (foreign-language implementation)
 pub struct OnchainWallet {

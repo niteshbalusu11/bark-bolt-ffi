@@ -48,10 +48,7 @@ impl log::Log for Bridge {
         if !self.enabled(record.metadata()) {
             return;
         }
-        // Cloned out so the lock isn't held during the foreign call: the call
-        // can block until the foreign runtime runs it (React Native runs it on
-        // the JS thread), and that thread may be waiting for the lock in
-        // `set_logger` or `clear_logger`.
+        // Foreign callbacks may replace or clear the logger; release the lock first.
         let sink = SINK.read().unwrap_or_else(PoisonError::into_inner).clone();
         let Some(sink) = sink else {
             return;

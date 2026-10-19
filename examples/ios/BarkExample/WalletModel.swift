@@ -13,6 +13,7 @@ final class WalletModel: ObservableObject {
     @Published var invoice = ""
     @Published var activity: [Movement] = []
     @Published var opened = false
+    @Published var notificationsReceived = 0
     @Published var endpoint = "http://127.0.0.1:3635"
     @Published var bitcoinEndpoint = "http://127.0.0.1:19443"
     var wallet: Wallet?
@@ -53,6 +54,7 @@ final class WalletModel: ObservableObject {
                 while !Task.isCancelled {
                     guard try await holder.nextNotification() != nil else { break }
                     guard let self else { break }
+                    self.notificationsReceived += 1
                     try await self.readBalances()
                 }
             } catch { if !Task.isCancelled { self?.error = error.localizedDescription } }
@@ -73,7 +75,7 @@ final class WalletModel: ObservableObject {
         try await readBalances()
     }
 
-    func perform(_ action: @escaping () async throws -> Void) {
+    func perform(_ action: @escaping @MainActor () async throws -> Void) {
         guard !busy else { return }
         busy = true; error = nil
         Task {
@@ -144,8 +146,11 @@ final class WalletModel: ObservableObject {
                 extra["reused"] = true
             default: throw AppError.message("Unknown automation action")
             }
+            if action == "board" {
+                for _ in 0..<100 where notificationsReceived == 0 { try await Task.sleep(nanoseconds: 20_000_000) }
+            }
             try await readBalances()
-            return ["ok": true, "arkAddress": arkAddress, "onchainAddress": onchainAddress,
+            return ["notifications": notificationsReceived, "ok": true, "arkAddress": arkAddress, "onchainAddress": onchainAddress,
                     "spendable": spendable, "onchain": onchainBalance, "historyCount": activity.count,
                     "fingerprint": self.wallet!.fingerprint()].merging(extra) { _, value in value }
         } catch let error as BarkError { return ["ok": false, "error": error.message] }

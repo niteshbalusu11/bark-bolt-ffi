@@ -11,6 +11,7 @@ shift
 if [[ "$platform" == apple ]]; then
     export IPHONEOS_DEPLOYMENT_TARGET=16.0
     "$BOLTFFI" pack apple "$@" --deny-skipped --layout ffi-only
+    cp sdk/swift-support/Concurrency.swift dist/apple/Sources/BoltFFI/Concurrency.swift
     "$BOLTFFI" generate swift --deny-skipped
 elif [[ "$platform" == android ]]; then
     "$BOLTFFI" pack android "$@" --deny-skipped

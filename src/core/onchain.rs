@@ -17,8 +17,7 @@ use crate::Network;
 
 /// BDK-based onchain Bitcoin wallet for boarding and exits.
 ///
-/// Core type, shared between uniffi and wasm bindings. Holds only the
-/// BDK case — callback-backed wallets are a uniffi-only concept layered
+/// Core implementation for the BDK backend. Callback-backed wallets are layered
 /// on top of the core inner `bark::Wallet`.
 pub struct OnchainWallet {
     wallet: Arc<RwLock<BarkOnchainWallet>>,

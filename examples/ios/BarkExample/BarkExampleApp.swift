@@ -103,7 +103,11 @@ struct WalletView: View {
             }
             .disabled(model.busy)
             .navigationTitle("Bark Wallet")
-            .tint(.green)
+            .tint(Color(uiColor: UIColor { traits in
+                traits.userInterfaceStyle == .dark
+                    ? UIColor(red: 0.44, green: 0.86, blue: 0.69, alpha: 1)
+                    : UIColor(red: 0, green: 0.42, blue: 0.30, alpha: 1)
+            }))
             .confirmationDialog("Exit every VTXO? This broadcasts onchain transactions and requires mining the exit delay.", isPresented: $confirmExit, titleVisibility: .visible) {
                 Button("Start exit", role: .destructive) { model.perform { try await model.wallet!.startExitForEntireWallet() } }
             }

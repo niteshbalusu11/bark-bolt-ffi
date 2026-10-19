@@ -36,7 +36,7 @@ class MainActivity : ComponentActivity() {
             } }
         }
         setContent {
-            MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
+            MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme(primary = androidx.compose.ui.graphics.Color(0xFF70DBAF)) else lightColorScheme(primary = androidx.compose.ui.graphics.Color(0xFF006C4C))) {
                 WalletScreen(model)
             }
         }
@@ -61,7 +61,7 @@ fun WalletScreen(model: WalletModel) {
                 item { Heading("Connect") }
                 item { OutlinedTextField(model.endpoint, { model.endpoint = it }, label = { Text("Ark server") }, modifier = Modifier.fillMaxWidth(), enabled = !model.busy) }
                 item { OutlinedTextField(model.bitcoinEndpoint, { model.bitcoinEndpoint = it }, label = { Text("Bitcoin RPC") }, modifier = Modifier.fillMaxWidth(), enabled = !model.busy) }
-                item { OutlinedTextField(restore, { restore = it }, label = { Text("Recovery phrase (optional)") }, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(), enabled = !model.busy) }
+                item { OutlinedTextField(restore, { restore = it }, label = { Text("Recovery phrase (optional)") }, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth(), enabled = !model.busy) }
                 item { Button(onClick = { model.perform { model.open(restore); restore = "" } }, enabled = !model.busy, modifier = Modifier.testTag("open-wallet")) { Text("Create or open wallet") } }
             } else {
                 item { Heading("Wallet") }

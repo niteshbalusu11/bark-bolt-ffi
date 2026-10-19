@@ -98,7 +98,7 @@ validation strategy; baseline failures are separated from migration regressions.
 
 ### 02 — Build a reproducible RegTest backend
 
-- [ ] Boot compatible, isolated Bitcoin/Ark/Lightning services.
+- [x] Boot compatible, isolated Bitcoin/Ark/Lightning services.
 
 **Engineering plan:** adapt Nitro's setup into regtest/ and lifecycle scripts.
 Choose server/CLI versions compatible with Bark 0.7.1, supply missing config and
@@ -116,7 +116,7 @@ does not touch existing Nitro or unrelated wallet/database volumes.
 
 ### 03 — Port the full Rust binding layer
 
-- [ ] Replace production UniFFI exports with BoltFFI across the complete API.
+- [x] Replace production UniFFI exports with BoltFFI across the complete API.
 
 **Engineering plan:** retain the core/native adapter seam and Bark revision.
 Specify concrete object returns, separate onchain factory arguments, message
@@ -167,7 +167,7 @@ cannot silently resolve an old UniFFI binary.
 
 ### 06 — Remove other languages and old infrastructure
 
-- [ ] Leave a Swift/Kotlin-only product with no active UniFFI or browser layer.
+- [x] Leave a Swift/Kotlin-only product with no active UniFFI or browser layer.
 
 **Engineering plan:** identify direct features/consumers to remove; retain Rust
 dependencies still needed for metadata or wallet behavior. Import only required
@@ -214,7 +214,7 @@ and test reports.
 
 ### 09 — Prepare repeatable simulator/emulator execution
 
-- [ ] Resolve device prerequisites and automate device readiness.
+- [x] Resolve device prerequisites and automate device readiness.
 
 **Engineering plan:** select local/CI OS images; install the missing Android
 emulator/system image; define boot readiness, forwarding and test data isolation.
@@ -336,3 +336,63 @@ Validation: all 52 original native tests passed; native Clippy with warnings
 denied passed under Rust 1.90 after adding installed Homebrew tools to PATH.
 The first attempt failed only because protoc was outside PATH.
 Remaining limits: migrated signatures and host parity are validated in task 03/05.
+
+## Implementation checkpoint — tasks 02–06
+
+Plans: docs/plans/02-regtest.md, 03-native-port.md and 05-sdk-packaging.md.
+The port preserves all 128 callable names, 40 records, 14 enums and both callbacks;
+Wallet.open_with_onchain is the added factory for the removed record object field.
+All 54 Rust tests and warnings-denied Clippy pass. Strict generation omits no API.
+Swift and Kotlin native contract tests pass, including full u64 and callback
+errors. Both native apps compile and create actual RegTest wallets.
+
+A fresh isolated Compose project also bootstrapped successfully and boarded
+998,900 sats. Repeating bootstrap preserves its wallet. The reference CLI/server
+are official 0.7.1 images; Bitcoin31 is required by that server.
+
+Real Android cancellation found and reproduced a reentrant mutex deadlock:
+Kotlin Unconfined timed out at 15s before the fix. Taking the cancel sender out
+of the lock before waking it makes the JVM regression and Android reuse command
+pass. iOS cancellation also passes. No generated binding file was patched.
+Full transaction acceptance and hosted CI remain in progress.
+
+## Completion record — task 02
+
+Engineering plan and paths: docs/plans/02-regtest.md; regtest/ and scripts/regtest.py.
+Implemented: digest-pinned Bitcoin31, Postgres, CLN/hold plugin, LND and exact
+Bark/server0.7.1; bounded bootstrap, funding/mining, channel setup and lifecycle.
+Validation: fresh project bootstrap/reference boarding succeeds; repeated setup
+preserves wallet; real apps paid/received Lightning through the funded channel.
+Artifacts: docs/validation/2026-10-18.md records actual transaction identifiers.
+Remaining limits: real external LNURL/BOLT12 providers are separate fixtures.
+
+## Completion record — task 03
+
+Engineering plan and paths: docs/plans/03-native-port.md; Cargo files and src/.
+Implemented: the full API uses BoltFFI, concrete factories, value records,
+message errors and foreign callbacks; onchain validation/datadir logic retained.
+Validation: 54 tests and strict Clippy pass; strict Swift/Kotlin generation and
+scripts/check-api.py account for every original export/type/callback.
+Artifacts: docs/api-baseline.json and docs/validation/2026-10-18.md.
+Remaining limits: packaging and hosted CI have their own acceptance tasks.
+
+## Completion record — task 06
+
+Engineering plan and paths: docs/plans/03-native-port.md and 05-sdk-packaging.md.
+Implemented: removed browser source/features, UniFFI scaffolding/dependency and
+GitLab CI; current products are Swift/Kotlin with native Rust implementation.
+Validation: native test/Clippy, strict generation, both SDK/app builds and live
+wallet transactions succeed after deletion. No old binary satisfies these apps.
+Artifacts: src/ffi/, boltffi.toml, Gradle modules and GitHub Actions workflows.
+Remaining limits: the historical compatibility proof remains until release cleanup.
+
+## Completion record — task 09
+
+Engineering plan and paths: docs/plans/07-08-native-apps.md; scripts/wait-devices.py,
+docs/devices.md and CI device setup.
+Implemented: installed API35 arm64 emulator/tools; created/booted BarkRegtest;
+opened both devices through T3, with bounded readiness and endpoint forwarding.
+Validation: wait-devices.py passes for both; installed apps create real wallets,
+complete transactions, and local XCTest/Compose instrumentation tests pass.
+Artifacts: docs/validation/2026-10-18.md and local device/test reports.
+Remaining limits: CI device execution is verified under tasks11–12, not inferred.

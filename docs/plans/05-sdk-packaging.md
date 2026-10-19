@@ -22,3 +22,21 @@ strict generation must report no omissions. Preserve the old SQLite filename.
 
 Remove .gitlab-ci.yml and obsolete browser docs/source/build commands after the
 native checks pass, updating README with only supported consumer products.
+
+Device acceptance exposed a hang in Kotlin notification cancellation/reuse.
+Minimize this with a real-wallet JVM test (no daemon, persistent temp SQLite;
+the offline attempt requires a genesis-block chain request, so use RegTest), then compare host cancellation and explicit
+cancellation independently before changing the shared implementation. Preserve a
+regression at this actual SDK boundary. Do not bypass this acceptance check.
+
+Confirmed cancellation cause: `if let` held the cancel mutex through tx.send,
+which synchronously resumes Kotlin Main.immediate/Unconfined and re-enters
+cleanup. An actual JVM RegTest test with Dispatchers.Unconfined times out in
+15s before the fix. Take the sender out of the lock before waking or dropping it.
+
+Modern Swift validation: compile the example in Swift6 language mode, not only
+with a Swift6 compiler in Swift5 mode. If generated object classes lack Sendable,
+add a separate handwritten sdk/swift-support/Concurrency.swift (never edit the
+generated file), justified by native Rust Send/Sync objects and atomic handles.
+Copy it into each packaged Swift target; test the strict app and actor crossing.
+Callback implementations still must synchronize state when called by Rust workers.

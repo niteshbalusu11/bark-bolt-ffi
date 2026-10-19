@@ -50,7 +50,7 @@ pub struct WalletOpenArgs {
     pub skip_recovery: bool,
 }
 
-/// UniFFI-facing Bark wallet.
+/// BoltFFI-facing Bark wallet.
 ///
 /// Wraps `core::Wallet` and adds:
 /// - `run_async` runtime offload on every entry point
@@ -914,7 +914,7 @@ impl Wallet {
     /// partial success; omit it for the defaults.
     ///
     /// The first parameter keeps its historical `vtxo_base64` name for foreign
-    /// binding compatibility (uniffi exposes parameter names), but hex as
+    /// binding compatibility (bindings expose parameter names), but hex as
     /// returned by [`Wallet::vtxo_encoded`] is accepted too.
     pub async fn import_vtxo(
         &self,

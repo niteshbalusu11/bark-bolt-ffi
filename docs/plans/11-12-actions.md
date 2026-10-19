@@ -22,3 +22,10 @@ Document the prerequisites for a permanent integration runner separately.
 All commands have bounded timeouts; retain diagnostics on failure. Never claim a
 hosted build from a local result. Trigger actual Actions runs after pushing the
 implementation and fix failed jobs. Verify API parity after strict generation.
+
+First real CI findings: hosted Ubuntu does not put sdkmanager on PATH; add the
+pinned setup-android action/CLI12. cargo-audit0.21.2 cannot parse current CVSS4
+advisories; 0.22.2 supports Rust1.88+ and is pinned instead. The current database
+reports seven advisories across quinn-proto0.11.17 and rustls0.23.45. Update only
+to patched compatible versions (0.11.18 and 0.23.46), retain Bark0.7.1, run audit
+without ignoring advisories, then rebuild/test affected SDKs.

@@ -29,7 +29,9 @@ jobs:
           xcodebuild -project examples/ios/BarkExample.xcodeproj -scheme BarkExample -sdk iphonesimulator -destination "platform=iOS Simulator,id=$IOS_DEVICE" -derivedDataPath build/ios build
           xcrun simctl install "$IOS_DEVICE" build/ios/Build/Products/Debug-iphonesimulator/BarkExample.app
           adb -s "$ANDROID_SERIAL" install -r examples/android/build/outputs/apk/debug/android-debug.apk
-      - run: python3 scripts/app-regtest.py --extended | tee app-regtest-results.jsonl
+      - run: |
+          set -o pipefail
+          python3 scripts/app-regtest.py --extended | tee app-regtest-results.jsonl
       - if: always()
         run: docker compose -f regtest/compose.yaml logs --tail=200 > regtest.log
       - if: always()

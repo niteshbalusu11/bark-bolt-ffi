@@ -1,17 +1,14 @@
-# Security Policy
+# Security reporting
 
-## Reporting a Vulnerability
+This repository maintains the BoltFFI bindings and native examples. Report
+binding, packaging or example-app vulnerabilities privately to the repository
+owner through GitHub. Include the commit, platform and a minimal reproduction;
+exclude recovery phrases, wallet databases and credentials.
 
-Please report any vulnerability or any bug that could potentially affect the
-security of users' funds by e-mail to [`security@second.tech`](mailto:security@second.tech).
+For vulnerabilities in the underlying Bark wallet/protocol, follow
+[upstream's security policy](https://gitlab.com/ark-bitcoin/bark/-/blob/master/SECURITY.md).
+The upstream team's reporting channel applies to upstream core code; it does
+not imply that they maintain this fork.
 
-Please do not report security issues through public issue trackers or chat
-channels.
-
-You may use the following PGP keys to encrypt your e-mail:
-
-- `8CC974D9CFD034DCEED213B02A57E0A610D7F19C` (Steven Roose)
-- `011E7F59B45397C4654D81298F44B2DD98E18528` (Erik De Smedt)
-
-Both keys can be found on the [keys.openpgp.org](https://keys.openpgp.org/)
-keyserver.
+CI runs cargo-audit against Cargo.lock. Advisory exceptions require a documented
+reason in .cargo/audit.toml; the current ignore list is empty.

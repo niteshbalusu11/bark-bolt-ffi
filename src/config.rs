@@ -69,7 +69,7 @@ pub struct Config {
 
 /// Compile-time default user-agent. Each language wrapper sets
 /// `BARK_FFI_DEFAULT_LANG` in its `.cargo/config.toml [env]` (e.g. `"swift"`,
-/// `"wasm"`); cargo propagates it to dependency builds, and bark-ffi composes
+/// `"kotlin"`); cargo propagates it to dependency builds, and bark-ffi composes
 /// `bark-{lang}/{bark-ffi-version}` from it. Returns `None` when bark-ffi is
 /// built standalone.
 fn default_user_agent() -> Option<String> {

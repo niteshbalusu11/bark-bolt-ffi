@@ -1,7 +1,7 @@
 //! Callback-based onchain wallet adapter
 //!
-//! This module allows foreign languages (Dart, Swift, Kotlin) to provide their own
-//! onchain wallet implementations via UniFFI callbacks. The adapter implements the
+//! This module allows foreign languages (Swift, Kotlin) to provide their own
+//! onchain wallet implementations via BoltFFI callbacks. The adapter implements the
 //! Bark onchain wallet trait by forwarding calls to the callback interface.
 
 use std::sync::{Arc, Mutex};
