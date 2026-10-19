@@ -9,6 +9,7 @@ android {
     defaultConfig {
         applicationId = "io.github.niteshbalusu11.bark.example"
         minSdk = 24; targetSdk = 35; versionCode = 1; versionName = "0.1.0"
+        ndk { abiFilters += setOf("arm64-v8a", "armeabi-v7a", "x86_64") }
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true; buildConfig = true }

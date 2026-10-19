@@ -54,6 +54,7 @@ GitHub Actions also uploads the built AAR/JAR and example APKs.
 | Swift resources | ARC releases native handles. The separate concurrency adapter marks synchronized native object wrappers Sendable for Swift6 actor crossing. |
 | Callbacks | Implement all methods of `CustomOnchainWalletCallbacks` or `BarkLogger`. Native workers can call them off the UI thread; synchronize mutable state. Native ownership retains callbacks until their owner/logger registration is released. |
 | Notifications | One pending receive per holder. Explicit cancellation or host-task cancellation releases that wait; reuse is supported. Concurrent waits return an error. |
+| Recovery outcome | `open` mirrors upstream best-effort recovery. Inspect `recoveryStatus()` and the completed report's `isComplete` before declaring seed recovery successful. |
 | Cancellation | Cancelling a foreign await does not roll back a submitted wallet operation. Tokio work already submitted may finish; sync/reconcile the wallet before retrying a payment. |
 | Daemon | Stop with `stopDaemonWait()` before replacing a wallet. Dropping the last native wallet also stops its daemon. |
 
@@ -103,7 +104,11 @@ unsigned32-bit at the FFI; relative block deltas above65535 return a typed error
 RegTest follows Nitro master's Bitcoin/Postgres/CLN/LND/server/CLI topology, with
 this project's isolated storage and ports. It uses the user's multi-architecture
 `niteshbalusu/bark:nightly-2026-10-19` (same master commit) and latest available
-`niteshbalusu/captaind:nightly-2026-10-18` (0.7.1 release), each pinned by digest.
-The server requires Bitcoin31, which the stack pins. The server image pin was
-explicitly confirmed by the user. The dates are registry UTC
+`niteshbalusu/captaind:nightly-2026-10-19` (same master commit), each pinned by digest.
+The server requires Bitcoin31, which the stack pins. Both images are pinned to the exact master revision; the older captaind tag
+lacks required recovery RPCs. The dates are registry UTC
 build dates; the Bark image was published on October18 in America/New_York.
+
+Android consumers should restrict `defaultConfig.ndk.abiFilters` to
+`arm64-v8a`, `armeabi-v7a`, and `x86_64`, as the example does. This prevents a
+transitive dependency's x86 library from advertising an ABI without Bark JNI.

@@ -32,7 +32,7 @@ services:
       timeout: 3s
       retries: 60
   captaind:
-    image: niteshbalusu/captaind:nightly-2026-10-18@sha256:9ef847236b92564d694b0ab1ed9a0c5d5dd1baa428840411376010610cb4cb8e
+    image: niteshbalusu/captaind:nightly-2026-10-19@sha256:42b7bb01c7e7e9872f730a31c3132f5b0678dacca11b483d7309c64c86c5f649
     environment: { CAPTAIND_CONFIG_PATH: /config/captaind.toml }
     volumes: [server:/data/captaind, cln:/data/cln, "./captaind.toml:/config/captaind.toml:ro"]
     ports: ["127.0.0.1:${ARK_PORT:-3635}:3535"]

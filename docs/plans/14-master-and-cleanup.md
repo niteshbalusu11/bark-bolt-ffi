@@ -64,3 +64,19 @@ retain the explicit Config.user_agent field. No seed/persistence behavior change
 Remove the machine-specific simulator UUID from the acceptance driver's default;
 require --ios-device or IOS_DEVICE for iOS runs. Existing documented commands and
 Actions already supply it; Android-only hosted runs remain independent of iOS.
+
+Recovery regression: integration39198410963 restored0 while the source wallet
+held1990572 sats. A minimal upstream-CLI probe against the same server recovers0
+from a funded998900-sat wallet in seconds, so the symptom is below BoltFFI/apps.
+Server logs show RecoverVtxosByXpub, GetVtxosStatusByIds and GetVtxosByIds return
+Unimplemented on the older0.7.1 server. During execution, user captaind tag
+nightly2026-10-19 appeared (04:02UTC); its binary reports exactmasterbfbe6b7c.
+Use that latest available tag/digest42b7bb01c7e7e9872f730a31c3132f5b0678dacca11b483d7309c64c86c5f649,
+within the user's confirmed latest-tag direction. Upgrade only this project's
+server and retain its funded data; rerun the identical CLI probe before full
+app acceptance. No fallback RPC shim or altered wallet logic is justified.
+
+External Maven consumer testing exposed transitive Compose x86 natives making
+the APK advertise unsupported x86. Limit the example app's ABI filters to the
+SDK's arm64-v8a/armeabi-v7a/x86_64 matrix, document the consumer requirement and
+rebuild the external minified APK. This changes app packaging only.
