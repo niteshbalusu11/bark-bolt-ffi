@@ -1,0 +1,933 @@
+{
+  "source_commit": "249386eecc6d267e3b75a275e15b9897f95a0f30",
+  "profile": "development SDKs built from this repository",
+  "events": [
+    {
+      "platform": "ios",
+      "action": "open",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqpakh4x7h94d7fjg4uf5swleyjf72dsjjzux6wx4dza4xw9prgmyppzqyp66sceuhc7qjm0h55y2vwzsv8564a7lspkrfk9gupazdhgrvj8w8ccshgh8",
+        "fingerprint": "95f91344",
+        "historyCount": 0,
+        "notifications": 0,
+        "ok": true,
+        "onchain": 0,
+        "onchainAddress": "bcrt1p8wmunmfh52968jj2fcl4grd6grrvh838ud34y9qks8try5egu7qq5c66nu",
+        "spendable": 0
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "cancel",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqp2rfu5n0tcn9f4mek4c92n5w4p5j233qy58z8rv8x3kdr5myu7p4fzqypqv5k3pp7hq725v23sp3yktw66tak25rspp4gk6wemk6pu2ucnpec257ege",
+        "fingerprint": "95f91344",
+        "historyCount": 0,
+        "notifications": 0,
+        "ok": true,
+        "onchain": 0,
+        "onchainAddress": "bcrt1p46ft9zr779yvgdvuvvaqwev99zsna50p9n90erqsurcalh29fw2s3l8qlm",
+        "reused": true,
+        "spendable": 0
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "send",
+      "result": {
+        "error": "invalid ark address: bech32m decoding error: parsing failed",
+        "ok": false
+      }
+    },
+    {
+      "platform": "android",
+      "action": "open",
+      "result": {
+        "notifications": 0,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqpj98curdmkvt0llrc73gmhyr5u0y8pkumf7ge325703uthvmun4zezqyplysej82tjaz0lhfhdfqafgngy38kqd0psma4g7l94lnkse0avt2qn6aq0j",
+        "onchainAddress": "bcrt1p049tpm3d044w8hr5dj2nfg5yxgdkwe5h07f7q75uu3a5fqexhqfsc8luel",
+        "spendable": 0,
+        "onchain": 0,
+        "historyCount": 0,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "cancel",
+      "result": {
+        "reused": true,
+        "notifications": 0,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqpw5epeqrmek4sepa9h7k8ty9addz6fjc7v6ns6runp0hskq4tpkc3zqyp2pql0zg7ly23vgtxqw3n5sdnw22lgwkfqrhmsgxs7zhjy93l4swc0mdw6e",
+        "onchainAddress": "bcrt1pfk05xlhvnu2tlmj6pa0vdv0g5u2yf4zz2y6jqa3a5ch7mg097kds20jf4c",
+        "spendable": 0,
+        "onchain": 0,
+        "historyCount": 0,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "send",
+      "result": {
+        "ok": false,
+        "error": "invalid ark address: bech32m decoding error: parsing failed"
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "sync",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqp9f8kcnnua5cf4zu7a4f3unqh3utdly656wtu7hp2er4uzwsfyu8pzqypq096v0ml6n52sj8yjjjy3v4ug9cndnzlwny8zezu8f3untny60dgcgult3",
+        "fingerprint": "95f91344",
+        "historyCount": 0,
+        "notifications": 0,
+        "ok": true,
+        "onchain": 10000000,
+        "onchainAddress": "bcrt1p5ywdnw42lenqvq7e9hfz8rg9ekkf5xuez6fzvv9f7hztmhnpwsfsz5nsjd",
+        "spendable": 0
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "board",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqpcyvnxgp7psypmpn2urw632h5wm2ypvmv3vu2zc3gqfrzhyawlzepzqypq8tcvs8c9qkygdy389t89eugay096ad9wc7sjrp7ny6wxdyhh67csfjvvj",
+        "fingerprint": "95f91344",
+        "historyCount": 1,
+        "notifications": 2,
+        "ok": true,
+        "onchain": 7999843,
+        "onchainAddress": "bcrt1pnte9ywlzv0pw3l6na0cjzf4pyk497k2nrhs98ujpf0ewznmfmuyqsht37v",
+        "spendable": 0,
+        "txid": "3c70459f5d5748051720d812c90f99f47b3fd01035b01d53b4b0e92241d1f846"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "sync",
+      "result": {
+        "notifications": 0,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqp9r9zzkxw4jtrtvzzem297z76v454seggzrjec96cgzs48xhdln5pzqypjp3a35esmtdcqwk89xpxqkn6fwuz4zzhdddlsvknalpm2svqxwacpyeues",
+        "onchainAddress": "bcrt1pqy6spgnkv909ga9cnsn9aw2pegw90tr4580aev4eqsht3ghy6xlsm763rz",
+        "spendable": 0,
+        "onchain": 10000000,
+        "historyCount": 0,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "board",
+      "result": {
+        "txid": "44dba7714649239b87f33311af039d567f86dffba7f9fcde5ab93db95a8264b0",
+        "notifications": 2,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqpvw760pr42leypm0084an5a9peqq2dg8xdj9vyeamj9d2zz94sluezqypdvay2dfw7lupfwhntag4ernldk9hv6uzkay3gwcql2s3e3s5ex2ch6gdsw",
+        "onchainAddress": "bcrt1p9drvwvz2l28glp2s2l94wlt09e7u9qngxvxrz9fy7djlvv89kscqgql0sz",
+        "spendable": 0,
+        "onchain": 7999843,
+        "historyCount": 1,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "sync",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqp39u20h5sxmzr2nxp4538u927ap2xwj4dnwx3vdwh5v4yst028z2pzqyp2fvqmu7yp8cmf7vydmw3e2yruy2c0lr3lgt5uwfcgufs7zrdl4lc2qg9n0",
+        "fingerprint": "95f91344",
+        "historyCount": 1,
+        "notifications": 0,
+        "ok": true,
+        "onchain": 7999843,
+        "onchainAddress": "bcrt1p09zhrnhde8n8qhvtzeve86vjk37ymza5snslkrljm0ywhffmj87qkdyj98",
+        "spendable": 1997900
+      }
+    },
+    {
+      "platform": "android",
+      "action": "sync",
+      "result": {
+        "notifications": 0,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqp9djaqy4970jv3mpc58a3c4y40e9sfk8ly65g55ntqqchj3gj6szpzqypddhv5r72kcwr5vcg2pklfyq4n7xa8g5vnyfhhwqzpry68gfdpn4sm65nkc",
+        "onchainAddress": "bcrt1pzc2kczg394mjfa39a76xha3nglmf3vtdvc52kpvh59uxx0hcqv7q9nd2ch",
+        "spendable": 1997900,
+        "onchain": 7999843,
+        "historyCount": 1,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "send",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqpmk7ansludszrmeqptgnj2cc963h5t3h2mypp3mjtzshmnhqg4dyfzqypezlq3wkxjfwp2l3v86z7lrvu4yyyf8l2f4xs305eaxgv6swfsq2qf04mgp",
+        "fingerprint": "95f91344",
+        "historyCount": 2,
+        "notifications": 3,
+        "ok": true,
+        "onchain": 7999843,
+        "onchainAddress": "bcrt1ppuuu0eh5u38zzjffx665sezgcs06ysrnp0lduzlhak3crct5e5cqssldc2",
+        "spendable": 1987900
+      }
+    },
+    {
+      "platform": "android",
+      "action": "sync",
+      "result": {
+        "notifications": 0,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqpda7l9agpch9qgztcsfr9nn9z5cunpzn33qtzfd924hdseqjg284ezqyprzdjlrgskmph8xn45aueeeu9seljvvfjg9snz8hx40urspemnrlckvhtkz",
+        "onchainAddress": "bcrt1pgpaw8zypmju90s7naxszfndwy0hsyux87kw8lyaa7dpnk4jmgv9srjm9ka",
+        "spendable": 2007900,
+        "onchain": 7999843,
+        "historyCount": 2,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "send",
+      "result": {
+        "notifications": 2,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqpygjuzg9vett07408npkjkpc4cs247ufa2ds9l5gducep3zf4ykrezqypp7fulg4z6sll39xefgrdnd2h5t4xxm3thnhm0lvukaef76k0kx7czdp6ft",
+        "onchainAddress": "bcrt1pxxm5xlz8tqcc4chvq0sfkmp9alm443pxcu3spgw0a9ktksw9wrrsltrdrr",
+        "spendable": 1997900,
+        "onchain": 7999843,
+        "historyCount": 3,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "sync",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqpwa23dak2g7ctgnnz67pnhkrgcgmmw9tgmuwj2g68akwkf8j9mwdezqypjvwsmgecgy359a88eg6m7ja0afg28ghpemkw057yvres8q3525mcdex5lv",
+        "fingerprint": "95f91344",
+        "historyCount": 3,
+        "notifications": 0,
+        "ok": true,
+        "onchain": 7999843,
+        "onchainAddress": "bcrt1pnr59lg8jtnsg8qt3zp3hlcs7tykqpmyyg9aa3w8x5hcfddh24fjq37frtm",
+        "spendable": 1997900
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "open",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqpcn9caf30hezapa5hd5uh4nupgmy26snrkggn0znd859p88ttcxzfzqypm3pf5275exs0qx234u0pftwzpfyljhrc97f32prqg46h70d7a2mqd9lf82",
+        "fingerprint": "95f91344",
+        "historyCount": 3,
+        "notifications": 0,
+        "ok": true,
+        "onchain": 7999843,
+        "onchainAddress": "bcrt1phcrzaysmd7kjazu55uh7p5gpawlpjvlg90jqz4g4nhmwnmfdtlss452sc3",
+        "spendable": 1997900
+      }
+    },
+    {
+      "platform": "android",
+      "action": "open",
+      "result": {
+        "notifications": 0,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqpqgupf8mzen4ntxmkew5jr4tetl66xvetuywm8jf2ym8n3dhzjp03zqyprtj6zw6ehnw8lsdxk74a8zazxznkgafm2zyu7vewv3dayxelml5qxlnf7w",
+        "onchainAddress": "bcrt1p60e5xqwnqv5t0r57586kg7440eprxx5j2gyj94dg30dakxduv66qz8404l",
+        "spendable": 1997900,
+        "onchain": 7999843,
+        "historyCount": 3,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "send",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqp84c8kvk2349v027c6mfp29fa5dpasks95dzg2r7rz7vs5p9s0x4ezqypfwknkz05umdv58cvuwa5rgrkarmpmddudyfagk7hd3m45u6g0zhsqk4hnk",
+        "fingerprint": "95f91344",
+        "historyCount": 4,
+        "notifications": 4,
+        "ok": true,
+        "onchain": 7999843,
+        "onchainAddress": "bcrt1pl58r3rzvfwj35esg8gma94z4ljry5wnf06ru0gkqnaumed55rzgqxgxgul",
+        "spendable": 1996821
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "invoice",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqp7tx65rmfajfwayzhy2d3mg9zsmxa9qwkeshg866gldh5kqwre6v3zqypyfm2zd0ewvp032w69st28qrppu8pz874zy53epxjqgx9ljtn087sj3yhyc",
+        "fingerprint": "95f91344",
+        "historyCount": 4,
+        "invoice": "lnbcrt20u1p4dvk68sp5zftem6tzkjfvgy7gq3l0u76prl439lxpev3yp8pdtndg2whz9mmspp5dymlml8jx552zjrzcmmwrhyxvzz2eht9l0l4gtw93yn9yszjuyjsdqj2dzykgzjv4n4getnwsxqy9gcqcqzrj9qyysgq28xjw7cjjdvt9ultd2rhm9zg08yf8jdcvhr4ykdmw3vyznh543knzpg58cc2l69t00qlc54v2hjyd80cvadrd60ygt9t6ahcc8eyk0gqpawha8",
+        "notifications": 0,
+        "ok": true,
+        "onchain": 7999843,
+        "onchainAddress": "bcrt1p8nn6llt3vyr2ngkm0sdp78equprw3j3ll6as60q5um7p244efe5qv50jxk",
+        "paymentHash": "6937fdfcf23528a14862c6f6e1dc866084acdd65fbff542dc58926524052e125",
+        "spendable": 1996821
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "claim",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqphkf3fpjyt252a2wr9l32hv5cj7gdtuysmupxe29d3cvsj4ag3xufzqypcwxnk3f6ysn92wegu6ltxv77j5lhqkmf8xkjyfrqueq7ahsx5s3cl3jd6s",
+        "fingerprint": "95f91344",
+        "historyCount": 5,
+        "notifications": 0,
+        "ok": true,
+        "onchain": 7999843,
+        "onchainAddress": "bcrt1p2mtk4t9z0qq3zcht92thrrt73gxdp6uz8zpsg9sfa9rk28wzmm6snqmryu",
+        "spendable": 1998717
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "sync",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqp6m5pzy356wzdd0fd3vy8lhegk2a58fwk3ectncgc4r945eswhk53zqyppl63sjmfp9umf64y2flhkwjdx5j4hdfj9rskakdpuxnjhxyskxucqfpvrt",
+        "fingerprint": "95f91344",
+        "historyCount": 5,
+        "notifications": 0,
+        "ok": true,
+        "onchain": 7999843,
+        "onchainAddress": "bcrt1p6p3slcrw0z8rnnlkquqn5sd5ag48mtdmqhltshu654fa5rm89d9s9pghh4",
+        "spendable": 1998717
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "refresh",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqp7gecmnakqetzeqpfl5d4algls4mp5afy8tnnr7gu2qgwxyhl58xpzqypym75h4txacml8jm9clp9ywhln0724m0q3k5m07m697q62q582sss4vsn4s",
+        "fingerprint": "95f91344",
+        "historyCount": 6,
+        "notifications": 3,
+        "ok": true,
+        "onchain": 7999843,
+        "onchainAddress": "bcrt1purc55r96yrhmn8c8e4etwy2fjeeajy9l0r2r533axzvf87ps0ngqp5ghuz",
+        "spendable": 0,
+        "txid": "Unconfirmed { funding_txid: 5ea52b92b3858599f7316018d322eb83725e696fdf3cb61f0079e2c1f7922887 }"
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "sync",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqppy8zsxpuwwm2dw5uv42fvl2pakv0sl5sgq9hme4awte9gn0w4u63zqyph9n2hvdx7mkrmfkyly7faqtmng3wq2yudghddsfesad4xzle9ucqevm229",
+        "fingerprint": "95f91344",
+        "historyCount": 6,
+        "notifications": 0,
+        "ok": true,
+        "onchain": 7999843,
+        "onchainAddress": "bcrt1px7s65jn3seumeujsd73vq0v644qk09xlvecuwfpy3epu0cqgzjyqf27jua",
+        "spendable": 1990572
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "sync",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqpgxkdy8nzjn2cjuhqyyp79y3scwn7vsvp89frklh8wr7y8zh8gqtezqypflxcnyp9pz892hpg3m36zptgmwlwqjkss7dtcn7alsuf5l0xvuds0fmwp6",
+        "fingerprint": "95f91344",
+        "historyCount": 6,
+        "notifications": 0,
+        "ok": true,
+        "onchain": 7999843,
+        "onchainAddress": "bcrt1pt3xsm649l7dcfuaw68kg55tpajadg8096f938h3mar34s03tp7zqs8293z",
+        "spendable": 1990572
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "restore",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqppy8zsxpuwwm2dw5uv42fvl2pakv0sl5sgq9hme4awte9gn0w4u63zqyph9n2hvdx7mkrmfkyly7faqtmng3wq2yudghddsfesad4xzle9ucqevm229",
+        "databaseName": "noah-p1-20261019-restored-91308148-73BA-4FCD-B3EA-AE46BE53C586",
+        "fingerprint": "95f91344",
+        "historyCount": 0,
+        "notifications": 0,
+        "ok": true,
+        "onchain": 7999843,
+        "onchainAddress": "bcrt1pz7vf9yeek285llr40ysl0n9x2rhx4qswahz9nmraevxj7dn8995qsrwqwl",
+        "recoveryComplete": true,
+        "spendable": 1990572
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "offboard",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqpdftzrq3gvwlps32s79ra9asll37w4vmmg8fjkj9mxj4gfealt22pzqyp9zse6xx5xd4e7kjqhj3qq9hc0ex8p7thp34zawatvmmet3m90x5q5548rc",
+        "fingerprint": "95f91344",
+        "historyCount": 7,
+        "notifications": 2,
+        "ok": true,
+        "onchain": 7999843,
+        "onchainAddress": "bcrt1pllzy473hqd3wjeyhdzsfaf98w5pwpvq2ywskmrvkpvpnlq8sadqqj5s0h0",
+        "spendable": 0,
+        "txid": "c0bf62ee5d6ab37920c66974165ecbb6207dfc6cba853e15e72554527f5cd9bb"
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "sync",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqpk7vvuha0zmzleu423he5vf6z02e6zlu34ycsa27kyhsq3fcggfsezqypqke23m4m4zwusqmefqp5uutxn3jf50gktxp6a54kz66kg5yvllrszwgct4",
+        "fingerprint": "95f91344",
+        "historyCount": 7,
+        "notifications": 0,
+        "ok": true,
+        "onchain": 7999843,
+        "onchainAddress": "bcrt1pvc48j6zt0myygtjje85qyz7nj4wpfuvfxgjcslkvfql2gvw7h33scp03wh",
+        "spendable": 0
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "board",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqpq804lzqdnmydneyuyrdzns9araws8u3fa44hs2f6h8rrghjl74pfzqyp3pg938zhyg9ewn952h95zfyypg8qsmlmyme3jt5e5f4tkyhguu5qq9d78a",
+        "fingerprint": "95f91344",
+        "historyCount": 8,
+        "notifications": 1,
+        "ok": true,
+        "onchain": 7499686,
+        "onchainAddress": "bcrt1pyvtcfep6gr9tcjprtrwz4j03pn5cpcsl9djjn9nkz3ertgwc90lqwda0d3",
+        "spendable": 0,
+        "txid": "f5098dc3f2c5622edcce1e1bcfd37aea256d000df13e94267b1f8e10334fa7ba"
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "sync",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqpqg9agkxzsehat4dvq2hagz7strk8jwx2y6z9nsuplz5ykf0kceeezqypmp024g60x0hacnfe39x52wp28jwqqkkg66cfqydddn3cu9ce67jqqyrh9j",
+        "fingerprint": "95f91344",
+        "historyCount": 8,
+        "notifications": 0,
+        "ok": true,
+        "onchain": 7499686,
+        "onchainAddress": "bcrt1pgtmyfv6sz9mz9xcfh0edht6w0zgdk8nvvezlmw9l50nlt9rwzk0sx9zuhp",
+        "spendable": 499400
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "estimate",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqpd0egepyn7w7nff3dzndauh584pqejhptsh0489q3fv080jv5gn0fzqypvnva5tklt4hzt7p4g2g0va3rj5yds238th5c3ugwmhj4ecz0t3acx59saf",
+        "broadcastFee": 333,
+        "claimFee": 129,
+        "fingerprint": "95f91344",
+        "historyCount": 8,
+        "notifications": 0,
+        "ok": true,
+        "onchain": 7499686,
+        "onchainAddress": "bcrt1pqj7y680u7j6082qdjgjx9qq8za43vy2x9erhj3cakagqqxey0tns2m3yya",
+        "spendable": 499400,
+        "totalFee": 462
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "startExit",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqpdzwavtd0nejrfmu06wrgfusfzvdgvgdt7rhyafdqakt59gxvxapfzqyp0ppwls3jcwqpwdanzmpc7h6qwypr80n7fxxtmj05gqx0vghrnk0gex6lst",
+        "fingerprint": "95f91344",
+        "historyCount": 9,
+        "notifications": 2,
+        "ok": true,
+        "onchain": 7499686,
+        "onchainAddress": "bcrt1p6v8yzexfjrh9y2k3f59m57pa9jpaz47qcs40ecahfsuzywsa5a7qwkruwr",
+        "spendable": 499400
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "progressExit",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqpf7u6zat6nahkfvgq705aywmqrmu7x8tffjce5fgf0jc9e9cl5dapzqypayqx4nv050rmmdxtkcnshve89plh7vt5t2wcssyxhuymev0kj8ec87g25f",
+        "claimable": 0,
+        "claimHeight": -1,
+        "fingerprint": "95f91344",
+        "historyCount": 9,
+        "notifications": 0,
+        "ok": true,
+        "onchain": 7499789,
+        "onchainAddress": "bcrt1ptqzr3c4fmnjjzju5h0hjc0vcstm5p9mxsmy3g6afda9hqlr3udeqmm05vg",
+        "spendable": 499400
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "progressExit",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqpjstvyn4vz85dcmaw6p2jwuthyw488r04s2ywcjncaf34tfeurf9fzqypnqqqmywd74shgmh53cr5m3c8xtmcrmw03cc8tqnenm872l7scmfcqjc500",
+        "claimable": 0,
+        "claimHeight": 867,
+        "fingerprint": "95f91344",
+        "historyCount": 9,
+        "notifications": 0,
+        "ok": true,
+        "onchain": 7499789,
+        "onchainAddress": "bcrt1pzgr6sg3zhtxpn3gunvsqhpzafxk3whaesavyf2h8yvrgfnv9er0q9g44jf",
+        "spendable": 0
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "progressExit",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqpexgxldul77myvj8lk5mquuf2cl3u8z3rg0tk5wwelkd9cd08z33pzqyplk570c94uq9wsa6a2tcq2cka3dasdy78x2ass33m7sckuezr4nzc0k4u3u",
+        "claimable": 0,
+        "claimHeight": 867,
+        "fingerprint": "95f91344",
+        "historyCount": 9,
+        "notifications": 0,
+        "ok": true,
+        "onchain": 7499789,
+        "onchainAddress": "bcrt1pf8us364g2lx4t2khxw3kv4y4htewplq94zlmhvcrezqhan2rcqys4rn222",
+        "spendable": 0
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "progressExit",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqpvc49xd68qxhwjta93ac6tjpxjucwlnezsk6jka4l8d06mvd9wdsezqypuxlh8a93leeexkyf4dny3gm9azx4agw0mw58xxu6ta3024k7nxmszxqsag",
+        "claimable": 1,
+        "claimHeight": 867,
+        "fingerprint": "95f91344",
+        "historyCount": 9,
+        "notifications": 0,
+        "ok": true,
+        "onchain": 7499789,
+        "onchainAddress": "bcrt1pt7l5exveax43n0fcj3d080f40fdanpmsrs8s84zp4w892zds23lseasv0e",
+        "spendable": 0
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "drainExit",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqpmtjj0p4cq52x0k3pys94vevfag9q88ua64udq9zsdmw87h84k4nezqypkjagxyveu3k0ny7eckmuanh36xevmmyx2kawzngaf902uecvkr6sddagyq",
+        "fingerprint": "95f91344",
+        "historyCount": 9,
+        "notifications": 0,
+        "ok": true,
+        "onchain": 7499789,
+        "onchainAddress": "bcrt1psdf3vwqcy5h07h969mwjlkamrxswlra85wczqppnm6t05pgmewmqk2hw3c",
+        "spendable": 0,
+        "txid": "daae96d1f80c0a5bd64a6302d3b09f53bdba60751bce38aada82f77abb8cc769"
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "sync",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqp8sah3w8zhgvj76nkr0f3f2dhc8ew6zxxufw6qm3gyx5yzjj5pcwezqypkyzs3gs8knl3uthsue3c7q9444t62l52887hzzg4dhq9rqvmsqwq7gq0y6",
+        "fingerprint": "95f91344",
+        "historyCount": 9,
+        "notifications": 0,
+        "ok": true,
+        "onchain": 7499789,
+        "onchainAddress": "bcrt1pz3squ9vjt3lkq8ncufvjk956lzwlkmfxysj9q47c3fysnr3p7ndqgz07qu",
+        "spendable": 0
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "restore",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqpqg9agkxzsehat4dvq2hagz7strk8jwx2y6z9nsuplz5ykf0kceeezqypmp024g60x0hacnfe39x52wp28jwqqkkg66cfqydddn3cu9ce67jqqyrh9j",
+        "databaseName": "noah-p1-20261019-restored-3403863C-22D3-440B-8406-E32339E4C76B",
+        "fingerprint": "95f91344",
+        "historyCount": 1,
+        "notifications": 0,
+        "ok": true,
+        "onchain": 7499789,
+        "onchainAddress": "bcrt1p09zhrnhde8n8qhvtzeve86vjk37ymza5snslkrljm0ywhffmj87qkdyj98",
+        "recoveryComplete": true,
+        "spendable": 0
+      }
+    },
+    {
+      "platform": "android",
+      "action": "send",
+      "result": {
+        "notifications": 4,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqp4vg9g4lrc39g8gufayyj754ekqyz8c7nvvmzdj0luwc9ev6vnnkpzqyptdemqvp8s79p8h7jt3hvfy0urfx6g6468tqnmv5d4pfs3ep2mjhc9mv0j3",
+        "onchainAddress": "bcrt1p9fvwjxlmz94w3u52q7vdf53esg29rwlak9acmt5umvux093sd3ys936zaj",
+        "spendable": 1996821,
+        "onchain": 7999843,
+        "historyCount": 4,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "invoice",
+      "result": {
+        "invoice": "lnbcrt20u1p4dvka8sp5gxcqdqpvvedr9r2ht25v5l7p3wa77t8phc8qclfwc7ajfpzyt2uspp5h4s24s3lkfs26rj0n4h0lp0tt8c4nfh9e3r9hlcj8nwqez07esesdqj2dzykgzjv4n4getnwsxqy9gcqcqzrj9qyysgq39xm5pskkhryglrvluv9pc4yln75vqa04kry895efy3ed0ydfu4p3hu9h2sp0fzfmrun4enljnmm3h3z3a4ha7j9u0z3qw7vlszyghgqxsl6q3",
+        "paymentHash": "bd60aac23fb260ad0e4f9d6eff85eb59f159a6e5cc465bff123cdc0c89fecc33",
+        "notifications": 0,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqpm8f8f3dgn8qzst4rce74umgp68clefxu7g895pjh9q9wd42jhx43zqypg6f4lv8z93drtzqmzwu06wq38s5uppk3l6rzq4zz7afqvkxl4lecgp2cqz",
+        "onchainAddress": "bcrt1p3hnmtvtpcwcyrk3fyu6y7un4revw04saleazp7r3ctdyh24rdk7svjqe92",
+        "spendable": 1996821,
+        "onchain": 7999843,
+        "historyCount": 4,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "claim",
+      "result": {
+        "notifications": 0,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqpvl3s2d6h9t6p4862hxkaq3dmlcu2x95lc4nzhna73vhjvfjwd94ezqyp5sczydcla7hprsxvtnu54v75x32se2lls6ww48up6eshhclh08hg404ku5",
+        "onchainAddress": "bcrt1pp4048vdshlhlq0xura6d7waed07dpdeud2ws5falt2wzc2xaqamqqg76ux",
+        "spendable": 1998717,
+        "onchain": 7999843,
+        "historyCount": 5,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "sync",
+      "result": {
+        "notifications": 0,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqpv99xq3nc9z59tql2qvh4cwu7stpd25re2m5c8n8jjpnuq6d9y98pzqypg2zemtyzhtek9y34qyjd2rk998zz4n07uzpl9x5zxsy40fwlhvjqrpgpdr",
+        "onchainAddress": "bcrt1p8clscn8eqfarz7e8hx4hu2zl8g3d27lljehvx7mdrxa7k7fqxe6s76wx3r",
+        "spendable": 1998717,
+        "onchain": 7999843,
+        "historyCount": 5,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "refresh",
+      "result": {
+        "txid": "Unconfirmed { funding_txid: a322dc1eaa0600c219a47690058ba73e12d476427a14709180e81a7c7bdd9186 }",
+        "notifications": 3,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqpn9jyzn4fp75dlh8s9smadk3gz96wtpca7xw908yaly49k3atn8hezqyp6q73ctc5t38qtskjx6tzm9aa8kywcrcut66ycqayffv06reses9qwyeffm",
+        "onchainAddress": "bcrt1pcscx9lcjjwapa8zh82czshtcwm3tlqyjl3rjls46hnkljf9yurzqnk8699",
+        "spendable": 0,
+        "onchain": 7999843,
+        "historyCount": 6,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "sync",
+      "result": {
+        "notifications": 0,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqpdeeu6u6hrmtuagz3u8hq8uca9qu9ga4l0htrfsmwq9upphlx0wrpzqypy0k4np4ua8c2a0lr8f0m6u3resh8g47cj450euxwhh0jr43x362sf6jj7a",
+        "onchainAddress": "bcrt1ps2auaws3atssps4xysfmpxxtwgwwevq3suxmeceletqrv45mj0fszzs4rr",
+        "spendable": 1990572,
+        "onchain": 7999843,
+        "historyCount": 6,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "sync",
+      "result": {
+        "notifications": 0,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqpx7kyprap934fnyq8q5mzf5ekuctyht26ast2hja5t72vj2zd2s33zqypldhd7u89z5sdxufznujwkevdrdky2rlcac8uf2xjlnn3wzn3dqzgdtvqqy",
+        "onchainAddress": "bcrt1pyse8llywn2m7fpgs5wefd5qvn22jmafqjkrz0ngkkhy8ycl5hedsqll8ea",
+        "spendable": 1990572,
+        "onchain": 7999843,
+        "historyCount": 6,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "restore",
+      "result": {
+        "databaseName": "noah-p1-20261019-restored-b112726a-6751-4f9f-b542-6d7f36e53f70",
+        "recoveryComplete": true,
+        "notifications": 0,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqpdeeu6u6hrmtuagz3u8hq8uca9qu9ga4l0htrfsmwq9upphlx0wrpzqypy0k4np4ua8c2a0lr8f0m6u3resh8g47cj450euxwhh0jr43x362sf6jj7a",
+        "onchainAddress": "bcrt1p6mrcug2xx3gzf3kygv9a2yxdylapdste60h4xhxckz3tpjd3kkfs57ssnx",
+        "spendable": 1990572,
+        "onchain": 7999843,
+        "historyCount": 0,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "offboard",
+      "result": {
+        "txid": "76cda230b4ad78b75b7aeae2ab1909817fccc1ca17415e599d7810999ec68fa3",
+        "notifications": 2,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqp7hdp2gscnsd2fugqn9r0d5j4rhwzlyz9dphrh7s2xjams9hy3kqpzqyp9xf7qhr2mmcezlkppcnv2l9um683c957q74eh2ph8u9h7gx39n5ssmphge",
+        "onchainAddress": "bcrt1pmmtkwqkd3l9ld2pg7e8dek4wykn903644hyw8gwtzphakflw9aeslu7jpc",
+        "spendable": 0,
+        "onchain": 7999843,
+        "historyCount": 7,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "sync",
+      "result": {
+        "notifications": 0,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqp3lyc5hfznwasdmf92hyv42x62rzvr9nz7trnlgrmmx2yhlcq9wg3zqyp9wtl9h68rrahqr6zgjv0c8xa66fr9hmtzua0kykr083068qtmurgl9csdp",
+        "onchainAddress": "bcrt1pmssddu86ssd0dytznmfcxycansluqqf2x98kzkjmtugmdme8253svmvu2h",
+        "spendable": 0,
+        "onchain": 7999843,
+        "historyCount": 7,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "board",
+      "result": {
+        "txid": "ea48f76da49dc22ffd67c1b173f2bd1fe976a8c2c5240785dfe291dd1709ba6d",
+        "notifications": 1,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqpd4ucedyykm46phzzctvf8c3hmuva20tsjrwhyyx69hc6fyltnzsfzqyp5g36zs30daqlet7yv2lf5x6qllmamlhfpq9rz65snnt87z6ef4egmufazp",
+        "onchainAddress": "bcrt1p7yvw8vsemtkd2xa0rzre6sf6k62x6m3y6mxyvadzuhc9x4lr45mshgdntq",
+        "spendable": 0,
+        "onchain": 7499686,
+        "historyCount": 8,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "sync",
+      "result": {
+        "notifications": 0,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqptz0ylg0dyhv3py43dwn7a5u5ysag3gw907rqjauw4m4fjucq35xezqypdcte29cwtuv85qhkfy679qqkcmj4qslauhrndanlv9cx6ulcjshgsscdq2",
+        "onchainAddress": "bcrt1p752dnezq4kvptl8h56zkpclfu76w3kzsr8asf4hdvd6ly2wr3vdqdk80z8",
+        "spendable": 499400,
+        "onchain": 7499686,
+        "historyCount": 8,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "estimate",
+      "result": {
+        "totalFee": 462,
+        "broadcastFee": 333,
+        "claimFee": 129,
+        "notifications": 0,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqp4c0nac53d9dpwd2vrq2ksa5dnv8mg7e0crr9cut9asfm74uva7spzqypsayzw9rfs8zgp67hf8uw7w63sm3tw29wqa5d2vq8xp7d9n35zwzgunjjfj",
+        "onchainAddress": "bcrt1peaa8xjlpyv0757wgunmut5ljh06vhnzqpl6a2n2va3rhtp9uflrqlek4cv",
+        "spendable": 499400,
+        "onchain": 7499686,
+        "historyCount": 8,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "startExit",
+      "result": {
+        "notifications": 2,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqpvahwvh4erp9ag6cyyyuwwec92dn7mhwgxc0anurlarfu7pw8n6afzqyptkf3gpt6tegqtzytl9f3m3rjvke449msn8pk25r0f66yvflkk2wglegahd",
+        "onchainAddress": "bcrt1p5r9yr8v4eddzj85ej8geqglfrp542kard69upe6mlm79pfhy7mzs8flutk",
+        "spendable": 499400,
+        "onchain": 7499686,
+        "historyCount": 9,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "progressExit",
+      "result": {
+        "claimable": 0,
+        "claimHeight": -1,
+        "notifications": 0,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqpfkh4jf8036fqqgn757pqltmt0jfc5j0xv876nnpfdzhrwps7m4wezqyp8acpsq8xlzuwe47hh9q8hl4q394c0dl2vjw20hsqwgx0r3ne94vs0supzh",
+        "onchainAddress": "bcrt1p7nxz6sfempq3rdpn2k6yqkm049m24wat3t2mh0798yj0umltw7sstqf7uj",
+        "spendable": 499400,
+        "onchain": 7499789,
+        "historyCount": 9,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "progressExit",
+      "result": {
+        "claimable": 0,
+        "claimHeight": 909,
+        "notifications": 0,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqpjfrlzndqcnrs3ns62ftsfl77yfrunvyvs3jur7call8n65st5uefzqypc35frgu0hlc6edq0lru25xpr4fa99yfw4slr8xzw4jfauz7rne3c4s7z9t",
+        "onchainAddress": "bcrt1prtt9m9uq6zhfyfykfmm5c6pvrhrxh3zfkehtnqm600gmmewt30yszed4l8",
+        "spendable": 0,
+        "onchain": 7499789,
+        "historyCount": 9,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "progressExit",
+      "result": {
+        "claimable": 0,
+        "claimHeight": 909,
+        "notifications": 0,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqpryxhrfrm4s2vmqufxmrc65g79k0gdgftzcryc0vnhnqze5skc6yezqypff8hzmn87nevdqq0vsgpd5vua5necatypj4svqhxpkw6fyd0x3usp4mrj3",
+        "onchainAddress": "bcrt1pg2h4sauw5f7vh7cvyhmzn70jhn9p7r0ye00h7txd7dr3wfxyyenqlqnkwv",
+        "spendable": 0,
+        "onchain": 7499789,
+        "historyCount": 9,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "progressExit",
+      "result": {
+        "claimable": 1,
+        "claimHeight": 909,
+        "notifications": 0,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqprw8gf334xye89fxha6l98vfa5gtvltv2wsr0fntk0m9ptcdlnw5ezqypj2m8c9k0x8x2gju6y0a5uznqfpnzzk5ypydmgj8wxv7t6pkd047cnxd3gk",
+        "onchainAddress": "bcrt1pd39dsvdm3ye4l0rd8lucy5t6cfvdm0nk7u94v5wupmz7ry25yh9srpduc5",
+        "spendable": 0,
+        "onchain": 7499789,
+        "historyCount": 9,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "drainExit",
+      "result": {
+        "txid": "c5a8b7fda310076e6fbca7d2f585c353398534bbd158cd02d84803fca046e9e5",
+        "notifications": 0,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqpn7gmsjgjshq2e8tjjswe6d6ju8fw5s0h4x7ypy630purunj5ch6fzqyp6jjcymprjehc5n2l034tneg9qnwl062a4r9f8vv8zyrqmperlteq7pdpr9",
+        "onchainAddress": "bcrt1pt0kd0kyr5wplymjjdqmxz588xvq0xxcfxf2cewd66yjyqedzyc8s02hwn5",
+        "spendable": 0,
+        "onchain": 7499789,
+        "historyCount": 9,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "sync",
+      "result": {
+        "notifications": 0,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqp9zg4rc56xyuhwmvvlam6c00z4tgpfjwclauxezaxmvdpjvp4ptxezqyp84jdwevawmqr3hlfe9mh076a4y7gctl6882thqlffcsp0q3shx4cg5zwzd",
+        "onchainAddress": "bcrt1p2el5azu772jpkahqm6nzh3zqxdmdudm5xcdp0ha5nnh4ucg9lphqq0r9l9",
+        "spendable": 0,
+        "onchain": 7499789,
+        "historyCount": 9,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "restore",
+      "result": {
+        "databaseName": "noah-p1-20261019-restored-bf647012-1d57-4a69-b292-da526497038d",
+        "recoveryComplete": true,
+        "notifications": 0,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqptz0ylg0dyhv3py43dwn7a5u5ysag3gw907rqjauw4m4fjucq35xezqypdcte29cwtuv85qhkfy679qqkcmj4qslauhrndanlv9cx6ulcjshgsscdq2",
+        "onchainAddress": "bcrt1pzc2kczg394mjfa39a76xha3nglmf3vtdvc52kpvh59uxx0hcqv7q9nd2ch",
+        "spendable": 0,
+        "onchain": 7499789,
+        "historyCount": 1,
+        "fingerprint": "1efd7e87"
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "open",
+      "result": {
+        "error": "error creating new wallet: Failed to connect to provided server: Failed to connect to Ark server: transport error: tcp connect error: tcp connect error: Connection refused (os error 61)",
+        "ok": false
+      }
+    },
+    {
+      "platform": "ios",
+      "action": "open",
+      "result": {
+        "arkAddress": "tark1p0x6vu53zqqplfeh7futy8j6ujj4my38eykktveesuk4u5f2q86gkyaw3xc5jl73zqyptjyu3095eg0ramufzlldmw78fm0mmvstptuyq75x0fnrrzud8ttq6hm04a",
+        "fingerprint": "02168837",
+        "historyCount": 0,
+        "notifications": 0,
+        "ok": true,
+        "onchain": 0,
+        "onchainAddress": "bcrt1pz07a07wz0uk4jwexpqkf65kgu7sj6m7ccq00s6cc6ynwc4ex7kdstn24ft",
+        "spendable": 0
+      }
+    },
+    {
+      "platform": "android",
+      "action": "open",
+      "result": {
+        "ok": false,
+        "error": "error creating new wallet: Failed to connect to provided server: Failed to connect to Ark server: transport error: tcp connect error: tcp connect error: Connection refused (os error 111)"
+      }
+    },
+    {
+      "platform": "android",
+      "action": "open",
+      "result": {
+        "notifications": 0,
+        "ok": true,
+        "arkAddress": "tark1p0x6vu53zqqp7ag0jvczzgxcvy8em7r0p8e4ek0qf7lknjly472x9pmftpw737epzqyp99fpnk2k5wwvymhc4829xzr3esf6aqwqekd6tygll07hgyrgdplgvn4ke7",
+        "onchainAddress": "bcrt1p8dz0vae8jr05ky7q4fj68d72ngkhdth0hl5yhgtuuzj7g2nm7c4sa82ccz",
+        "spendable": 0,
+        "onchain": 0,
+        "historyCount": 0,
+        "fingerprint": "38bff604"
+      }
+    },
+    {
+      "passed": true,
+      "platforms": [
+        "ios",
+        "android"
+      ],
+      "extended": true,
+      "run_id": "noah-p1-20261019"
+    }
+  ]
+}

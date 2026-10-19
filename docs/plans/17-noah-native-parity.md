@@ -48,6 +48,22 @@ only available Lightning details, never private keys or the P2 payment secret.
 Document fee units and absolute expiry. Validate Rust and both host contracts,
 build apps after changed result shapes, and run live RegTest for transactions.
 
+Refinement before P1 code: keep sentToAddresses/receivedOnAddresses names but
+replace their elements with MovementDestination { paymentMethod: PaymentMethod
+{ type, value }, amountSats }. Metadata patches must be JSON objects <=16KiB,
+matching Nitro; Bark performs the merge. PendingBoard gains vtxoIds and drops
+the lossy singular field. Pure decode returns state=Unknown and registered=false
+because those are local DB facts; wallet VTXOs retain their stored state.
+Anchor/point are available on both full and Bare VTXOs, so all wallet views
+expose them without fetching genesis.
+Round status uses a typed outcome with funding txid/error and terminal flags;
+the current pin has no unsigned funding txid status, so its list is empty.
+Exit packages include parent/child raw hex and their statuses without another
+network lookup. Absolute mailbox expiry gets a distinct Rust export (Rust has
+no overloads); document the generated host name. Drain retains network
+validation; ownership queries validate syntax and inspect scriptPubkey, matching
+Nitro regardless of the address network. Callback backends cannot drain.
+
 ## Release engineering plan
 
 One PR per P0/P1 group with small commits. After acceptance, bump to a fresh
@@ -57,6 +73,19 @@ SHA256SUMS and manifest. Verify downloaded artifacts and clean consumers; record
 actual hosted CI results separately from local results. Never overwrite v0.1.0.
 
 ## Actual outcomes and remaining limits
+
+Swift stack regression plan: the minimal live test
+`swift test --package-path tests/swift --filter testWalletSyncOnSwiftWorkerStack`
+reproduces SIGBUS on the Swift worker stack in Wallet::run. Box Bark's large
+future before wrapping it to retain the live DB registration; keep ownership
+and cancellation semantics unchanged. Re-run the exact reproducer and full
+funded Swift/Kotlin contracts before recording a fix. Backport this P0 fix to
+its PR as well as P1.
+
+CI refinement: after the isolated stack starts, the hosted Android job also
+runs Rust's live contracts. The paired integration workflow starts its backend
+before contracts and sets BARK_REGTEST=1 for Swift/Kotlin, so live host APIs are
+executed in addition to the app flows. No existing volumes are reset.
 
 P0 implemented: wallet and offline public-key/signature exports; safe SQLite
 snapshot export/validation and schema42 fixture; 750ms committed-state observer
@@ -79,28 +108,92 @@ validation covers a matching schema42 plaintext fixture and real newly exported
 wallet snapshots. No physical devices were used for these contract tests.
 P1 and release acceptance are pending.
 
-## Independent review repair plan and outcome
+## P1 actual outcomes (before independent review)
 
-Fable 5.1 High reviewed the combined P0/P1 PRs at 249386e. Before changing code,
-plan a rollback-journal EXCLUSIVE-lock regression for the observer and a real
-uncheckpointed WAL validation regression. Retry transient BUSY/LOCKED on the
-next observer tick while preserving resyncRequired for other errors. Validation
-must never open/recover the input through SQLite: reject nonempty WAL/journal
-sidecars before and after the private copy. Preserve and document Nitro's queued
-event drain after stop; test it. Keep the specified backup pacing and upstream
-fee validation. Backport the two P0 repairs from the combined implementation.
+Implemented all P1 exports and DTO fields; absolute mailbox host overloads are
+handwritten support files calling regenerated Rust bindings. No generated code
+is patched. Pure decoding uses Unknown local state. All boarding IDs and exit
+packages are retained. Pending round conversions cover every current outcome.
+The original derivation/SQLite schema and upstream transaction logic remain.
 
-Both regressions failed before repair (resyncRequired; stale main-file success).
-On the combined branch, the repaired Rust suite passes all 74 tests with
-BARK_REGTEST=1, and warnings-denied Clippy passes all targets. See
-docs/validation/noah-review-20261019.md for each finding's disposition. Final
-release SDKs are rebuilt after repair before re-running both host contracts.
+Validation: full BARK_REGTEST=1 Rust suite passes 71 tests; warnings-denied
+Clippy passes. Swift compiles and passes 9 contracts including funded boarding,
+Ark receive/destination amount sums, metadata patch, BDK drain, exits/packages,
+destructive drop in a disposable wallet, absolute mailbox auth, and invoice
+details. Kotlin compiles and passes 8 contracts normally and from its actual
+JAR, including the same funded cases; the Android AAR and example APK build.
+The Swift stack reproducer failed with SIGBUS before boxing the inner future,
+then passed in 0.139s; all 9 Swift contracts pass after the fix. The fix is also
+backported to P0 PR #1 (357d773). Mailbox Schnorr auth is randomized, so its tests
+assert identity/expiry rather than byte equality across distinct signatures.
+Deterministic ECDSA golden signatures still compare exact bytes in all hosts.
+Eight Python tooling tests and strict API parity (149 exports, 50 records, 15
+enums, 2 callbacks) pass. Local full ABI release/hosted CI remain release gates.
 
-## Swift worker-stack fix
+Remaining limits: terminal round outcomes have Rust conversion tests; empty
+pending-state calls run in both hosts. The pinned upstream does not expose
+unsigned round funding IDs or retain settled Lightning HTLC/movement details.
+P2 stays deferred. Independent Fable 5.1 High review and release are pending.
 
-Plan/paths: src/ffi/wallet.rs and Swift contracts. Retaining the DB registration
-in an outer future increased stack copies of Bark's large sync future. Box the
-inner future before the lifetime wrapper; keep ownership/cancellation unchanged.
-The minimal live open+sync contract reproduced SIGBUS, then passed after boxing
-on the combined native parity branch. Keep that regression in this PR as well.
-Full combined Swift and release acceptance remains recorded by the parity task.
+## Fable 5.1 High review: validation and repair plan
+
+Review round 1 examined combined PR head 249386e, without executing tests.
+Before changing behavior, reproduce its observer lock-contention finding with
+a real rollback-journal SQLite writer holding EXCLUSIVE across a poll tick.
+In src/core/state_changes.rs, retry BUSY/LOCKED on the next 750ms tick, retaining
+the short busy timeout for responsive stop; other errors still emit
+resyncRequired and terminate. Verify committed changes arrive after unlock and
+the observer remains active. Preserve Nitro's queued-event drain after stop,
+document it and test it rather than discard already committed notifications.
+
+For src/backup.rs, reproduce validation silently ignoring an uncheckpointed WAL.
+Validation must only read the input, so reject nonempty -wal/-journal siblings
+with an actionable error instead of opening/recovering the source with SQLite.
+Check before and after the raw copy, and prove source/sidecar bytes are unchanged.
+Checkpointed createSnapshot outputs and extracted schema42 fixtures must still
+validate. Update docs/migration.md with this self-contained snapshot boundary.
+
+Keep the specified 10ms pause between backup steps and continuous-busy 30s
+timeout; an overall deadline would change the requested contract. Keep Bark's
+and Nitro's fee-rate acceptance, including zero, rather than introduce a new
+transaction-validation policy. Record the reasoning in the review dispositions.
+Backport these P0 repairs to PR #1 and merge into PR #2. Run Rust tests/Clippy,
+regenerate both full release SDKs, execute Swift and Kotlin packaged contracts,
+and verify release provenance after the final changes.
+
+Actual repair outcomes: the lock regression first failed with resyncRequired;
+the WAL regression first failed because validation returned stale main-file
+information. After the fixes, BARK_REGTEST=1 cargo test --locked passes all 74
+tests and cargo clippy --locked --all-targets -- -D warnings passes. The stop
+queue regression passes with Nitro's documented drain behavior. Full release
+SDKs are rebuilding from the repaired source before host contracts run again.
+
+Release refinement before CI packaging changes: have the Android CI Gradle call
+generate both Maven POMs and upload them with the AAR/JVM JAR. Consume the actual
+Linux CI-generated POM rather than editing host-specific generated metadata.
+After final green checks, merge P0 then P1 as the user requested, and tag the
+merged main commit. Verify both the published checksums and clean Git consumer.
+
+Additional parity correction plan: Nitro v0.0.144 onchain.rs:24 uses
+assume_checked().script_pubkey() for is_mine, so a valid address from another
+network must be queried rather than rejected. In core/ffi onchain, parse syntax
+without require_network for this read-only query. Keep send/drain validation.
+Add a Rust regression re-encoding an owned RegTest script as a Bitcoin address
+and checking true, plus valid foreign-network non-owned addresses in Swift and
+Kotlin. First reproduce the network error, then run the full contracts and
+rebuild/re-stage release artifacts from the corrected source.
+
+Actual ownership correction outcome: the new Rust regression first failed with
+"bitcoin address is not valid on regtest". With syntax-only parsing for isMine,
+all 74 live Rust tests pass, including ownership of the same script encoded on
+Bitcoin and false for an unrelated valid Bitcoin address. Swift/Kotlin contracts
+include the foreign-network query; final rebuilt SDK execution remains a gate.
+
+Final local release outcomes: full optimized Apple five-ABI and Android
+three-ABI plus Darwin JNI builds pass. Swift artifact staging/check-source
+passes and compares slices with current Cargo output/deployment targets.
+Final live Swift contracts pass 9/9; final live Kotlin contracts pass 8/8
+normally and 8/8 from the actual JAR, including the ownership correction.
+AAR/JAR ABI/class checks and the 149-export API inventory pass. Both Maven
+POMs are generated, iOS rebuild passes, and Android debug/release APKs build
+successfully. Hosted CI/merge/publication/download acceptance remain pending.

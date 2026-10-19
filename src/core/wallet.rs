@@ -101,6 +101,7 @@ pub(crate) fn parse_vtxo_ids(vtxo_ids: &[String]) -> Result<Vec<VtxoId>, BarkErr
 /// Human-readable one-liner for a VTXO state, for error messages.
 fn describe_state(state: &types::VtxoState) -> String {
     match state {
+        types::VtxoState::Unknown => "unknown (decoded without wallet state)".to_owned(),
         types::VtxoState::Spendable => "spendable".to_owned(),
         types::VtxoState::Locked { holder: None } => "locked by an unnamed holder".to_owned(),
         types::VtxoState::Locked { holder: Some(h) } => match h {
@@ -942,6 +943,19 @@ impl Wallet {
             .collect())
     }
 
+    pub async fn update_history_metadata(
+        &self,
+        movement_id: u32,
+        patch_json: String,
+    ) -> Result<(), BarkError> {
+        let patch = parse_history_metadata_patch(&patch_json)?;
+        self.inner
+            .update_history_metadata(bark::movement::MovementId::new(movement_id), &patch)
+            .await
+            .context("failed to update history metadata")?;
+        Ok(())
+    }
+
     pub async fn history_by_payment_method(
         &self,
         payment_method_type: String,
@@ -1574,6 +1588,18 @@ impl Wallet {
             .collect())
     }
 
+    pub async fn sync_pending_rounds(&self) -> Result<Vec<types::PendingRoundStatus>, BarkError> {
+        let mut statuses: Vec<_> = self
+            .inner
+            .sync_pending_rounds()
+            .await?
+            .into_iter()
+            .map(|(id, status)| types::PendingRoundStatus::new(id.0, status))
+            .collect();
+        statuses.sort_by_key(|status| status.round_id);
+        Ok(statuses)
+    }
+
     pub async fn cancel_pending_round(&self, round_id: u32) -> Result<(), BarkError> {
         use bark::persist::models::RoundStateId;
         self.inner
@@ -1659,6 +1685,21 @@ impl Wallet {
             .inner
             .mailbox_authorization(mailbox_auth_expiry(expiry_secs)?);
         Ok(hex::encode(auth.serialize()))
+    }
+
+    pub fn mailbox_authorization_at(
+        &self,
+        authorization_expiry: i64,
+    ) -> Result<types::MailboxAuthorization, BarkError> {
+        let expiry = DateTime::from_timestamp(authorization_expiry, 0)
+            .context("invalid authorization expiry")?
+            .with_timezone(&Local);
+        let auth = self.inner.mailbox_authorization(expiry);
+        Ok(types::MailboxAuthorization {
+            mailbox_id: auth.mailbox().to_string(),
+            expiry: auth.expiry().timestamp(),
+            encoded: hex::encode(auth.serialize()),
+        })
     }
 
     // ------------------------------------------------------------------------
@@ -1906,7 +1947,7 @@ fn mailbox_auth_expiry(expiry_secs: u32) -> Result<DateTime<Local>, BarkError> {
 ///
 /// Hex is the canonical encoding ([`Wallet::vtxo_encoded`] and bark-rest use
 /// it); base64 is also accepted since `import_vtxo` historically took it.
-fn parse_vtxo(encoded: &str) -> Result<ark::Vtxo, BarkError> {
+pub(crate) fn parse_vtxo(encoded: &str) -> Result<ark::Vtxo, BarkError> {
     let encoded = encoded.trim();
 
     if let Ok(vtxo) = ark::Vtxo::deserialize_hex(encoded) {
@@ -2134,5 +2175,37 @@ mod tests {
     fn parse_vtxo_rejects_truncated() {
         let truncated = &BOARD_VTXO_HEX[..BOARD_VTXO_HEX.len() - 8];
         assert!(parse_vtxo(truncated).is_err());
+    }
+}
+
+fn parse_history_metadata_patch(patch_json: &str) -> Result<serde_json::Value, BarkError> {
+    if patch_json.len() > 16 * 1024 {
+        return Err("history metadata patch exceeds 16384 byte limit".into());
+    }
+    let patch: serde_json::Value =
+        serde_json::from_str(patch_json).context("invalid history metadata patch JSON")?;
+    if !patch.is_object() {
+        return Err("history metadata patch must be a JSON object".into());
+    }
+    Ok(patch)
+}
+
+#[cfg(test)]
+mod metadata_patch_tests {
+    use super::*;
+    #[test]
+    fn requires_a_json_object_and_bounds_utf8_bytes() {
+        for invalid in ["null", "[]", "1", "{bad"] {
+            assert!(parse_history_metadata_patch(invalid).is_err());
+        }
+        assert!(
+            parse_history_metadata_patch(&format!("{{\"note\":\"{}\"}}", "🦀".repeat(4096)))
+                .is_err()
+        );
+        assert!(
+            parse_history_metadata_patch(&format!("{{\"note\":\"{}\"}}", "a".repeat(16373)))
+                .is_ok()
+        );
+        assert!(parse_history_metadata_patch("{\"note\":null,\"nested\":{\"x\":1}}").is_ok());
     }
 }

@@ -75,3 +75,21 @@ pub fn default_vtxo_key_gap_limit() -> u32 {
 pub fn max_vtxo_key_gap_limit() -> u32 {
     bark::MAX_VTXO_KEY_GAP_LIMIT
 }
+
+/// Decode hex or standard base64 without a wallet, database or network access.
+/// State is Unknown and registered is false because neither fact is encoded.
+#[boltffi::export]
+pub fn decode_vtxo(hex_or_base64: String) -> Result<crate::Vtxo, BarkError> {
+    Ok(crate::core::wallet::parse_vtxo(&hex_or_base64)?.into())
+}
+
+/// Parse an Ark address locally. The user pubkey is absent for policies without one.
+#[boltffi::export]
+pub fn parse_ark_address(address: String) -> Result<crate::ParsedArkAddress, BarkError> {
+    let address: ark::Address = address.parse().context("invalid Ark address")?;
+    Ok(crate::ParsedArkAddress {
+        ark_id: address.ark_id().to_string(),
+        user_pubkey: Some(address.policy().user_pubkey().to_string()),
+        is_testnet: address.is_testnet(),
+    })
+}

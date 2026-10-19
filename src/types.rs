@@ -198,6 +198,8 @@ impl From<VtxoLockHolder> for bark::vtxo::VtxoLockHolder {
 #[serde(tag = "type", rename_all = "kebab-case")]
 #[boltffi::data]
 pub enum VtxoState {
+    /// Pure decode has no local wallet-state information.
+    Unknown,
     /// Available; can be spent in a future round.
     Spendable,
     /// Locked by an operation. `holder` is `None` only for the narrow
@@ -227,6 +229,10 @@ impl From<&bark::vtxo::VtxoState> for VtxoState {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[boltffi::data]
 pub struct Vtxo {
+    pub server_pubkey: String,
+    pub exit_delta: u32,
+    pub anchor_point: OutPoint,
+    pub point: OutPoint,
     pub id: String,
     pub amount_sats: u64,
     pub expiry_height: u32,
@@ -248,6 +254,10 @@ pub struct Vtxo {
 impl From<BarkWalletVtxo> for Vtxo {
     fn from(v: BarkWalletVtxo) -> Self {
         Self {
+            server_pubkey: v.vtxo.server_pubkey().to_string(),
+            exit_delta: u32::from(v.vtxo.exit_delta()),
+            anchor_point: v.vtxo.chain_anchor().into(),
+            point: v.vtxo.point().into(),
             id: v.vtxo.id().to_string(),
             amount_sats: v.vtxo.amount().to_sat(),
             expiry_height: v.vtxo.expiry_height().into(),
@@ -300,6 +310,8 @@ pub struct AddressWithIndex {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[boltffi::data]
 pub struct LightningReceive {
+    pub htlc_vtxo_ids: Vec<String>,
+    pub movement_id: Option<u32>,
     pub payment_hash: String,
     pub invoice: String,
     /// `None` for an amountless invoice that has not settled yet. It used to
@@ -322,6 +334,14 @@ pub struct LightningReceive {
 impl From<bark::actions::lightning::receive::LightningReceive> for LightningReceive {
     fn from(r: bark::actions::lightning::receive::LightningReceive) -> Self {
         use bark::actions::lightning::receive::Progress;
+        let (htlc_vtxo_ids, movement_id) = match &r.progress {
+            Progress::AwaitingPayment => (Vec::new(), None),
+            Progress::HtlcsReady(htlcs) | Progress::PreimageRevealed(htlcs) => (
+                htlcs.vtxo_ids.iter().map(ToString::to_string).collect(),
+                Some(htlcs.movement_id.0),
+            ),
+            Progress::Delivering(delivery) => (Vec::new(), Some(delivery.movement_id.0)),
+        };
         let state = match r.progress {
             Progress::AwaitingPayment => "awaiting-payment",
             Progress::HtlcsReady(_) => "htlcs-ready",
@@ -329,6 +349,8 @@ impl From<bark::actions::lightning::receive::LightningReceive> for LightningRece
             Progress::Delivering(_) => "delivering",
         };
         Self {
+            htlc_vtxo_ids,
+            movement_id,
             payment_hash: r.payment_hash.to_string(),
             invoice: r.invoice.to_string(),
             amount_sats: r
@@ -346,6 +368,8 @@ impl From<bark::actions::lightning::receive::LightningReceive> for LightningRece
 impl From<bark::persist::models::SettledLightningReceive> for LightningReceive {
     fn from(r: bark::persist::models::SettledLightningReceive) -> Self {
         Self {
+            htlc_vtxo_ids: Vec::new(),
+            movement_id: None,
             payment_hash: r.payment_hash.to_string(),
             invoice: r.invoice.to_string(),
             amount_sats: Some(r.amount.to_sat()),
@@ -375,6 +399,9 @@ impl From<bark::actions::lightning::receive::LightningReceiveState> for Lightnin
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[boltffi::data]
 pub struct LightningSend {
+    pub payment_hash: String,
+    pub htlc_vtxo_ids: Vec<String>,
+    pub movement_id: Option<u32>,
     pub invoice: String,
     /// Amount being paid, in sats (`payment_amount`).
     pub amount_sats: u64,
@@ -389,7 +416,22 @@ pub struct LightningSend {
 
 impl From<bark::actions::lightning::pay::LightningSend> for LightningSend {
     fn from(s: bark::actions::lightning::pay::LightningSend) -> Self {
+        use bark::actions::lightning::pay::Progress;
+        let (htlc_vtxo_ids, movement_id) = match &s.progress {
+            Progress::Start => (Vec::new(), s.movement_id.map(|id| id.0)),
+            Progress::InputsLocked { movement_id } => (Vec::new(), Some(movement_id.0)),
+            Progress::HtlcReceived(htlcs)
+            | Progress::PaymentInitiated(htlcs)
+            | Progress::RevocableHtlcs { htlcs, .. }
+            | Progress::RevocationStuck { htlcs, .. } => (
+                htlcs.vtxo_ids.iter().map(ToString::to_string).collect(),
+                Some(htlcs.movement_id.0),
+            ),
+        };
         Self {
+            payment_hash: s.invoice.payment_hash().to_string(),
+            htlc_vtxo_ids,
+            movement_id,
             invoice: s.invoice.to_string(),
             amount_sats: s.payment_amount.to_sat(),
             fee_sats: s.fee.to_sat(),
@@ -451,8 +493,8 @@ pub struct Movement {
     pub intended_balance_sats: i64,
     pub effective_balance_sats: i64,
     pub offchain_fee_sats: u64,
-    pub sent_to_addresses: Vec<String>,
-    pub received_on_addresses: Vec<String>,
+    pub sent_to_addresses: Vec<MovementDestination>,
+    pub received_on_addresses: Vec<MovementDestination>,
     pub input_vtxo_ids: Vec<String>,
     pub output_vtxo_ids: Vec<String>,
     pub exited_vtxo_ids: Vec<String>,
@@ -477,24 +519,8 @@ impl From<bark::movement::Movement> for Movement {
             intended_balance_sats: m.intended_balance.to_sat(),
             effective_balance_sats: m.effective_balance.to_sat(),
             offchain_fee_sats: m.offchain_fee.to_sat(),
-            sent_to_addresses: m
-                .sent_to
-                .iter()
-                .map(|d| {
-                    // Serialize PaymentMethod to JSON string for FFI
-                    serde_json::to_string(&d.destination)
-                        .unwrap_or_else(|_| format!("{:?}", d.destination))
-                })
-                .collect(),
-            received_on_addresses: m
-                .received_on
-                .iter()
-                .map(|d| {
-                    // Serialize PaymentMethod to JSON string for FFI
-                    serde_json::to_string(&d.destination)
-                        .unwrap_or_else(|_| format!("{:?}", d.destination))
-                })
-                .collect(),
+            sent_to_addresses: m.sent_to.iter().map(Into::into).collect(),
+            received_on_addresses: m.received_on.iter().map(Into::into).collect(),
             input_vtxo_ids: m.input_vtxos.iter().map(|v| v.to_string()).collect(),
             output_vtxo_ids: m.output_vtxos.iter().map(|v| v.to_string()).collect(),
             exited_vtxo_ids: m.exited_vtxos.iter().map(|v| v.to_string()).collect(),
@@ -713,7 +739,7 @@ impl From<&bark::onchain::Utxo> for OnchainUtxo {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[boltffi::data]
 pub struct PendingBoard {
-    pub vtxo_id: String,
+    pub vtxo_ids: Vec<String>,
     pub amount_sats: u64,
     pub txid: String,
 }
@@ -721,7 +747,7 @@ pub struct PendingBoard {
 impl From<BarkPendingBoard> for PendingBoard {
     fn from(pb: BarkPendingBoard) -> Self {
         Self {
-            vtxo_id: pb.vtxos.first().map(|v| v.to_string()).unwrap_or_default(),
+            vtxo_ids: pb.vtxos.iter().map(ToString::to_string).collect(),
             amount_sats: pb.amount.to_sat(),
             txid: pb.funding_tx.compute_txid().to_string(),
         }
@@ -872,6 +898,7 @@ impl From<&ark::fees::FeeSchedule> for FeeSchedule {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[boltffi::data]
 pub struct ArkInfo {
+    pub mailbox_pubkey: String,
     pub network: Network,
     pub server_pubkey: String,
     pub round_interval_secs: u64,
@@ -912,6 +939,7 @@ impl From<&bark::ark::ArkInfo> for ArkInfo {
                 _ => Network::Testnet,
             },
             server_pubkey: info.server_pubkey.serialize().as_hex().to_string(),
+            mailbox_pubkey: info.mailbox_pubkey.to_string(),
             round_interval_secs: info.round_interval.as_secs(),
             nb_round_nonces: info.nb_round_nonces as u32,
             vtxo_exit_delta: u32::from(info.vtxo_exit_delta),
@@ -1299,15 +1327,45 @@ pub struct ExitTransactionStatus {
     pub state: ExitState,
     pub history: Option<Vec<ExitState>>,
     pub transaction_count: u32,
+    pub transactions: Vec<ExitTransactionPackage>,
 }
 
 impl From<bark::exit::ExitTransactionStatus> for ExitTransactionStatus {
     fn from(ets: bark::exit::ExitTransactionStatus) -> Self {
+        let transactions = ets
+            .transactions
+            .iter()
+            .map(|package| {
+                let tracked_status = match &ets.state {
+                    bark::exit::ExitState::Processing(processing) => processing
+                        .transactions
+                        .iter()
+                        .find(|tx| tx.txid == package.exit.txid)
+                        .map(|tx| (&tx.status).into()),
+                    _ => None,
+                };
+                ExitTransactionPackage {
+                    parent_txid: package.exit.txid.to_string(),
+                    parent_tx_hex: bitcoin::consensus::encode::serialize_hex(&package.exit.tx),
+                    child_txid: package
+                        .child
+                        .as_ref()
+                        .map(|child| child.info.txid.to_string()),
+                    child_tx_hex: package
+                        .child
+                        .as_ref()
+                        .map(|child| bitcoin::consensus::encode::serialize_hex(&child.info.tx)),
+                    child_origin: package.child.as_ref().map(|child| (&child.origin).into()),
+                    status: tracked_status,
+                }
+            })
+            .collect();
         Self {
             vtxo_id: ets.vtxo_id.to_string(),
             state: (&ets.state).into(),
             history: ets.history.map(|h| h.iter().map(Into::into).collect()),
             transaction_count: ets.transactions.len() as u32,
+            transactions,
         }
     }
 }
@@ -1567,6 +1625,15 @@ pub struct Destination {
 pub struct OutPoint {
     pub txid: String,
     pub vout: u32,
+}
+
+impl From<bitcoin::OutPoint> for OutPoint {
+    fn from(point: bitcoin::OutPoint) -> Self {
+        Self {
+            txid: point.txid.to_string(),
+            vout: point.vout,
+        }
+    }
 }
 
 /// Reference to a block in the blockchain
@@ -2154,4 +2221,241 @@ mod tests {
 pub struct StoredPublicKey {
     pub public_key: String,
     pub index: u32,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[boltffi::data]
+pub struct PaymentMethod {
+    pub method_type: String,
+    pub value: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[boltffi::data]
+pub struct MovementDestination {
+    pub payment_method: PaymentMethod,
+    pub amount_sats: u64,
+}
+
+impl From<&bark::movement::MovementDestination> for MovementDestination {
+    fn from(destination: &bark::movement::MovementDestination) -> Self {
+        Self {
+            payment_method: PaymentMethod {
+                method_type: destination.destination.type_str().into(),
+                value: destination.destination.value_string(),
+            },
+            amount_sats: destination.amount.to_sat(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[boltffi::data]
+pub struct ParsedArkAddress {
+    pub user_pubkey: Option<String>,
+    pub ark_id: String,
+    pub is_testnet: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[boltffi::data]
+pub struct MailboxAuthorization {
+    pub mailbox_id: String,
+    pub expiry: i64,
+    pub encoded: String,
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[boltffi::data]
+pub enum RoundOutcome {
+    Confirmed,
+    Unconfirmed,
+    Pending,
+    Failed,
+    Canceled,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[boltffi::data]
+pub struct PendingRoundStatus {
+    pub round_id: u32,
+    pub status: RoundOutcome,
+    pub funding_txid: Option<String>,
+    /// Empty on Bark bfbe6b7c, whose RoundStatus has no unsigned-funding variant.
+    pub unsigned_funding_txids: Vec<String>,
+    pub error: Option<String>,
+    pub is_final: bool,
+    pub is_success: bool,
+}
+
+impl PendingRoundStatus {
+    pub(crate) fn new(round_id: u32, value: bark::round::RoundStatus) -> Self {
+        use bark::round::RoundStatus as R;
+        let is_final = value.is_final();
+        let is_success = value.is_success();
+        let (status, funding_txid, error) = match value {
+            R::Confirmed { funding_txid } => (
+                RoundOutcome::Confirmed,
+                Some(funding_txid.to_string()),
+                None,
+            ),
+            R::Unconfirmed { funding_txid } => (
+                RoundOutcome::Unconfirmed,
+                Some(funding_txid.to_string()),
+                None,
+            ),
+            R::Pending => (RoundOutcome::Pending, None, None),
+            R::Failed { error } => (RoundOutcome::Failed, None, Some(error)),
+            R::Canceled => (RoundOutcome::Canceled, None, None),
+        };
+        Self {
+            round_id,
+            status,
+            funding_txid,
+            unsigned_funding_txids: vec![],
+            error,
+            is_final,
+            is_success,
+        }
+    }
+}
+
+impl From<ark::Vtxo> for Vtxo {
+    fn from(v: ark::Vtxo) -> Self {
+        Self {
+            id: v.id().to_string(),
+            amount_sats: v.amount().to_sat(),
+            expiry_height: v.expiry_height().into(),
+            kind: format!("{:?}", v.policy_type()),
+            state: VtxoState::Unknown,
+            exit_depth: u32::from(v.exit_depth()),
+            exit_tx_weight_wu: v.transactions().map(|tx| tx.tx.weight().to_wu()).sum(),
+            registered: false,
+            server_pubkey: v.server_pubkey().to_string(),
+            exit_delta: u32::from(v.exit_delta()),
+            anchor_point: v.chain_anchor().into(),
+            point: v.point().into(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[boltffi::data]
+pub struct ExitTransactionPackage {
+    pub parent_txid: String,
+    pub parent_tx_hex: String,
+    pub child_txid: Option<String>,
+    pub child_tx_hex: Option<String>,
+    pub child_origin: Option<ExitTxOrigin>,
+    /// Present when the current or historical exit state tracks this parent.
+    pub status: Option<ExitTxStatus>,
+}
+
+#[cfg(test)]
+mod noah_parity_tests {
+    use super::*;
+    use bitcoin::hashes::Hash;
+    #[test]
+    fn destinations_keep_amounts_and_boarding_keeps_every_id() {
+        let destination = bark::movement::MovementDestination::new(
+            bark::movement::PaymentMethod::Custom("Noah receipt".into()),
+            bitcoin::Amount::from_sat(u64::MAX),
+        );
+        let converted: MovementDestination = (&destination).into();
+        assert_eq!(converted.amount_sats, u64::MAX);
+        assert_eq!(converted.payment_method.method_type, "custom");
+        assert_eq!(converted.payment_method.value, "Noah receipt");
+        let vtxos: Vec<ark::VtxoId> = (0..2)
+            .map(|vout| {
+                bitcoin::OutPoint {
+                    txid: bitcoin::Txid::all_zeros(),
+                    vout,
+                }
+                .into()
+            })
+            .collect();
+        let board: PendingBoard = BarkPendingBoard {
+            funding_tx: bitcoin::Transaction {
+                version: bitcoin::transaction::Version::TWO,
+                lock_time: bitcoin::absolute::LockTime::ZERO,
+                input: vec![],
+                output: vec![],
+            },
+            vtxos: vtxos.clone(),
+            amount: bitcoin::Amount::from_sat(1000),
+            movement_id: bark::movement::MovementId::new(3),
+        }
+        .into();
+        assert_eq!(
+            board.vtxo_ids,
+            vtxos.iter().map(ToString::to_string).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn pending_round_status_preserves_all_outcomes() {
+        use bark::round::RoundStatus as R;
+        for (original, expected, finality, success) in [
+            (R::Pending, RoundOutcome::Pending, false, false),
+            (
+                R::Confirmed {
+                    funding_txid: bitcoin::Txid::all_zeros(),
+                },
+                RoundOutcome::Confirmed,
+                true,
+                true,
+            ),
+            (
+                R::Unconfirmed {
+                    funding_txid: bitcoin::Txid::all_zeros(),
+                },
+                RoundOutcome::Unconfirmed,
+                false,
+                true,
+            ),
+            (
+                R::Failed {
+                    error: "denied".into(),
+                },
+                RoundOutcome::Failed,
+                true,
+                false,
+            ),
+            (R::Canceled, RoundOutcome::Canceled, true, false),
+        ] {
+            let converted = PendingRoundStatus::new(9, original);
+            assert_eq!(converted.round_id, 9);
+            assert_eq!(converted.status, expected);
+            assert_eq!(converted.is_final, finality);
+            assert_eq!(converted.is_success, success);
+            assert_eq!(converted.funding_txid.is_some(), success);
+            assert_eq!(
+                converted.error.as_deref(),
+                if expected == RoundOutcome::Failed {
+                    Some("denied")
+                } else {
+                    None
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn pure_decode_preserves_public_fields_and_local_state_is_unknown() {
+        let hex = include_str!("../tests/fixtures/board-vtxo.hex");
+        let decoded = crate::decode_vtxo(hex.into()).unwrap();
+        let original = crate::core::wallet::parse_vtxo(hex).unwrap();
+        assert_eq!(decoded.id, original.id().to_string());
+        assert_eq!(decoded.server_pubkey, original.server_pubkey().to_string());
+        assert_eq!(decoded.exit_delta, u32::from(original.exit_delta()));
+        assert_eq!(decoded.anchor_point, original.chain_anchor().into());
+        assert_eq!(decoded.point, original.point().into());
+        assert!(matches!(decoded.state, VtxoState::Unknown));
+        assert!(!decoded.registered);
+        use base64::Engine;
+        let base64 =
+            base64::engine::general_purpose::STANDARD.encode(hex::decode(hex.trim()).unwrap());
+        assert_eq!(crate::decode_vtxo(base64).unwrap().id, decoded.id);
+        assert!(crate::decode_vtxo("not a VTXO".into()).is_err());
+    }
 }

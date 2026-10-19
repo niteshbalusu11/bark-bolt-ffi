@@ -24,6 +24,7 @@ pub struct OnchainWallet {
     chain: Arc<ChainSource>,
     /// For [`Self::send`]; neither the bdk wallet nor the trait exposes one.
     network: bitcoin::Network,
+    pub(crate) db_path_registration: Option<Arc<std::path::PathBuf>>,
 }
 
 impl OnchainWallet {
@@ -83,6 +84,7 @@ impl OnchainWallet {
             wallet: Arc::new(RwLock::new(onchain)),
             chain,
             network,
+            db_path_registration: None,
         })
     }
 
@@ -140,6 +142,41 @@ impl OnchainWallet {
             .await
             .context("Send failed")?;
 
+        Ok(txid.to_string())
+    }
+
+    pub async fn is_mine(&self, address: String) -> Result<bool, BarkError> {
+        // Ownership is a script query, regardless of the address's network (Nitro).
+        let address: bitcoin::Address<bitcoin::address::NetworkUnchecked> =
+            address.parse().context("invalid address")?;
+        Ok(self
+            .wallet
+            .read()
+            .await
+            .is_mine(&address.assume_checked().script_pubkey())
+            .await?)
+    }
+
+    /// True BDK drain; the optional rate is sat/vB, otherwise the chain's regular rate.
+    pub async fn drain(
+        &self,
+        address: String,
+        fee_rate_sat_per_vb: Option<u64>,
+    ) -> Result<String, BarkError> {
+        let address = parse_address(&address, self.network)?;
+        let fee_rate = match fee_rate_sat_per_vb {
+            Some(rate) => {
+                bitcoin::FeeRate::from_sat_per_vb(rate).context("invalid fee rate in sat/vB")?
+            }
+            None => self.chain.fee_rates().await.regular,
+        };
+        let txid = self
+            .wallet
+            .write()
+            .await
+            .drain(&self.chain, address, fee_rate)
+            .await
+            .context("drain failed")?;
         Ok(txid.to_string())
     }
 
