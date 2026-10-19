@@ -54,6 +54,7 @@ an Apple developer account. Device signing needs your normal Apple team setup.
 just setup-everything
 just status
 just bcli getblockchaininfo
+just aspd rpc wallet
 just bark balance
 just generate 6
 just send-to ADDRESS 0.1
@@ -99,9 +100,11 @@ Docker, JDK17, Android SDK/NDK, a booted simulator/emulator, `IOS_DEVICE` and
 hosted macOS runner. Tests use a separate Compose project/ports. The helper
 registers a unique per-job label and dispatches the trusted main workflow.
 The validation record links actual completed runs. Current-master integration passed in
-[Actions39202007139](https://github.com/smolcars/bark-bolt-ffi/actions/runs/39202007139),
-and [all hosted SDK/app jobs passed](https://github.com/smolcars/bark-bolt-ffi/actions/runs/39201332568);
+[Actions39260224145](https://github.com/smolcars/bark-bolt-ffi/actions/runs/39260224145),
+and [all hosted SDK/app jobs passed](https://github.com/smolcars/bark-bolt-ffi/actions/runs/39260131486);
 see [device/runner setup](docs/devices.md) to repeat it.
+The [Just/Bash validation record](docs/validation/just-and-actions-2026-10-19.md)
+documents the restored commands, latest action pins and preservation checks.
 
 ## Upstream
 

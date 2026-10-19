@@ -1,0 +1,177 @@
+{
+  "source_commit": "279031a04fb8a6c1fb83fb8170814b4ac7c1a4e3",
+  "entrypoint": "just test-regtest --extended",
+  "compose_project": "bark-bolt-ffi-just-check-20261019",
+  "ports": {
+    "bitcoin": 19643,
+    "ark": 3835
+  },
+  "sdk_source_unchanged_from": "95d90fd467a341cd90736a33ad5fc4ec0410e439",
+  "raw_results_sha256": "9f155674db23e8a5239b586fc9ca75ded47c7b9ac8f24bd0a566285146e97b1d",
+  "result": {
+    "passed": true,
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "extended": true,
+    "run_id": "just-bash-20261019-r1"
+  },
+  "default_stack_setup": {
+    "runs": 2,
+    "reference_seed_hash_unchanged": true,
+    "reference_spendable_sats": 998900,
+    "existing_channel_reused": true
+  },
+  "fresh_stack_setup": {
+    "bitcoin_height": 145,
+    "lightning_channels": 1,
+    "reference_balance": {
+      "spendable_sat": 998900,
+      "needs_refresh_sat": 0,
+      "pending_lightning_send_sat": 0,
+      "claimable_lightning_receive_sat": 0,
+      "pending_in_round_sat": 0,
+      "pending_board_sat": 0,
+      "pending_arkoor_send_sat": 0,
+      "pending_offboard_sat": 0,
+      "pending_exit_sat": 0
+    }
+  },
+  "ordinary_down": {
+    "volumes_preserved": 6,
+    "reference_seed_hash_unchanged": true
+  },
+  "explicit_cleanup": {
+    "project_containers_removed": true,
+    "project_volumes_removed": true
+  },
+  "platforms": {
+    "ios": {
+      "completed_commands": 32,
+      "actions": [
+        "board",
+        "cancel",
+        "claim",
+        "drainExit",
+        "estimate",
+        "invoice",
+        "offboard",
+        "open",
+        "progressExit",
+        "refresh",
+        "restore",
+        "send",
+        "startExit",
+        "sync"
+      ],
+      "transactions": [
+        {
+          "action": "board",
+          "txid": "d2043f7531a033d3c765de3a37b07bc31c91c2f76b08415d9bb56aa4be986d09"
+        },
+        {
+          "action": "offboard",
+          "txid": "6cfd96fd89f213ec5bc497b1833e26c13d1dfc988b185f50f1384c0b89c3c015"
+        },
+        {
+          "action": "board",
+          "txid": "21f26f94222c58c38af029cd14eff570a8942602fe4beece0c40c370612477ae"
+        },
+        {
+          "action": "drainExit",
+          "txid": "57166865149f6d32325a6e47e8de7c0ee31e14539c57ef1c4f8f96e7383fdc1d"
+        }
+      ],
+      "offboard_and_claim_confirmations_asserted": true,
+      "restores": [
+        {
+          "databaseName": "just-bash-20261019-r1-restored-F331625E-C819-469C-9FE3-8A8372C91297",
+          "fingerprint": "163fb483",
+          "recoveryComplete": true,
+          "historyCount": 0,
+          "spendable": 1990572,
+          "onchain": 7999845
+        },
+        {
+          "databaseName": "just-bash-20261019-r1-restored-BFBA3E65-9DB3-493A-94FD-6E178377A88C",
+          "fingerprint": "163fb483",
+          "recoveryComplete": true,
+          "historyCount": 1,
+          "spendable": 0,
+          "onchain": 7499795
+        }
+      ],
+      "notification_counts": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "android": {
+      "completed_commands": 32,
+      "actions": [
+        "board",
+        "cancel",
+        "claim",
+        "drainExit",
+        "estimate",
+        "invoice",
+        "offboard",
+        "open",
+        "progressExit",
+        "refresh",
+        "restore",
+        "send",
+        "startExit",
+        "sync"
+      ],
+      "transactions": [
+        {
+          "action": "board",
+          "txid": "7a8a2abc5ab0e1c1f6f25935ba443d02d42f2365e451309f2ce20453e02ae288"
+        },
+        {
+          "action": "offboard",
+          "txid": "f060b428c10ec4f79bf4e6456bcef2485ff2cca1dcd1997e0a15e77cad6e4b09"
+        },
+        {
+          "action": "board",
+          "txid": "25d0e5dc6d73dba533bf37679a00255ce43501eb43cd6fd76d4eb52d3b1afca7"
+        },
+        {
+          "action": "drainExit",
+          "txid": "3c70fad6338399023e5aa0de5bdff418f4c7734775794b21420d51a5cae7bcf4"
+        }
+      ],
+      "offboard_and_claim_confirmations_asserted": true,
+      "restores": [
+        {
+          "databaseName": "just-bash-20261019-r1-restored-ec04744b-3e2b-4bc4-aaa3-4aa176cf0877",
+          "fingerprint": "a78a7c3b",
+          "recoveryComplete": true,
+          "historyCount": 0,
+          "spendable": 1990572,
+          "onchain": 7999845
+        },
+        {
+          "databaseName": "just-bash-20261019-r1-restored-88af4d74-60ce-4246-aaa7-dd58cd0761d9",
+          "fingerprint": "a78a7c3b",
+          "recoveryComplete": true,
+          "historyCount": 1,
+          "spendable": 0,
+          "onchain": 7499795
+        }
+      ],
+      "notification_counts": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    }
+  }
+}

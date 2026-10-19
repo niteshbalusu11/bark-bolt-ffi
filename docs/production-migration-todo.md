@@ -1,6 +1,6 @@
 # Production migration checklist
 
-Status: tasks 00–15 complete; task16 restores Just/Bash tooling and updates Actions. Bark master, BoltFFI Swift/Kotlin SDKs, native
+Status: all tasks 00–16 complete. Bark master, BoltFFI Swift/Kotlin SDKs, native
 apps, RegTest acceptance, GitHub Actions, cleanup and published release consumers
 pass. [Current evidence](validation/2026-10-19-master.md) records exact sources,
 runs, artifacts and scope limits. [Release v0.1.0](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.1.0)
@@ -333,7 +333,7 @@ v0.1.0 artifacts remain unchanged; these source fixes are on main.
 
 ### 16 — Restore Just/Bash RegTest tooling and update GitHub Actions
 
-- [ ] Use Nitro Ark's familiar Just recipes/Bash commands and latest stable actions.
+- [x] Use Nitro Ark's familiar Just recipes/Bash commands and latest stable actions.
 
 **Engineering plan:** [Just/Bash and Actions](plans/16-just-and-current-actions.md)
 records the retained interfaces, volume/seed invariants, exact upstream action
@@ -346,6 +346,14 @@ active instructions. Keep Python only for structured mobile/runner helpers.
 **Done when:** shell safety/lint checks, real repeated setup with preserved seed,
 full paired app acceptance and both updated CI workflows pass; changes are pushed
 and evidence is recorded.
+
+**Results:** restored the original command family, including raw captaind
+passthrough, and pushed at f66a75d. Real repeated/fresh setup, seed preservation,
+ordinary down's six retained volumes and explicit CI cleanup pass.
+[Hosted SDK/app CI](https://github.com/smolcars/bark-bolt-ffi/actions/runs/39260131486)
+and [paired RegTest CI](https://github.com/smolcars/bark-bolt-ffi/actions/runs/39260224145)
+pass with the latest stable action pins. [Validation and evidence](validation/just-and-actions-2026-10-19.md)
+record commands, exact versions, transaction summaries and scope limits.
 
 ## Dependency order
 

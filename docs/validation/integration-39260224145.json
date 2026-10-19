@@ -1,0 +1,150 @@
+{
+  "workflow": "https://github.com/smolcars/bark-bolt-ffi/actions/runs/39260224145",
+  "source_commit": "f66a75d510bd79738e6cb68cfe0e30dfcef90a5c",
+  "entrypoint": "just test-regtest --extended",
+  "backend": "scripts/ark-dev.sh",
+  "native_profile": "development, arm64 local overlays",
+  "raw_results_sha256": "eb6d403fb5f1256e89da587af13b11f64bd8c45c91e5fda33c2775e4c9248ced",
+  "result": {
+    "passed": true,
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "extended": true,
+    "run_id": "integration-1792416510"
+  },
+  "runner_unregistered": true,
+  "runner_temporary_directory_removed": true,
+  "ci_project_containers_removed": true,
+  "ci_project_volumes_removed": true,
+  "cleanup_entrypoint": "just down --volumes",
+  "platforms": {
+    "ios": {
+      "completed_commands": 32,
+      "actions": [
+        "board",
+        "cancel",
+        "claim",
+        "drainExit",
+        "estimate",
+        "invoice",
+        "offboard",
+        "open",
+        "progressExit",
+        "refresh",
+        "restore",
+        "send",
+        "startExit",
+        "sync"
+      ],
+      "transactions": [
+        {
+          "action": "board",
+          "txid": "57374fe65798301adea5f75bdd6a8a0d8cd4763fe3f60eedda7f5c51289e77ab"
+        },
+        {
+          "action": "offboard",
+          "txid": "54218aa6500d0a46cfc7179db677bb979f955b7c452ada9cb81632bc9f299382"
+        },
+        {
+          "action": "board",
+          "txid": "36021711175bcde1c5729692437b05360da1c2a3e6edfd846081d7e1ee70b2d9"
+        },
+        {
+          "action": "drainExit",
+          "txid": "b191cc5e0a21bde9ae5bce602dec26c55a7c660fc1aaa32a59f4c06b4634a6ec"
+        }
+      ],
+      "offboard_and_claim_confirmations_asserted": true,
+      "restores": [
+        {
+          "databaseName": "integration-1792416510-restored-5C602805-327C-4CE5-B424-D40C470D4665",
+          "fingerprint": "4fbb8913",
+          "recoveryComplete": true,
+          "historyCount": 0,
+          "spendable": 1990572,
+          "onchain": 7999845
+        },
+        {
+          "databaseName": "integration-1792416510-restored-3195AAC6-B163-4B77-A3C6-2D8C1AC30DCB",
+          "fingerprint": "4fbb8913",
+          "recoveryComplete": true,
+          "historyCount": 1,
+          "spendable": 0,
+          "onchain": 7499795
+        }
+      ],
+      "notification_counts": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "android": {
+      "completed_commands": 32,
+      "actions": [
+        "board",
+        "cancel",
+        "claim",
+        "drainExit",
+        "estimate",
+        "invoice",
+        "offboard",
+        "open",
+        "progressExit",
+        "refresh",
+        "restore",
+        "send",
+        "startExit",
+        "sync"
+      ],
+      "transactions": [
+        {
+          "action": "board",
+          "txid": "147ccec6ad01f1b0c2be74d90b3f0ec369c4919f4481ab5fb215812d6507eb65"
+        },
+        {
+          "action": "offboard",
+          "txid": "6c3aa3926fa6d49cb7f48c61dddaa0a65a5b420c1fd3d4292285d9f9b20fd2ba"
+        },
+        {
+          "action": "board",
+          "txid": "8c83c7911f89e83ba4256c3d5bea373524950f29d93e08222f20f9e896b36e91"
+        },
+        {
+          "action": "drainExit",
+          "txid": "008637bede9409b967e532beb52c6972e683fd76f3c477d01a87fbd2ba8a8477"
+        }
+      ],
+      "offboard_and_claim_confirmations_asserted": true,
+      "restores": [
+        {
+          "databaseName": "integration-1792416510-restored-1a0881ff-4bb2-4995-8a00-b304dcd3b180",
+          "fingerprint": "8c23eff2",
+          "recoveryComplete": true,
+          "historyCount": 0,
+          "spendable": 1990572,
+          "onchain": 7999845
+        },
+        {
+          "databaseName": "integration-1792416510-restored-6d813343-7f85-4c29-b4fd-a558a584d0be",
+          "fingerprint": "8c23eff2",
+          "recoveryComplete": true,
+          "historyCount": 1,
+          "spendable": 0,
+          "onchain": 7499795
+        }
+      ],
+      "notification_counts": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    }
+  }
+}
