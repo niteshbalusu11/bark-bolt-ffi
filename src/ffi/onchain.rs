@@ -36,7 +36,10 @@ impl OnchainWallet {
     ) -> Result<Self, BarkError> {
         run_async(async move {
             let db = open_sqlite_db(&datadir)?;
-            let core = CoreOnchainWallet::default(network, mnemonic, config, db).await?;
+            let registration =
+                crate::backup::register_live_database(&crate::ffi::db::sqlite_path(&datadir))?;
+            let mut core = CoreOnchainWallet::default(network, mnemonic, config, db).await?;
+            core.db_path_registration = Some(registration);
             Ok(Self {
                 inner: OnchainWalletInner::Bdk(Arc::new(core)),
             })
@@ -132,6 +135,47 @@ impl OnchainWallet {
             }
             OnchainWalletInner::Callback(_) => {
                 Err("send() not supported for callback wallets".into())
+            }
+        }
+    }
+
+    /// Whether this wallet owns the address. BDK validates the configured network;
+    /// a callback wallet receives its scriptPubkey after address syntax validation.
+    pub async fn is_mine(&self, address: String) -> Result<bool, BarkError> {
+        match &self.inner {
+            OnchainWalletInner::Bdk(core) => {
+                let core = core.clone();
+                run_async(async move { core.is_mine(address).await }).await
+            }
+            OnchainWalletInner::Callback(adapter) => {
+                let adapter = adapter.clone();
+                run_async(async move {
+                    let address: bitcoin::Address<bitcoin::address::NetworkUnchecked> =
+                        address.parse().map_err(anyhow::Error::from)?;
+                    Ok(adapter
+                        .read()
+                        .await
+                        .is_mine(&address.assume_checked().script_pubkey())
+                        .await?)
+                })
+                .await
+            }
+        }
+    }
+
+    /// Drain all BDK-selected funds. Fee rate is sat/vB; nil/null uses regular.
+    pub async fn drain(
+        &self,
+        address: String,
+        #[boltffi::default(None)] fee_rate_sat_per_vb: Option<u64>,
+    ) -> Result<String, BarkError> {
+        match &self.inner {
+            OnchainWalletInner::Bdk(core) => {
+                let core = core.clone();
+                run_async(async move { core.drain(address, fee_rate_sat_per_vb).await }).await
+            }
+            OnchainWalletInner::Callback(_) => {
+                Err("drain() not supported for callback wallets".into())
             }
         }
     }

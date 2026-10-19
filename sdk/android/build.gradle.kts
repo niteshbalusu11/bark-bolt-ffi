@@ -22,3 +22,5 @@ afterEvaluate {
         groupId = project.group.toString(); artifactId = "bark-bolt-ffi-android"; version = project.version.toString()
     } } }
 }
+// Include handwritten host conveniences alongside generated bindings.
+kotlin.sourceSets.getByName("main").kotlin.srcDir(rootProject.file("sdk/kotlin-support"))

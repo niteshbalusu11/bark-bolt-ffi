@@ -72,7 +72,8 @@ impl Wallet {
         Fut: Future<Output = T> + Send + 'static,
         T: Send + 'static,
     {
-        let future = action(self.core.clone());
+        // Bark sync futures are too large to nest by value on Swift worker stacks.
+        let future = Box::pin(action(self.core.clone()));
         let db_path = self.db_path.clone();
         run_async(async move {
             let _db_path = db_path;
@@ -567,6 +568,27 @@ impl Wallet {
         self.run(|core| async move { core.history().await }).await
     }
 
+    /// Merge a JSON-object patch (<=16KiB) into movement metadata, preserving Nitro semantics.
+    pub async fn update_history_metadata(
+        &self,
+        movement_id: u32,
+        patch_json: String,
+    ) -> Result<(), BarkError> {
+        self.run(|core| async move { core.update_history_metadata(movement_id, patch_json).await })
+            .await
+    }
+
+    /// Destructively forget one VTXO using Bark's recovery API. Can cause loss of funds.
+    pub async fn dangerous_drop_vtxo(&self, id: String) -> Result<(), BarkError> {
+        self.run(|core| async move {
+            core.inner()
+                .dangerous_drop_vtxo(id.parse().context("invalid VTXO id")?)
+                .await?;
+            Ok(())
+        })
+        .await
+    }
+
     pub async fn history_by_payment_method(
         &self,
         payment_method_type: String,
@@ -866,6 +888,12 @@ impl Wallet {
             .await
     }
 
+    /// Advance pending rounds and report terminal outcomes before they disappear from pending state.
+    pub async fn sync_pending_rounds(&self) -> Result<Vec<types::PendingRoundStatus>, BarkError> {
+        self.run(|core| async move { core.sync_pending_rounds().await })
+            .await
+    }
+
     pub async fn cancel_pending_round(&self, round_id: u32) -> Result<(), BarkError> {
         self.run(|core| async move { core.cancel_pending_round(round_id).await })
             .await
@@ -927,6 +955,14 @@ impl Wallet {
     /// window short.
     pub fn mailbox_authorization(&self, expiry_secs: u32) -> Result<String, BarkError> {
         self.core.mailbox_authorization(expiry_secs)
+    }
+
+    /// Absolute Unix expiry in seconds, unlike mailboxAuthorization's relative duration.
+    pub fn mailbox_authorization_at(
+        &self,
+        authorization_expiry: i64,
+    ) -> Result<types::MailboxAuthorization, BarkError> {
+        self.core.mailbox_authorization_at(authorization_expiry)
     }
 
     // ------------------------------------------------------------------------
@@ -1210,6 +1246,104 @@ mod noah_tests {
             assert_eq!(created.sha256,validated.sha256);
             assert!(crate::validate_wallet_snapshot(directory.path().join("db.sqlite").to_string_lossy().into(),None).await.is_err());
             subscription.stop();
+        });
+    }
+}
+
+#[cfg(test)]
+mod noah_p1_tests {
+    use super::*;
+    fn regtest(args: &[&str]) -> String {
+        let output = std::process::Command::new("bash")
+            .arg(concat!(env!("CARGO_MANIFEST_DIR"), "/scripts/ark-dev.sh"))
+            .args(args)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "RegTest helper failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        String::from_utf8(output.stdout).unwrap().trim().to_string()
+    }
+    #[test]
+    fn live_board_metadata_exit_packages_drop_and_bdk_drain() {
+        if std::env::var("BARK_REGTEST").as_deref() != Ok("1") {
+            return;
+        }
+        crate::ffi::runtime::TOKIO_RT.block_on(async {
+            let directory = tempfile::tempdir().unwrap();
+            let config: Config = serde_json::from_value(serde_json::json!({"server_address":"http://127.0.0.1:3635","bitcoind_address":"http://127.0.0.1:19443","bitcoind_user":"second","bitcoind_pass":"ark","vtxo_exit_margin":2})).unwrap();
+            let mnemonic = crate::generate_mnemonic().unwrap();
+            let onchain = OnchainWallet::default(Network::Regtest,mnemonic.clone(),config.clone(),directory.path().to_string_lossy().into()).await.unwrap();
+            let wallet = Wallet::open_with_onchain(Network::Regtest,mnemonic,config.clone(),WalletOpenArgs { run_daemon:false,datadir:directory.path().to_string_lossy().into(),create_if_not_exists:true,create_without_server:true,skip_recovery:true },&onchain).await.unwrap();
+            let address = onchain.new_address().await.unwrap();
+            assert!(onchain.is_mine(address.clone()).await.unwrap());
+            assert!(onchain.is_mine("invalid".into()).await.is_err());
+            assert!(onchain.drain(address.clone(),Some(u64::MAX)).await.is_err());
+            regtest(&["send-to",&address,"0.005"]);
+            onchain.sync().await.unwrap();
+            let board = wallet.board_amount(100_000).await.unwrap();
+            assert!(!board.vtxo_ids.is_empty());
+            regtest(&["generate","6"]);
+            wallet.sync().await.unwrap();
+            let movement = wallet.history().await.unwrap().into_iter().find(|m| m.subsystem_kind=="board").unwrap();
+            wallet.update_history_metadata(movement.id,"{\"note\":\"Noah native\"}".into()).await.unwrap();
+            let updated = wallet.history().await.unwrap().into_iter().find(|m| m.id==movement.id).unwrap();
+            let metadata: serde_json::Value = serde_json::from_str(&updated.metadata_json).unwrap();
+            assert_eq!(metadata["note"],"Noah native");
+            assert!(wallet.update_history_metadata(movement.id,"[]".into()).await.is_err());
+            let recipient_directory = directory.path().join("recipient");
+            let recipient = Wallet::open(Network::Regtest,crate::generate_mnemonic().unwrap(),config.clone(), WalletOpenArgs { run_daemon:false,datadir:recipient_directory.to_string_lossy().into(),create_if_not_exists:true,create_without_server:true,skip_recovery:true }).await.unwrap();
+            let receive_address = recipient.new_address().await.unwrap();
+            wallet.send_arkoor_payment(receive_address.clone(),10_000).await.unwrap();
+            recipient.sync().await.unwrap();
+            let received: u64 = recipient.history().await.unwrap().iter().flat_map(|movement| &movement.received_on_addresses).filter(|destination| destination.payment_method.value == receive_address).map(|destination| destination.amount_sats).sum();
+            assert_eq!(received,10_000);
+            let ark_address = wallet.new_address_with_index().await.unwrap();
+            let parsed = crate::parse_ark_address(ark_address.address).unwrap();
+            assert_eq!(parsed.user_pubkey.as_deref(),Some(wallet.peek_public_key(ark_address.index).await.unwrap().as_str()));
+            assert!(!parsed.ark_id.is_empty());
+            let info = wallet.ark_info().await.unwrap();
+            assert!(!info.mailbox_pubkey.is_empty());
+            let auth = wallet.mailbox_authorization_at(2_000_000_000).unwrap();
+            assert_eq!(auth.expiry,2_000_000_000);
+            assert!(!auth.encoded.is_empty());
+            assert!(wallet.mailbox_authorization_at(i64::MAX).is_err());
+            assert!(wallet.sync_pending_rounds().await.unwrap().is_empty());
+            let id = wallet.spendable_vtxos().await.unwrap()[0].id.clone();
+            assert!(!wallet.get_vtxo_by_id(id.clone()).await.unwrap().server_pubkey.is_empty());
+            wallet.start_exit_for_vtxos(vec![id.clone()]).await.unwrap();
+            let status = wallet.get_exit_status(id.clone(),true,true).await.unwrap().unwrap();
+            assert!(!status.transactions.is_empty());
+            for package in status.transactions {
+                let tx: bitcoin::Transaction = bitcoin::consensus::deserialize(&hex::decode(package.parent_tx_hex).unwrap()).unwrap();
+                assert_eq!(tx.compute_txid().to_string(),package.parent_txid);
+            }
+            assert!(wallet.get_exit_status(id.clone(),false,false).await.unwrap().unwrap().transactions.is_empty());
+            let snapshot = wallet.create_snapshot(directory.path().join("with-exit.sqlite").to_string_lossy().into()).await.unwrap();
+            crate::validate_wallet_snapshot(snapshot.path,None).await.unwrap();
+            wallet.cancel_exit(id.clone()).await.unwrap();
+            wallet.dangerous_drop_vtxo(id.clone()).await.unwrap();
+            assert!(wallet.get_vtxo_by_id(id).await.is_err());
+            assert!(wallet.dangerous_drop_vtxo("invalid".into()).await.is_err());
+            let destination = regtest(&["bcli","getnewaddress"]);
+            onchain.sync().await.unwrap();
+            let drain = onchain.drain(destination.clone(),None).await.unwrap();
+            let transaction = onchain.transactions().await.unwrap().into_iter().find(|t| t.txid==drain).unwrap();
+            let tx: bitcoin::Transaction = bitcoin::consensus::deserialize(&hex::decode(transaction.tx_hex).unwrap()).unwrap();
+            assert_eq!(tx.output.len(),1);
+            assert!(!onchain.is_mine(destination).await.unwrap());
+            regtest(&["generate","1"]);
+            onchain.sync().await.unwrap();
+            assert_eq!(onchain.balance().await.unwrap().total_sats,0);
+            regtest(&["send-to",&address,"0.002"]);
+            onchain.sync().await.unwrap();
+            let all = wallet.board_all().await.unwrap();
+            assert!(!all.vtxo_ids.is_empty());
+            regtest(&["generate","6"]);
+            wallet.sync().await.unwrap();
+            assert!(all.vtxo_ids.iter().all(|id| !id.is_empty()));
         });
     }
 }

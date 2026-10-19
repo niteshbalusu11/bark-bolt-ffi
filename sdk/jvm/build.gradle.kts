@@ -4,7 +4,7 @@ val nativeHost = (if (System.getProperty("os.name").startsWith("Mac")) "darwin" 
     (if (System.getProperty("os.arch") in listOf("aarch64", "arm64")) "arm64" else "x86_64")
 tasks.jar { archiveBaseName.set("bark-bolt-ffi-jvm-$nativeHost"); archiveVersion.set(project.version.toString()) }
 sourceSets {
-    main { kotlin.srcDir(rootProject.file("dist/kotlin")); resources.srcDir(rootProject.file("dist/android/desktopJniLibs")) }
+    main { kotlin.srcDir(rootProject.file("dist/kotlin")); kotlin.srcDir(rootProject.file("sdk/kotlin-support")); resources.srcDir(rootProject.file("dist/android/desktopJniLibs")) }
     test { kotlin.srcDir(rootProject.file("tests/kotlin")) }
 }
 dependencies {
@@ -26,7 +26,7 @@ tasks.register<JavaExec>("testPackaged") {
     dependsOn(tasks.testClasses, tasks.jar)
     classpath = files(tasks.jar) + (sourceSets.test.get().runtimeClasspath - sourceSets.main.get().output)
     mainClass.set("org.junit.runner.JUnitCore")
-    args("ContractTest", "NoahContractTest")
+    args("ContractTest", "NoahContractTest", "NoahP1ContractTest")
     systemProperty("bark.fixtures", rootProject.file("tests/fixtures").absolutePath)
     environment("BARK_REGTEST", System.getenv("BARK_REGTEST") ?: "")
 }
