@@ -185,14 +185,20 @@ checks schema/integrity/FKs, migrates that copy and loads typed Bark/BDK state.
 It supports Nitro's schema 42. The input directory must be writable for temporary
 validation files. The input bytes remain unchanged; expected identity is optional
 and explicit. The API validates an extracted database, not a `.noahbackup` ZIP.
+The input must be self-contained: nonempty `-wal` or `-journal` sidecars are
+rejected rather than silently omitted or recovered by mutating the input.
+Export with `createSnapshot` before packaging a live database. The 30s timeout
+counts continuous busy/locked time, not total elapsed backup time.
 
 `wallet.stateChanges()` returns an independent `StateChangeSubscription`. Receive
 with `nextChange()` in a loop; reasons match Nitro: `initial`, `databaseChanged`,
 `resyncRequired`, with monotonic sequence numbers. It polls `PRAGMA data_version`
 on an independent read-only connection every 750ms, so commits can coalesce and
-rollbacks do not emit changes. Treat `resyncRequired` as a request for a full
+rollbacks do not emit changes. Temporary SQLite busy/locked polls retry on the
+next tick. Treat `resyncRequired` as a request for a full
 state refresh and resubscribe. Only one pending wait per holder is allowed;
 `cancelNextChangeWait()` returns nil/null for that wait and permits reuse. Host
 task cancellation also releases the wait. `stop()` permanently stops observation,
-unblocks receivers and sets `isActive()` false; close Kotlin holders on teardown.
+unblocks receivers and sets `isActive()` false. Events already queued still drain
+before nil/null, matching Nitro; close Kotlin holders on teardown.
 Use these notifications to schedule backups after any committed state change.
