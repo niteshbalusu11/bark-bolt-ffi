@@ -47,6 +47,20 @@ impl OnchainWallet {
         .await
     }
 
+    /// Open an initialized wallet, validating network and mnemonic before any writes.
+    pub async fn open_existing(
+        network: Network,
+        mnemonic: String,
+        config: Config,
+        datadir: String,
+    ) -> Result<Self, BarkError> {
+        run_async(async move {
+            crate::ffi::db::validate_existing_wallet(&datadir, network, &mnemonic)?;
+            Self::default(network, mnemonic, config, datadir).await
+        })
+        .await
+    }
+
     /// Callback-backed wallet for foreign-language implementations.
     pub fn custom(callbacks: Arc<dyn CustomOnchainWalletCallbacks>) -> Result<Self, BarkError> {
         info!("[ONCHAIN] Creating callback-based onchain wallet");

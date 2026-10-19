@@ -18,3 +18,8 @@ v0.0.144, shows identical migration SQL; the sole difference is a height
 conversion in a migration unit test. This proves the schema format used by
 v2 plaintext `db.sqlite`; it is not an end-user backup archive. Host contracts
 copy it before validating and check identity and unchanged source bytes.
+
+`foreign.sqlite` contains only `foreign_data(value)` with the value 42. It is a
+non-Bark SQLite input for no-write open contracts. Reproduce using Python's
+`sqlite3.connect`, `CREATE TABLE foreign_data(value)` and `INSERT INTO
+foreign_data VALUES(42)`. All test inputs are copied into temporary directories.

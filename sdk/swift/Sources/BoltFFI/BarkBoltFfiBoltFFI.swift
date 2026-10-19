@@ -333,6 +333,16 @@ public struct Balance: Hashable, Equatable, Sendable {
     public var pendingLightningSendSats: UInt64
     public var claimableLightningReceiveSats: UInt64
     public var pendingBoardSats: UInt64
+    /// Expired or too-deep VTXOs; excluded from spendable, included in total.
+    public var needsRefreshSats: UInt64
+    /// Entire locked inputs, including change, until the send finalizes.
+    public var pendingArkoorSendSats: UInt64
+    /// Entire locked inputs until the offboard transaction is broadcast.
+    public var pendingOffboardSats: UInt64
+    /// Bark's sum of the seven operation buckets, including claimable receives.
+    public var pendingSats: UInt64
+    /// Bark's total: spendable, needs-refresh and pending funds.
+    public var totalSats: UInt64
 
     public init(
         spendableSats: UInt64,
@@ -340,7 +350,12 @@ public struct Balance: Hashable, Equatable, Sendable {
         pendingExitSats: UInt64,
         pendingLightningSendSats: UInt64,
         claimableLightningReceiveSats: UInt64,
-        pendingBoardSats: UInt64
+        pendingBoardSats: UInt64,
+        needsRefreshSats: UInt64,
+        pendingArkoorSendSats: UInt64,
+        pendingOffboardSats: UInt64,
+        pendingSats: UInt64,
+        totalSats: UInt64
     ) {
         self.spendableSats = spendableSats
         self.pendingInRoundSats = pendingInRoundSats
@@ -348,6 +363,11 @@ public struct Balance: Hashable, Equatable, Sendable {
         self.pendingLightningSendSats = pendingLightningSendSats
         self.claimableLightningReceiveSats = claimableLightningReceiveSats
         self.pendingBoardSats = pendingBoardSats
+        self.needsRefreshSats = needsRefreshSats
+        self.pendingArkoorSendSats = pendingArkoorSendSats
+        self.pendingOffboardSats = pendingOffboardSats
+        self.pendingSats = pendingSats
+        self.totalSats = totalSats
     }
 
     @usableFromInline init(fromC c: ___Balance) {
@@ -357,7 +377,12 @@ public struct Balance: Hashable, Equatable, Sendable {
             pendingExitSats: c.pending_exit_sats,
             pendingLightningSendSats: c.pending_lightning_send_sats,
             claimableLightningReceiveSats: c.claimable_lightning_receive_sats,
-            pendingBoardSats: c.pending_board_sats
+            pendingBoardSats: c.pending_board_sats,
+            needsRefreshSats: c.needs_refresh_sats,
+            pendingArkoorSendSats: c.pending_arkoor_send_sats,
+            pendingOffboardSats: c.pending_offboard_sats,
+            pendingSats: c.pending_sats,
+            totalSats: c.total_sats
         )
     }
 
@@ -368,7 +393,12 @@ public struct Balance: Hashable, Equatable, Sendable {
             pending_exit_sats: pendingExitSats,
             pending_lightning_send_sats: pendingLightningSendSats,
             claimable_lightning_receive_sats: claimableLightningReceiveSats,
-            pending_board_sats: pendingBoardSats
+            pending_board_sats: pendingBoardSats,
+            needs_refresh_sats: needsRefreshSats,
+            pending_arkoor_send_sats: pendingArkoorSendSats,
+            pending_offboard_sats: pendingOffboardSats,
+            pending_sats: pendingSats,
+            total_sats: totalSats
         )
     }
 }
@@ -2703,6 +2733,51 @@ public final class OnchainWallet {
         ) { boltffiFuture, boltffiStatus in
             var boltffiResult: UInt64 = UInt64()
             let boltffiError = boltffi_async_init_class_bark_bolt_ffi_ffi_onchain_onchain_wallet_default_complete(boltffiFuture, boltffiStatus, &boltffiResult)
+            if boltffiError.ptr != nil || Int(boltffiError.len) != 0 {
+                defer { boltffi_free_buf(boltffiError) }
+                throw boltffiDecodeOwnedBuf(boltffiError.ptr, Int(boltffiError.len)) { boltffiErrorReader in BarkError.decode(from: &boltffiErrorReader) }
+            }
+            let boltffiStatusCode = boltffiStatus!.pointee.code
+            guard boltffiStatusCode == 0 else {
+                throw FfiError(message: "FFI failed in async completion with code \(boltffiStatusCode)")
+            }
+            return OnchainWallet(handle: boltffiResult)
+        }
+    }
+
+    /// Open an initialized wallet, validating network and mnemonic before any writes.
+    public static func openExisting(
+        network: Network,
+        mnemonic: String,
+        config: Config,
+        datadir: String
+    ) async throws -> OnchainWallet {
+        let boltffiMnemonicBytes = boltffiEncode { boltffiMnemonicWriter in boltffiMnemonicWriter.writeString(mnemonic) }
+        let boltffiFuture = boltffiMnemonicBytes.withUnsafeBufferPointer { boltffiMnemonicBuffer in
+            let boltffiConfigBytes = boltffiEncode { boltffiConfigWriter in config.encode(to: &boltffiConfigWriter) }
+            return boltffiConfigBytes.withUnsafeBufferPointer { boltffiConfigBuffer in
+                let boltffiDatadirBytes = boltffiEncode { boltffiDatadirWriter in boltffiDatadirWriter.writeString(datadir) }
+                return boltffiDatadirBytes.withUnsafeBufferPointer { boltffiDatadirBuffer in
+                    return boltffi_init_class_bark_bolt_ffi_ffi_onchain_onchain_wallet_open_existing(
+                        network.cValue,
+                        boltffiMnemonicBuffer.baseAddress!,
+                        UInt(boltffiMnemonicBuffer.count),
+                        boltffiConfigBuffer.baseAddress!,
+                        UInt(boltffiConfigBuffer.count),
+                        boltffiDatadirBuffer.baseAddress!,
+                        UInt(boltffiDatadirBuffer.count)
+                    )
+                }
+            }
+        }
+        return try await boltffiAsyncCall(
+            futureHandle: boltffiFuture,
+            poll: boltffi_async_init_class_bark_bolt_ffi_ffi_onchain_onchain_wallet_open_existing_poll,
+            cancel: boltffi_async_init_class_bark_bolt_ffi_ffi_onchain_onchain_wallet_open_existing_cancel,
+            free: boltffi_async_init_class_bark_bolt_ffi_ffi_onchain_onchain_wallet_open_existing_free
+        ) { boltffiFuture, boltffiStatus in
+            var boltffiResult: UInt64 = UInt64()
+            let boltffiError = boltffi_async_init_class_bark_bolt_ffi_ffi_onchain_onchain_wallet_open_existing_complete(boltffiFuture, boltffiStatus, &boltffiResult)
             if boltffiError.ptr != nil || Int(boltffiError.len) != 0 {
                 defer { boltffi_free_buf(boltffiError) }
                 throw boltffiDecodeOwnedBuf(boltffiError.ptr, Int(boltffiError.len)) { boltffiErrorReader in BarkError.decode(from: &boltffiErrorReader) }

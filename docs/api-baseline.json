@@ -1192,6 +1192,13 @@
       "signature": "pub async fn drain( &self, address: String, #[boltffi::default(None)] fee_rate_sat_per_vb: Option<u64>, ) -> Result<String, BarkError>",
       "source": "src/ffi/onchain.rs",
       "line": 167
+    },
+    {
+      "owner": "OnchainWallet",
+      "name": "open_existing",
+      "async": true,
+      "signature": "pub async fn open_existing(network: Network, mnemonic: String, config: Config, datadir: String) -> Result<Self, BarkError>",
+      "source": "src/ffi/onchain.rs"
     }
   ],
   "records": [
@@ -1570,6 +1577,19 @@
       "expiry",
       "encoded",
       "mailbox_id"
+    ],
+    "Balance": [
+      "spendable_sats",
+      "pending_in_round_sats",
+      "pending_exit_sats",
+      "pending_lightning_send_sats",
+      "claimable_lightning_receive_sats",
+      "pending_board_sats",
+      "needs_refresh_sats",
+      "pending_arkoor_send_sats",
+      "pending_offboard_sats",
+      "pending_sats",
+      "total_sats"
     ]
   }
 }

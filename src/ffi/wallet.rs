@@ -1182,8 +1182,12 @@ impl Wallet {
     ) -> Result<Self, BarkError> {
         run_async(async move {
             let path = crate::ffi::db::sqlite_path(&args.datadir);
-            if !args.create_if_not_exists && !path.is_file() {
-                return Err(BarkError::from("existing wallet database is missing"));
+            if !args.create_if_not_exists {
+                crate::ffi::db::validate_existing_wallet(
+                    &args.datadir,
+                    network,
+                    &mnemonic_or_seed,
+                )?;
             }
             let db = open_sqlite_db(&args.datadir)?;
             let db_path = crate::backup::register_live_database(&path)?;
@@ -1266,6 +1270,92 @@ mod noah_p1_tests {
         );
         String::from_utf8(output.stdout).unwrap().trim().to_string()
     }
+    #[test]
+    fn live_full_balance_buckets() {
+        if std::env::var("BARK_REGTEST").as_deref() != Ok("1") {
+            return;
+        }
+        use std::io::BufRead;
+        struct Proxy(std::process::Child);
+        impl Drop for Proxy {
+            fn drop(&mut self) {
+                let _ = self.0.kill();
+                let _ = self.0.wait();
+            }
+        }
+        let mut proxy = Proxy(
+            std::process::Command::new("python3")
+                .arg("tests/support/ark-proxy.py")
+                .stdout(std::process::Stdio::piped())
+                .spawn()
+                .unwrap(),
+        );
+        let mut port = String::new();
+        std::io::BufReader::new(proxy.0.stdout.take().unwrap())
+            .read_line(&mut port)
+            .unwrap();
+        async fn consistent(wallet: &Wallet) -> crate::types::Balance {
+            let upstream = wallet.core.inner().balance().await.unwrap();
+            let ffi = wallet.balance().await.unwrap();
+            assert_eq!(ffi.total_sats, upstream.total().to_sat());
+            assert_eq!(ffi.pending_sats, upstream.pending().to_sat());
+            ffi
+        }
+        crate::ffi::runtime::TOKIO_RT.block_on(async {
+            let directory = tempfile::tempdir().unwrap();
+            let config: Config = serde_json::from_value(serde_json::json!({"server_address":format!("http://127.0.0.1:{}",port.trim()),"bitcoind_address":"http://127.0.0.1:19443","bitcoind_user":"second","bitcoind_pass":"ark","vtxo_exit_margin":2})).unwrap();
+            let mnemonic = crate::generate_mnemonic().unwrap();
+            let args = |path: std::path::PathBuf| WalletOpenArgs { run_daemon:false,datadir:path.to_string_lossy().into(),create_if_not_exists:true,create_without_server:true,skip_recovery:true };
+            let onchain = OnchainWallet::default(Network::Regtest,mnemonic.clone(),config.clone(),directory.path().to_string_lossy().into()).await.unwrap();
+            let wallet = Arc::new(Wallet::open_with_onchain(Network::Regtest,mnemonic,config.clone(),args(directory.path().into()),&onchain).await.unwrap());
+            let recipient = Wallet::open(Network::Regtest,crate::generate_mnemonic().unwrap(),config,args(directory.path().join("recipient"))).await.unwrap();
+            let address = onchain.new_address().await.unwrap();
+            regtest(&["send-to",&address,"0.005"]);
+            onchain.sync().await.unwrap();
+            let boarded = wallet.board_amount(100_000).await.unwrap();
+            let board = consistent(&wallet).await;
+            assert_eq!(board.pending_board_sats,boarded.amount_sats);
+            assert_eq!(board.total_sats,boarded.amount_sats);
+            regtest(&["generate","6"]); wallet.sync().await.unwrap();
+            let funded = consistent(&wallet).await;
+            assert_eq!(funded.spendable_sats,boarded.amount_sats);
+            let destination = recipient.new_address().await.unwrap();
+            let sender = wallet.clone();
+            let send = tokio::spawn(async move { sender.send_arkoor_payment(destination,10_000).await });
+            let pending = tokio::time::timeout(std::time::Duration::from_secs(10),async {
+                loop { let b = wallet.balance().await.unwrap(); if b.pending_arkoor_send_sats>0 { break b; } tokio::time::sleep(std::time::Duration::from_millis(20)).await; }
+            }).await.unwrap();
+            assert_eq!(pending.pending_arkoor_send_sats,funded.total_sats);
+            assert_eq!(pending.pending_sats,funded.total_sats);
+            assert_eq!(pending.spendable_sats,0);
+            assert_eq!(pending.total_sats,funded.total_sats);
+            send.await.unwrap().unwrap();
+            recipient.sync().await.unwrap();
+            let before = consistent(&wallet).await;
+            let destination = onchain.new_address().await.unwrap();
+            let sender = wallet.clone();
+            let offboard = tokio::spawn(async move { sender.offboard_all(destination).await });
+            let pending = tokio::time::timeout(std::time::Duration::from_secs(10),async {
+                loop { let b = wallet.balance().await.unwrap(); if b.pending_offboard_sats>0 { break b; } tokio::time::sleep(std::time::Duration::from_millis(20)).await; }
+            }).await.unwrap();
+            assert_eq!(pending.pending_offboard_sats,before.total_sats);
+            assert_eq!(pending.pending_sats,before.total_sats);
+            assert_eq!(pending.total_sats,before.total_sats);
+            assert_eq!(pending.spendable_sats,0);
+            offboard.await.unwrap().unwrap();
+            let vtxo = recipient.spendable_vtxos().await.unwrap().remove(0);
+            let tip: u32 = regtest(&["bcli","getblockcount"]).parse().unwrap();
+            regtest(&["generate",&(vtxo.expiry_height-tip+1).to_string()]);
+            recipient.sync().await.unwrap();
+            let expired = consistent(&recipient).await;
+            assert_eq!(expired.needs_refresh_sats,10_000);
+            assert_eq!(expired.spendable_sats,0);
+            assert_eq!(expired.pending_sats,0);
+            assert_eq!(expired.total_sats,10_000);
+            println!("full balance: real board, in-flight arkoor, in-flight offboard and expired VTXO passed");
+        });
+    }
+
     #[test]
     fn live_board_metadata_exit_packages_drop_and_bdk_drain() {
         if std::env::var("BARK_REGTEST").as_deref() != Ok("1") {

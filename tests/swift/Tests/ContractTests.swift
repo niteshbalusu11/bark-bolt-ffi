@@ -312,3 +312,118 @@ extension ContractTests {
         try await wallet.sync()
     }
 }
+
+extension ContractTests {
+    func testExistingWalletOpenRejectsWithoutWrites() async throws {
+        let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+        let config = Config(serverAddress: "http://127.0.0.1:1", esploraAddress: "http://127.0.0.1:1")
+        for scenario in ["empty", "foreign", "network", "mnemonic", "missing"] {
+            let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let path = directory.appendingPathComponent("db.sqlite")
+            if scenario == "empty" { try Data().write(to: path) }
+            else if scenario != "missing" {
+                try FileManager.default.copyItem(at: fixtures.appendingPathComponent(scenario == "foreign" ? "foreign.sqlite" : "noah-v2-schema42.sqlite"), to: path)
+            }
+            func contents() throws -> [String: Data] {
+                try Dictionary(uniqueKeysWithValues: FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil).map { ($0.lastPathComponent, try Data(contentsOf: $0)) })
+            }
+            let before = try contents()
+            let network: Network = scenario == "network" ? .bitcoin : .regtest
+            let seed = scenario == "mnemonic" ? try generateMnemonic() : mnemonic
+            do { _ = try await OnchainWallet.openExisting(network: network, mnemonic: seed, config: config, datadir: directory.path); XCTFail("Expected \(scenario) rejection") } catch let error as BarkError { XCTAssertFalse(error.message.isEmpty) }
+            XCTAssertEqual(try contents(), before, "onchain: \(scenario)")
+            do { _ = try await Wallet.open(network: network, mnemonicOrSeed: seed, config: config, args: WalletOpenArgs(runDaemon: false, datadir: directory.path, createIfNotExists: false)); XCTFail("Expected \(scenario) rejection") } catch let error as BarkError { XCTAssertFalse(error.message.isEmpty) }
+            XCTAssertEqual(try contents(), before, "wallet: \(scenario)")
+        }
+    }
+
+    func testSchema42ExistingWalletOpens() async throws {
+        guard ProcessInfo.processInfo.environment["BARK_REGTEST"] == "1" else { throw XCTSkip("requires live RegTest") }
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.copyItem(at: fixtures.appendingPathComponent("noah-v2-schema42.sqlite"), to: directory.appendingPathComponent("db.sqlite"))
+        let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+        let config = Config(serverAddress: "http://127.0.0.1:\(ProcessInfo.processInfo.environment["ARK_PORT"] ?? "3635")", bitcoindAddress: "http://127.0.0.1:\(ProcessInfo.processInfo.environment["BITCOIN_PORT"] ?? "19443")", bitcoindUser: "second", bitcoindPass: "ark")
+        let onchain = try await OnchainWallet.openExisting(network: .regtest, mnemonic: mnemonic, config: config, datadir: directory.path)
+        let wallet = try await Wallet.openWithOnchain(network: .regtest, mnemonicOrSeed: mnemonic, config: config, args: WalletOpenArgs(runDaemon: false, datadir: directory.path, createIfNotExists: false), onchain: onchain)
+        XCTAssertFalse(wallet.fingerprint().isEmpty)
+    }
+}
+
+private func checkBalance(_ balance: Balance, file: StaticString = #filePath, line: UInt = #line) {
+    XCTAssertEqual(balance.pendingSats, balance.pendingInRoundSats + balance.pendingExitSats + balance.pendingLightningSendSats + balance.claimableLightningReceiveSats + balance.pendingBoardSats + balance.pendingArkoorSendSats + balance.pendingOffboardSats, file: file, line: line)
+    XCTAssertEqual(balance.totalSats, balance.spendableSats + balance.needsRefreshSats + balance.pendingSats, file: file, line: line)
+}
+
+extension ContractTests {
+    func testLiveFullBalanceBuckets() async throws {
+        guard ProcessInfo.processInfo.environment["BARK_REGTEST"] == "1" else { throw XCTSkip("requires live RegTest") }
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let proxy = Process()
+        proxy.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        proxy.arguments = ["python3", fixtures.deletingLastPathComponent().appendingPathComponent("support/ark-proxy.py").path]
+        let output = Pipe(); proxy.standardOutput = output
+        try proxy.run()
+        defer { proxy.terminate(); proxy.waitUntilExit() }
+        var portBytes = Data()
+        while let byte = try output.fileHandleForReading.read(upToCount: 1), !byte.isEmpty, byte[0] != 10 { portBytes.append(byte) }
+        let port = String(decoding: portBytes, as: UTF8.self)
+        let env = ProcessInfo.processInfo.environment
+        let config = Config(serverAddress: "http://127.0.0.1:\(port)", bitcoindAddress: "http://127.0.0.1:\(env["BITCOIN_PORT"] ?? "19443")", bitcoindUser: "second", bitcoindPass: "ark", vtxoExitMargin: 2)
+        let mnemonic = try generateMnemonic()
+        let onchain = try await OnchainWallet.default(network: .regtest, mnemonic: mnemonic, config: config, datadir: directory.path)
+        let wallet = try await Wallet.openWithOnchain(network: .regtest, mnemonicOrSeed: mnemonic, config: config, args: WalletOpenArgs(runDaemon: false, datadir: directory.path, createWithoutServer: true, skipRecovery: true), onchain: onchain)
+        let recipient = try await Wallet.open(network: .regtest, mnemonicOrSeed: generateMnemonic(), config: config, args: WalletOpenArgs(runDaemon: false, datadir: directory.appendingPathComponent("recipient").path, createWithoutServer: true, skipRecovery: true))
+        let fundingAddress = try await onchain.newAddress()
+        _ = try regtestCommand("send-to", fundingAddress, "0.005")
+        _ = try await onchain.sync()
+        let boarded = try await wallet.boardAmount(amountSats: 100000)
+        let board = try await wallet.balance()
+        checkBalance(board)
+        XCTAssertEqual(board.pendingBoardSats, boarded.amountSats)
+        _ = try regtestCommand("generate", "6")
+        try await wallet.sync()
+        let funded = try await wallet.balance()
+        checkBalance(funded)
+        XCTAssertEqual(funded.spendableSats, boarded.amountSats)
+        let receiveAddress = try await recipient.newAddress()
+        let send = Task { try await wallet.sendArkoorPayment(arkAddress: receiveAddress, amountSats: 10000) }
+        func waitForBucket(_ bucket: KeyPath<Balance, UInt64>) async throws -> Balance {
+            for _ in 0..<300 {
+                let value = try await wallet.balance()
+                if value[keyPath: bucket] > 0 { checkBalance(value); return value }
+                try await Task.sleep(nanoseconds: 20_000_000)
+            }
+            throw BarkError(message: "Pending balance bucket never appeared")
+        }
+        let sending = try await waitForBucket(\.pendingArkoorSendSats)
+        XCTAssertEqual(sending.pendingArkoorSendSats, funded.totalSats)
+        XCTAssertEqual(sending.spendableSats, 0)
+        XCTAssertEqual(sending.totalSats, funded.totalSats)
+        try await send.value
+        try await recipient.sync()
+        let before = try await wallet.balance()
+        let destination = try await onchain.newAddress()
+        let offboard = Task { try await wallet.offboardAll(bitcoinAddress: destination) }
+        let offboarding = try await waitForBucket(\.pendingOffboardSats)
+        XCTAssertEqual(offboarding.pendingOffboardSats, before.totalSats)
+        XCTAssertEqual(offboarding.spendableSats, 0)
+        XCTAssertEqual(offboarding.totalSats, before.totalSats)
+        _ = try await offboard.value
+        let vtxos = try await recipient.spendableVtxos()
+        let vtxo = try XCTUnwrap(vtxos.first)
+        let tip = try XCTUnwrap(UInt32(regtestCommand("bcli", "getblockcount")))
+        _ = try regtestCommand("generate", String(vtxo.expiryHeight - tip + 1))
+        try await recipient.sync()
+        let expired = try await recipient.balance()
+        checkBalance(expired)
+        XCTAssertEqual(expired.needsRefreshSats, 10000)
+        XCTAssertEqual(expired.spendableSats, 0)
+        XCTAssertEqual(expired.pendingSats, 0)
+        XCTAssertEqual(expired.totalSats, 10000)
+    }
+}

@@ -14,6 +14,7 @@ dependencies {
 tasks.test {
     inputs.property("regtest", System.getenv("BARK_REGTEST") ?: "")
     inputs.dir(rootProject.file("tests/fixtures"))
+    inputs.dir(rootProject.file("tests/support"))
     systemProperty("bark.fixtures", rootProject.file("tests/fixtures").absolutePath)
     environment("BARK_REGTEST", System.getenv("BARK_REGTEST") ?: "")
 }
@@ -26,7 +27,7 @@ tasks.register<JavaExec>("testPackaged") {
     dependsOn(tasks.testClasses, tasks.jar)
     classpath = files(tasks.jar) + (sourceSets.test.get().runtimeClasspath - sourceSets.main.get().output)
     mainClass.set("org.junit.runner.JUnitCore")
-    args("ContractTest", "NoahContractTest", "NoahP1ContractTest")
+    args("ContractTest", "NoahContractTest", "NoahP1ContractTest", "V030ContractTest", "FullBalanceContractTest")
     systemProperty("bark.fixtures", rootProject.file("tests/fixtures").absolutePath)
     environment("BARK_REGTEST", System.getenv("BARK_REGTEST") ?: "")
 }

@@ -71,6 +71,16 @@ different claims. Record them separately; do not mark one from evidence of anoth
 
 ## Tasks
 
+### 18 — v0.3.0 full balance and no-write existing-wallet open
+
+- [ ] Expose all nine balance buckets and Bark-computed pending/total.
+- [ ] Validate existing-wallet identity before SQLite migrations or BDK writes.
+- [ ] Pass Rust, compiled Swift/Kotlin and live RegTest regression contracts.
+- [ ] Publish v0.3.0 XCFramework, AAR, SHA256SUMS and SPM manifest; verify CI/consumers.
+
+Engineering plan and affected paths: [balance and existing open](plans/18-balance-and-existing-open.md).
+Execution results are pending; previous completed-release evidence remains historical.
+
 ### 17 — Noah native API parity
 
 - [x] P0 keys/signatures, v2 snapshots and committed-state subscriptions.

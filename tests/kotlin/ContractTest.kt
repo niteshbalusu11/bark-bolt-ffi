@@ -279,3 +279,99 @@ class NoahP1ContractTest {
         } finally { directory.deleteRecursively() }
     }
 }
+
+class V030ContractTest {
+    @Test fun existingOpensRejectWithoutWrites() = runBlocking<Unit> {
+        val mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+        val config = Config(serverAddress="http://127.0.0.1:1",esploraAddress="http://127.0.0.1:1")
+        for (scenario in listOf("empty","foreign","network","mnemonic","missing")) {
+            val directory = java.nio.file.Files.createTempDirectory("bark-existing").toFile()
+            try {
+                val file = java.io.File(directory,"db.sqlite")
+                if (scenario == "empty") file.writeBytes(byteArrayOf())
+                else if (scenario != "missing") java.io.File(fixtureDirectory,if (scenario=="foreign") "foreign.sqlite" else "noah-v2-schema42.sqlite").copyTo(file)
+                fun contents() = directory.listFiles()!!.associate { it.name to it.readBytes().toList() }
+                val before = contents()
+                val network = if (scenario=="network") Network.BITCOIN else Network.REGTEST
+                val seed = if (scenario=="mnemonic") generateMnemonic() else mnemonic
+                assertFailsWith<BarkError> { OnchainWallet.openExisting(network,seed,config,directory.path) }
+                assertEquals(before,contents(),"onchain: $scenario")
+                assertFailsWith<BarkError> { Wallet.open(network,seed,config,WalletOpenArgs(runDaemon=false,datadir=directory.path,createIfNotExists=false)) }
+                assertEquals(before,contents(),"wallet: $scenario")
+            } finally { directory.deleteRecursively() }
+        }
+    }
+
+    @Test fun schema42ExistingWalletOpens() = runBlocking<Unit> {
+        org.junit.Assume.assumeTrue(System.getenv("BARK_REGTEST") == "1")
+        val directory = java.nio.file.Files.createTempDirectory("bark-schema42").toFile()
+        try {
+            java.io.File(fixtureDirectory,"noah-v2-schema42.sqlite").copyTo(java.io.File(directory,"db.sqlite"))
+            val mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+            val config = Config(serverAddress="http://127.0.0.1:${System.getenv("ARK_PORT") ?: "3635"}",bitcoindAddress="http://127.0.0.1:${System.getenv("BITCOIN_PORT") ?: "19443"}",bitcoindUser="second",bitcoindPass="ark")
+            OnchainWallet.openExisting(Network.REGTEST,mnemonic,config,directory.path).use { onchain ->
+                Wallet.openWithOnchain(Network.REGTEST,mnemonic,config,WalletOpenArgs(runDaemon=false,datadir=directory.path,createIfNotExists=false),onchain).use { wallet -> assertTrue(wallet.fingerprint().isNotEmpty()) }
+            }
+        } finally { directory.deleteRecursively() }
+    }
+}
+
+private fun checkBalance(balance: Balance) {
+    assertEquals(balance.pendingInRoundSats + balance.pendingExitSats + balance.pendingLightningSendSats + balance.claimableLightningReceiveSats + balance.pendingBoardSats + balance.pendingArkoorSendSats + balance.pendingOffboardSats,balance.pendingSats)
+    assertEquals(balance.spendableSats + balance.needsRefreshSats + balance.pendingSats,balance.totalSats)
+}
+
+class FullBalanceContractTest {
+    @org.junit.Test(timeout=120000) fun liveFullBalanceBuckets() = runBlocking<Unit> {
+        org.junit.Assume.assumeTrue(System.getenv("BARK_REGTEST") == "1")
+        val directory = java.nio.file.Files.createTempDirectory("bark-full-balance").toFile()
+        val proxy = ProcessBuilder("python3",java.io.File(fixtureDirectory.parentFile,"support/ark-proxy.py").path).redirectError(ProcessBuilder.Redirect.INHERIT).start()
+        val port = proxy.inputStream.bufferedReader().readLine().toInt()
+        try {
+            val config = Config(serverAddress="http://127.0.0.1:$port",bitcoindAddress="http://127.0.0.1:${System.getenv("BITCOIN_PORT") ?: "19443"}",bitcoindUser="second",bitcoindPass="ark",vtxoExitMargin=2u)
+            val mnemonic = generateMnemonic()
+            OnchainWallet.default(Network.REGTEST,mnemonic,config,directory.path).use { onchain ->
+                Wallet.openWithOnchain(Network.REGTEST,mnemonic,config,WalletOpenArgs(runDaemon=false,datadir=directory.path,createWithoutServer=true,skipRecovery=true),onchain).use { wallet ->
+                    Wallet.open(Network.REGTEST,generateMnemonic(),config,WalletOpenArgs(runDaemon=false,datadir=java.io.File(directory,"recipient").path,createWithoutServer=true,skipRecovery=true)).use { recipient ->
+                        val address = onchain.newAddress()
+                        regtestCommand("send-to",address,"0.005"); onchain.sync()
+                        val boarded = wallet.boardAmount(100000uL)
+                        val board = wallet.balance(); checkBalance(board)
+                        assertEquals(boarded.amountSats,board.pendingBoardSats)
+                        regtestCommand("generate","6"); wallet.sync()
+                        val funded = wallet.balance(); checkBalance(funded)
+                        assertEquals(boarded.amountSats,funded.spendableSats)
+                        val receiveAddress = recipient.newAddress()
+                        suspend fun waitForBucket(bucket: (Balance) -> ULong): Balance = withTimeout(10000) {
+                            var balance = wallet.balance()
+                            while (bucket(balance)==0uL) { delay(20); balance=wallet.balance() }
+                            checkBalance(balance); balance
+                        }
+                        val send = async(Dispatchers.Default) { wallet.sendArkoorPayment(receiveAddress,10000uL) }
+                        val sending = waitForBucket { it.pendingArkoorSendSats }
+                        assertEquals(funded.totalSats,sending.pendingArkoorSendSats)
+                        assertEquals(0uL,sending.spendableSats)
+                        assertEquals(funded.totalSats,sending.totalSats)
+                        send.await(); recipient.sync()
+                        val before = wallet.balance()
+                        val destination = onchain.newAddress()
+                        val offboard = async(Dispatchers.Default) { wallet.offboardAll(destination) }
+                        val offboarding = waitForBucket { it.pendingOffboardSats }
+                        assertEquals(before.totalSats,offboarding.pendingOffboardSats)
+                        assertEquals(0uL,offboarding.spendableSats)
+                        assertEquals(before.totalSats,offboarding.totalSats)
+                        offboard.await()
+                        val vtxo = recipient.spendableVtxos().first()
+                        val tip = regtestCommand("bcli","getblockcount").toUInt()
+                        regtestCommand("generate",(vtxo.expiryHeight-tip+1u).toString()); recipient.sync()
+                        val expired = recipient.balance(); checkBalance(expired)
+                        assertEquals(10000uL,expired.needsRefreshSats)
+                        assertEquals(0uL,expired.spendableSats)
+                        assertEquals(0uL,expired.pendingSats)
+                        assertEquals(10000uL,expired.totalSats)
+                    }
+                }
+            }
+        } finally { proxy.destroy(); proxy.waitFor(); directory.deleteRecursively() }
+    }
+}

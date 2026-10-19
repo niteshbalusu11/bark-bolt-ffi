@@ -7,10 +7,10 @@ supported consumer languages. The Rust core remains in this repository.
 ## Swift
 
 Add `https://github.com/smolcars/bark-bolt-ffi` in Xcode's package dependencies,
-select version 0.2.0, and link the `BarkBoltFFI` product. In a package manifest:
+select version 0.3.0, and link the `BarkBoltFFI` product. In a package manifest:
 
 ```swift
-.package(url: "https://github.com/smolcars/bark-bolt-ffi.git", exact: "0.2.0")
+.package(url: "https://github.com/smolcars/bark-bolt-ffi.git", exact: "0.3.0")
 // Target dependency:
 .product(name: "BarkBoltFFI", package: "bark-bolt-ffi")
 ```
@@ -31,7 +31,7 @@ BOLTFFI="$PWD/target/tools/boltffi" scripts/build-sdk.sh android --release
 ./gradlew :sdk:android:publishToMavenLocal :sdk:jvm:publishToMavenLocal
 ```
 
-Use `mavenLocal()` with `io.github.niteshbalusu11:bark-bolt-ffi-android:0.2.0`,
+Use `mavenLocal()` with `io.github.niteshbalusu11:bark-bolt-ffi-android:0.3.0`,
 or the host-specific `bark-bolt-ffi-jvm-darwin-arm64` / `bark-bolt-ffi-jvm-linux-x86_64`
 artifact. Import `io.github.niteshbalusu11.bark.*`. The Maven POM supplies the
 coroutines dependency. The Android AAR embeds all three JNI ABIs and consumer
@@ -39,7 +39,7 @@ R8 rules. JVM JARs contain the native library for the build host; choose a JAR
 matching the deployment OS/architecture. Linux CI builds on Ubuntu24.04; rebuild
 locally when targeting an older libc. Maven Central publication is separate.
 Versioned AAR/JAR/POM files are attached to the
-[v0.2.0 release](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.2.0);
+[v0.3.0 release](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.3.0);
 verify them against its SHA256SUMS. GitHub Actions also uploads artifacts and
 example APKs. To use a downloaded AAR or JVM JAR directly, include it as a local
 file dependency and declare `org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2`
@@ -66,7 +66,7 @@ explicitly; local file dependencies do not resolve the attached Maven POM.
 
 All128 original callable exports, 40 records, 14 enums and both callback traits
 are tracked in `api-baseline.json` and checked against strict host generation.
-Noah parity brings the checked inventory to 149 exports, 50 records and 15 enums.
+v0.3.0 brings the checked inventory to 150 exports, 50 records and 15 enums.
 Generated files are never patched; the Swift concurrency adapter is handwritten
 in `sdk/swift-support`. There is no UniFFI runtime, JNA or browser product.
 
@@ -156,11 +156,52 @@ Amounts are unsigned 64-bit satoshis. Fee rates use these explicit units:
 | Onchain `send`, `drain`, custom-wallet transaction callbacks | sat/vB |
 | Emergency-exit estimates and `progressExits` | sat/vB |
 
-To open an **existing** Noah wallet, preflight that `<datadir>/db.sqlite` exists,
-pass the original mnemonic and network, and set `createIfNotExists = false`.
-Do this before opening the onchain wallet as well. Do not create a fresh database
-when an existing wallet is expected. Older Bark `bark.sqlite` files are supported
-by the compatibility filename selection; Noah uses `db.sqlite`.
+To open an **existing** Noah wallet, use its original mnemonic, network and
+folder with `OnchainWallet.openExisting(network:mnemonic:config:datadir:)` in
+Swift, or `OnchainWallet.openExisting(network, mnemonic, config, datadir)` in
+Kotlin. Then call `Wallet.openWithOnchain` with `createIfNotExists = false`.
+Both existing-wallet paths validate `bark_properties`, network and Bark's seed
+fingerprint before opening a migrating SQLite connection or creating BDK tables.
+Missing, empty, foreign, wrong-network and wrong-mnemonic databases fail without
+changing database bytes, tables or directory entries. Schema 42 remains supported;
+normal migration/BDK loading happens after identity validation. `Wallet.open`
+without an onchain handle applies the same preflight when creation is disabled.
+
+`OnchainWallet.default` remains the creation-capable factory. Use it when creating
+or recovering into a new directory; calling it before the existing-wallet opener
+would already allow writes. `createIfNotExists = true` retains its creation
+behavior. Older `bark.sqlite` files retain compatibility filename selection.
+Noah's application-level read-only check can remain as defence in depth.
+The SDK never recovers a hot rollback journal or creates a missing WAL index
+during preflight: files requiring that recovery fail before any writes. Existing
+WAL/index pairs are read with SQLite's read-only connection; closed databases use
+an immutable connection to avoid creating sidecars. As with ordinary wallet open,
+the app must not replace the database concurrently with opening it.
+
+## Wallet balance in v0.3.0
+
+`Wallet.balance()` exposes all nine non-overlapping Bark buckets, in satoshis.
+Show `spendableSats` as available to pay and `totalSats` as the offchain wallet's
+full balance. `pendingSats` and `totalSats` come directly from Bark's `pending()`
+and `total()` methods. `totalSats = spendableSats + needsRefreshSats + pendingSats`.
+Do not construct the total using the six fields exposed before v0.3.0.
+
+| Field | Meaning |
+| --- | --- |
+| `spendableSats` | VTXOs available to spend now. |
+| `needsRefreshSats` | Unlocked VTXOs that have expired or reached the server's exit-depth limit. Kept out of spendable until refreshed; still part of total. Bark may offboard or exit them. This differs from the proactive maintenance refresh-expiry threshold. |
+| `pendingLightningSendSats` | Locked outgoing Lightning inputs until settlement or failure. |
+| `claimableLightningReceiveSats` | Incoming HTLC VTXOs whose preimage has been revealed but whose payment has not yet been swapped into spendable VTXOs. Included in pending. Still-cancellable incoming payments are not counted. |
+| `pendingInRoundSats` | Inputs locked by an active round. A participation waiting without a lock remains spendable. |
+| `pendingExitSats` | Exits committed onchain but not yet claimed into the onchain wallet. Cancellable exits are not counted here. |
+| `pendingBoardSats` | Broadcast board VTXOs awaiting enough confirmations for registration. Unbroadcast boards are not counted. |
+| `pendingArkoorSendSats` | Whole inputs locked in an outgoing Ark send, including change until finalization. |
+| `pendingOffboardSats` | Whole inputs locked before offboard broadcast, including change. After broadcast, those funds belong to the onchain wallet. |
+
+`pendingSats` includes all seven operation buckets; it excludes spendable and
+needs-refresh funds. Each VTXO is counted once. When the daemon is disabled,
+sync before querying balances. All prior field names remain available; regenerate
+consumers against the v0.3.0 SDK because the native record layout has changed.
 
 Wallet `peekPublicKey`, `deriveStoreNextKeypair` and `signMessage` use Bark's
 `m/350'/0'/index` keychain. Peeking/signing an unstored index fails. Deriving the

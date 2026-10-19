@@ -130,6 +130,16 @@ pub struct Balance {
     pub pending_lightning_send_sats: u64,
     pub claimable_lightning_receive_sats: u64,
     pub pending_board_sats: u64,
+    /// Expired or too-deep VTXOs; excluded from spendable, included in total.
+    pub needs_refresh_sats: u64,
+    /// Entire locked inputs, including change, until the send finalizes.
+    pub pending_arkoor_send_sats: u64,
+    /// Entire locked inputs until the offboard transaction is broadcast.
+    pub pending_offboard_sats: u64,
+    /// Bark's sum of the seven operation buckets, including claimable receives.
+    pub pending_sats: u64,
+    /// Bark's total: spendable, needs-refresh and pending funds.
+    pub total_sats: u64,
 }
 
 impl From<BarkBalance> for Balance {
@@ -143,6 +153,11 @@ impl From<BarkBalance> for Balance {
             // There is no separate "total pending receive" field in upstream.
             claimable_lightning_receive_sats: b.claimable_lightning_receive.to_sat(),
             pending_board_sats: b.pending_board.to_sat(),
+            needs_refresh_sats: b.needs_refresh.to_sat(),
+            pending_arkoor_send_sats: b.pending_arkoor_send.to_sat(),
+            pending_offboard_sats: b.pending_offboard.to_sat(),
+            pending_sats: b.pending().to_sat(),
+            total_sats: b.total().to_sat(),
         }
     }
 }
@@ -2457,5 +2472,41 @@ mod noah_parity_tests {
             base64::engine::general_purpose::STANDARD.encode(hex::decode(hex.trim()).unwrap());
         assert_eq!(crate::decode_vtxo(base64).unwrap().id, decoded.id);
         assert!(crate::decode_vtxo("not a VTXO".into()).is_err());
+    }
+}
+
+#[cfg(test)]
+mod balance_contract_tests {
+    #[test]
+    fn every_bucket_and_upstream_aggregates_survive_conversion() {
+        let sats = bitcoin::Amount::from_sat;
+        let b = bark::Balance {
+            spendable: sats(11),
+            needs_refresh: sats(23),
+            pending_lightning_send: sats(37),
+            claimable_lightning_receive: sats(41),
+            pending_in_round: sats(53),
+            pending_exit: sats(67),
+            pending_board: sats(71),
+            pending_arkoor_send: sats(83),
+            pending_offboard: sats(97),
+        };
+        let ffi = super::Balance::from(b.clone());
+        assert_eq!(ffi.pending_sats, b.pending().to_sat());
+        assert_eq!(ffi.total_sats, b.total().to_sat());
+        assert_eq!(
+            [
+                ffi.spendable_sats,
+                ffi.needs_refresh_sats,
+                ffi.pending_lightning_send_sats,
+                ffi.claimable_lightning_receive_sats,
+                ffi.pending_in_round_sats,
+                ffi.pending_exit_sats,
+                ffi.pending_board_sats,
+                ffi.pending_arkoor_send_sats,
+                ffi.pending_offboard_sats
+            ],
+            [11, 23, 37, 41, 53, 67, 71, 83, 97]
+        );
     }
 }
