@@ -111,6 +111,7 @@ fn validate_wallet_snapshot_blocking(
     expected: Option<WalletSnapshotExpectation>,
 ) -> anyhow::Result<WalletSnapshotInfo> {
     ensure_regular_snapshot_file(snapshot)?;
+    ensure_self_contained_snapshot(snapshot)?;
     let mut input = File::open(snapshot).context("failed to open snapshot")?;
     {
         let live = LIVE_DATABASES.lock().unwrap();
@@ -128,6 +129,7 @@ fn validate_wallet_snapshot_blocking(
         .tempfile_in(parent)
         .context("failed to create validation database")?;
     std::io::copy(&mut input, migrated.as_file_mut())?;
+    ensure_self_contained_snapshot(snapshot)?;
     validate_sqlite_integrity(migrated.path())?;
     let source_schema_version = read_schema_version(migrated.path())?;
     let supported = supported_schema_version(parent)?;
@@ -198,6 +200,23 @@ fn ensure_regular_snapshot_file(path: &Path) -> anyhow::Result<()> {
     }
     if metadata.len() == 0 {
         bail!("Snapshot file is empty: {}", path.display());
+    }
+    Ok(())
+}
+
+fn ensure_self_contained_snapshot(path: &Path) -> anyhow::Result<()> {
+    for suffix in ["-wal", "-journal"] {
+        let mut sidecar = path.as_os_str().to_os_string();
+        sidecar.push(suffix);
+        match std::fs::metadata(Path::new(&sidecar)) {
+            Ok(metadata) if metadata.len() > 0 => bail!(
+                "Expected a self-contained snapshot; nonempty {} sidecar found. Use createSnapshot to export a checkpointed database first",
+                suffix
+            ),
+            Ok(_) => {},
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {},
+            Err(error) => return Err(error).context("failed to inspect snapshot sidecar"),
+        }
     }
     Ok(())
 }
@@ -537,6 +556,40 @@ mod tests {
         assert_eq!(info.sha256, created.sha256);
         assert_eq!(std::fs::read(&snapshot).unwrap(), before);
         drop(live);
+    }
+
+    #[test]
+    fn validation_rejects_uncheckpointed_input_without_changing_any_file() {
+        let dir = tempdir().unwrap();
+        let source = dir.path().join("db.sqlite");
+        create_test_wallet_db(&source);
+        let writer = Connection::open(&source).unwrap();
+        writer.execute_batch("PRAGMA journal_mode=WAL; CREATE TABLE uncheckpointed(value); INSERT INTO uncheckpointed VALUES(123);").unwrap();
+        let wal = dir.path().join("db.sqlite-wal");
+        let before = std::fs::read(&source).unwrap();
+        let wal_before = std::fs::read(&wal).unwrap();
+        assert!(!wal_before.is_empty());
+        let error = validate_wallet_snapshot_blocking(&source, None).unwrap_err();
+        assert!(
+            error.to_string().contains("self-contained snapshot"),
+            "{error:#}"
+        );
+        assert_eq!(std::fs::read(&source).unwrap(), before);
+        assert_eq!(std::fs::read(&wal).unwrap(), wal_before);
+        writer
+            .execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")
+            .unwrap();
+        assert!(validate_wallet_snapshot_blocking(&source, None).is_ok());
+        let journal = dir.path().join("db.sqlite-journal");
+        std::fs::write(&journal, b"nonempty journal requiring recovery").unwrap();
+        assert!(validate_wallet_snapshot_blocking(&source, None)
+            .unwrap_err()
+            .to_string()
+            .contains("self-contained snapshot"));
+        assert_eq!(
+            std::fs::read(&journal).unwrap(),
+            b"nonempty journal requiring recovery"
+        );
     }
 
     #[test]

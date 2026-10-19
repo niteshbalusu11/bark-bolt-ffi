@@ -133,3 +133,36 @@ Remaining limits: terminal round outcomes have Rust conversion tests; empty
 pending-state calls run in both hosts. The pinned upstream does not expose
 unsigned round funding IDs or retain settled Lightning HTLC/movement details.
 P2 stays deferred. Independent Fable 5.1 High review and release are pending.
+
+## Fable 5.1 High review: validation and repair plan
+
+Review round 1 examined combined PR head 249386e, without executing tests.
+Before changing behavior, reproduce its observer lock-contention finding with
+a real rollback-journal SQLite writer holding EXCLUSIVE across a poll tick.
+In src/core/state_changes.rs, retry BUSY/LOCKED on the next 750ms tick, retaining
+the short busy timeout for responsive stop; other errors still emit
+resyncRequired and terminate. Verify committed changes arrive after unlock and
+the observer remains active. Preserve Nitro's queued-event drain after stop,
+document it and test it rather than discard already committed notifications.
+
+For src/backup.rs, reproduce validation silently ignoring an uncheckpointed WAL.
+Validation must only read the input, so reject nonempty -wal/-journal siblings
+with an actionable error instead of opening/recovering the source with SQLite.
+Check before and after the raw copy, and prove source/sidecar bytes are unchanged.
+Checkpointed createSnapshot outputs and extracted schema42 fixtures must still
+validate. Update docs/migration.md with this self-contained snapshot boundary.
+
+Keep the specified 10ms pause between backup steps and continuous-busy 30s
+timeout; an overall deadline would change the requested contract. Keep Bark's
+and Nitro's fee-rate acceptance, including zero, rather than introduce a new
+transaction-validation policy. Record the reasoning in the review dispositions.
+Backport these P0 repairs to PR #1 and merge into PR #2. Run Rust tests/Clippy,
+regenerate both full release SDKs, execute Swift and Kotlin packaged contracts,
+and verify release provenance after the final changes.
+
+Actual repair outcomes: the lock regression first failed with resyncRequired;
+the WAL regression first failed because validation returned stale main-file
+information. After the fixes, BARK_REGTEST=1 cargo test --locked passes all 74
+tests and cargo clippy --locked --all-targets -- -D warnings passes. The stop
+queue regression passes with Nitro's documented drain behavior. Full release
+SDKs are rebuilding from the repaired source before host contracts run again.

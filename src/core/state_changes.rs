@@ -71,6 +71,15 @@ impl StateChangeSubscription {
                             "databaseChanged"
                         }
                         Ok(_) => continue,
+                        Err(rusqlite::Error::SqliteFailure(error, _))
+                            if matches!(
+                                error.code,
+                                rusqlite::ErrorCode::DatabaseBusy
+                                    | rusqlite::ErrorCode::DatabaseLocked
+                            ) =>
+                        {
+                            continue
+                        }
                         Err(_) => "resyncRequired",
                     };
                     sequence = sequence.saturating_add(1);
@@ -130,7 +139,8 @@ impl StateChangeSubscription {
         }
     }
 
-    /// Permanently stop the observer and unblock the pending receive.
+    /// Permanently stop observation. Already queued events drain before None.
+    /// A pending receive with no queued event is unblocked with None.
     pub fn stop(&self) {
         self.active.store(false, Ordering::Release);
         let (lock, signal) = &*self.stop_signal;
@@ -160,6 +170,54 @@ impl Drop for StateChangeSubscription {
 mod tests {
     use super::*;
     use crate::ffi::runtime::TOKIO_RT;
+
+    #[test]
+    fn transient_exclusive_lock_retries_and_delivers_committed_change() {
+        TOKIO_RT.block_on(async {
+            let file = tempfile::NamedTempFile::new().unwrap();
+            let writer = Connection::open(file.path()).unwrap();
+            writer.execute_batch("CREATE TABLE test(value);").unwrap();
+            let holder = StateChangeSubscription::new(file.path()).unwrap();
+            assert_eq!(
+                holder.next_change().await.unwrap().unwrap().reason,
+                "initial"
+            );
+            writer
+                .execute_batch("BEGIN EXCLUSIVE; INSERT INTO test VALUES(1);")
+                .unwrap();
+            // Cover the first 750ms poll and its 100ms busy timeout.
+            tokio::time::sleep(Duration::from_millis(1100)).await;
+            writer.execute_batch("COMMIT;").unwrap();
+            let changed = tokio::time::timeout(Duration::from_secs(3), holder.next_change())
+                .await
+                .unwrap()
+                .unwrap()
+                .unwrap();
+            assert_eq!(changed.reason, "databaseChanged");
+            assert!(holder.is_active());
+            holder.stop();
+        });
+    }
+
+    #[test]
+    fn stop_preserves_queued_events_then_ends_stream() {
+        TOKIO_RT.block_on(async {
+            let file = tempfile::NamedTempFile::new().unwrap();
+            Connection::open(file.path())
+                .unwrap()
+                .execute_batch("CREATE TABLE test(value);")
+                .unwrap();
+            let holder = StateChangeSubscription::new(file.path()).unwrap();
+            holder.stop();
+            assert!(!holder.is_active());
+            assert_eq!(
+                holder.next_change().await.unwrap().unwrap().reason,
+                "initial"
+            );
+            assert!(holder.next_change().await.unwrap().is_none());
+        });
+    }
+
     #[test]
     fn committed_changes_rollback_cancel_concurrency_stop_and_reuse() {
         TOKIO_RT.block_on(async {
