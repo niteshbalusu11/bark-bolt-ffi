@@ -32,6 +32,14 @@ cmp "$temporary/expected" "$ARK_TEST_LOG"
 just --justfile "$ROOT/justfile" bcli sendmany '' "$json" >/dev/null
 cmp "$temporary/expected" "$ARK_TEST_LOG"
 
+# aspd retains the original raw captaind interface, including explicit rpc.
+for argument in --version rpc; do
+    : > "$ARK_TEST_LOG"
+    just --justfile "$ROOT/justfile" aspd "$argument" >/dev/null
+    printf '%s\0' compose -f "$compose" exec -T captaind captaind "$argument" > "$temporary/expected"
+    cmp "$temporary/expected" "$ARK_TEST_LOG"
+done
+
 # Ordinary down must preserve every existing wallet volume.
 : > "$ARK_TEST_LOG"
 "$script" down >/dev/null

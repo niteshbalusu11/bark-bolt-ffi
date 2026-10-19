@@ -9,7 +9,7 @@ WALLET_NAME=miner
 dcr() { docker compose -f "$COMPOSE_FILE" "$@"; }
 bitcoin() { dcr exec -T bitcoind bitcoin-cli -regtest -rpcuser=second -rpcpassword=ark "$@"; }
 bcli() { bitcoin "-rpcwallet=$WALLET_NAME" "$@"; }
-aspd() { dcr exec -T captaind captaind rpc "$@"; }
+aspd() { dcr exec -T captaind captaind "$@"; }
 lncli() { dcr exec -T lnd lncli --network=regtest "$@"; }
 cln() { dcr exec -T cln lightning-cli --regtest "$@"; }
 bark() { dcr run --rm -T bark --datadir /wallets/reference --no-logfile "$@"; }
@@ -58,7 +58,7 @@ send_to_address() {
 fund_aspd() {
     [[ $# == 1 ]] || die 'Usage: fund-aspd BTC_AMOUNT'
     local address
-    address=$(aspd wallet | jq -er '.rounds.address')
+    address=$(aspd rpc wallet | jq -er '.rounds.address')
     send_to_address "$address" "$1"
 }
 
@@ -125,7 +125,7 @@ setup_everything() {
         generate_blocks 110 >/dev/null
     fi
     local wallet
-    wallet=$(wait_for 'Ark server' aspd wallet)
+    wallet=$(wait_for 'Ark server' aspd rpc wallet)
     if jq -e '.rounds.trusted_balance < 100000000' <<<"$wallet" >/dev/null; then
         fund_aspd 25 >/dev/null
         generate_blocks 6 >/dev/null

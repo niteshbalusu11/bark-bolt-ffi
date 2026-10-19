@@ -11,6 +11,8 @@ published v0.1.0 artifacts unchanged.
   create-bark-wallet, generate, fund-aspd, send-to, aspd, bark, bcli, lncli, cln
   and setup-lightning commands. Use the existing isolated regtest/compose.yaml
   and environment-selected CI project/ports. Remove scripts/regtest.py.
+  Preserve aspd as a raw captaind passthrough, including `just aspd rpc wallet`
+  and `just aspd --version`; internal callers supply rpc explicitly.
 - Preserve the current miner/reference wallet locations, bounded service/channel
   readiness, mature funding, idempotent wallet/channel setup and fresh chain tip.
   Retain seeds/databases and ordinary down's volumes; do not copy Nitro's forced
