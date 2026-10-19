@@ -6,6 +6,12 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -51,7 +57,19 @@ fun WalletScreen(model: WalletModel) {
     var amount by remember { mutableStateOf("10000") }
     var boardAmount by remember { mutableStateOf("1000000") }
     var exitDialog by remember { mutableStateOf(false) }
-    Scaffold(topBar = { TopAppBar(title = { Text("Bark Wallet") }) }) { insets ->
+    var errorDetails by remember { mutableStateOf(false) }
+    Scaffold(topBar = { TopAppBar(title = { Text("Bark Wallet") }) }, bottomBar = {
+        Surface(tonalElevation = 3.dp) {
+            Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (model.busy) CircularProgressIndicator(Modifier.size(24.dp))
+                Text(if (model.busy) "Working…" else if (model.error != null) "Operation failed" else model.status,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f).testTag("operation-feedback").semantics { liveRegion = LiveRegionMode.Polite })
+                if (model.error != null) TextButton(onClick = { errorDetails = true }) { Text("Details") }
+            }
+        }
+    }) { insets ->
         LazyColumn(Modifier.fillMaxSize().padding(insets).imePadding(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item { Text("RegTest · local funds only", style = MaterialTheme.typography.titleMedium) }
             item { Text(model.status, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.testTag("connection-status")) }
@@ -80,7 +98,7 @@ fun WalletScreen(model: WalletModel) {
                 if (model.invoice.isNotEmpty()) item { Address("Invoice", model.invoice) }
                 item { Action("Claim received payments", model) { model.claim() } }
                 item { Heading("Activity") }
-                if (model.activity.isEmpty()) item { Text("No activity yet. Fund the onchain address, then board to Ark.") }
+                if (model.activity.isEmpty()) item { Text("No saved activity yet.") }
                 items(model.activity, key = { it.id.toString() }) { movement ->
                     Column {
                         Text(movement.subsystemKind.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.titleMedium)
@@ -98,6 +116,11 @@ fun WalletScreen(model: WalletModel) {
             }
         }
     }
+    if (errorDetails) AlertDialog(onDismissRequest = { errorDetails = false },
+        title = { Text("Operation failed") },
+        text = { SelectionContainer { Text(model.error ?: "No error details",
+            modifier = Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState())) } },
+        confirmButton = { TextButton(onClick = { errorDetails = false }) { Text("Done") } })
     if (exitDialog) AlertDialog(onDismissRequest = { exitDialog = false }, title = { Text("Exit every VTXO?") },
         text = { Text("This broadcasts onchain transactions and requires mining the exit delay.") },
         confirmButton = { TextButton(onClick = { exitDialog = false; model.perform { model.startExit() } }) { Text("Start exit") } },

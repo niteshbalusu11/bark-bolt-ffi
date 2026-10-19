@@ -1,0 +1,108 @@
+{
+  "workflow": "https://github.com/smolcars/bark-bolt-ffi/actions/runs/39195200829",
+  "commit": "61453084c307610e1d43574f6bcf7baa9728f4b6",
+  "raw_results_sha256": "e666b6a273531512655b5fac6a10b36f19e97e4eebe13342946a5f0644e8ab47",
+  "result": {
+    "passed": true,
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "extended": true,
+    "run_id": "integration-1792380965"
+  },
+  "platforms": {
+    "ios": {
+      "actions": [
+        "board",
+        "cancel",
+        "claim",
+        "drainExit",
+        "invoice",
+        "offboard",
+        "open",
+        "progressExit",
+        "refresh",
+        "restore",
+        "send",
+        "startExit",
+        "sync"
+      ],
+      "transactions": [
+        {
+          "action": "board",
+          "txid": "62fe19e128567cd65723bd35febe16ce4d82988ed0fdf26a4d7a57329e73840f"
+        },
+        {
+          "action": "offboard",
+          "txid": "a5edb7ff5f5bf7635c7d369cdb03c7f501990dd2d8fc6ab9826b52dc98e8be55"
+        },
+        {
+          "action": "board",
+          "txid": "b83efb9f24a1b8c0d7630452115fc5911a1549e8f666fb1fc19ca03920605092"
+        },
+        {
+          "action": "drainExit",
+          "txid": "cc9aa78d951f0d7ae4c693bfbb935b7f7b15f7b3150c3ff1e7a8ce6064d04e66"
+        }
+      ],
+      "notification_counts": [
+        2,
+        2
+      ],
+      "unavailable_server_error_verified": true,
+      "funding_references": [
+        {
+          "action": "refresh",
+          "reference": "Unconfirmed { funding_txid: 5b4c1967119b1a128380eb66c3cef15e9f9f3a5792eab7406d83bcc829c64236 }"
+        }
+      ]
+    },
+    "android": {
+      "actions": [
+        "board",
+        "cancel",
+        "claim",
+        "drainExit",
+        "invoice",
+        "offboard",
+        "open",
+        "progressExit",
+        "refresh",
+        "restore",
+        "send",
+        "startExit",
+        "sync"
+      ],
+      "transactions": [
+        {
+          "action": "board",
+          "txid": "db1b887dcbf1aa20a1b630c689f82670aa3ec9ed494a24120894afb749869fba"
+        },
+        {
+          "action": "offboard",
+          "txid": "ce004e05a3ee8144575ea36aee22df315bedc5f143d599af2d46bddc77c3177d"
+        },
+        {
+          "action": "board",
+          "txid": "70334301237397175a74f01891f973a117b5a20543e7dbe0f4e305f0a7abdc3a"
+        },
+        {
+          "action": "drainExit",
+          "txid": "ab79ed821cdf444b93d7d9c10d79906b3b8afbfa49671f613c547e9fb4d06a30"
+        }
+      ],
+      "notification_counts": [
+        2,
+        2
+      ],
+      "unavailable_server_error_verified": true,
+      "funding_references": [
+        {
+          "action": "refresh",
+          "reference": "Unconfirmed { funding_txid: e2c9d70e7af816a0e698f6103f4acfdf7cf8466f22cda7e580b226a93da2c2e2 }"
+        }
+      ]
+    }
+  }
+}

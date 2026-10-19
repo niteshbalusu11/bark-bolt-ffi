@@ -12,7 +12,7 @@ import tempfile
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
-REPOSITORY = 'niteshbalusu11/bark-bolt-ffi'
+REPOSITORY = 'smolcars/bark-bolt-ffi'
 ARCHIVE = 'https://github.com/actions/runner/releases/download/v2.338.0/actions-runner-osx-arm64-2.338.0.tar.gz'
 CHECKSUM = 'df4cebda25c86a886ed204e49fee63f5c2e7cec5f447b5c98440a826bbdf9df2'
 

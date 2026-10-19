@@ -26,9 +26,6 @@ target
 # Claude
 .claude/settings.local.json
 
-# CI cargo home (see CARGO_HOME in .gitlab-ci.yml)
-.cargo-home
-
 # Generated SDKs and native application builds
 /dist/
 .build/

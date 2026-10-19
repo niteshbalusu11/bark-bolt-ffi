@@ -126,6 +126,9 @@ def extended(apps):
         app.command('board', amount=500000)
         regtest.mine(6)
         app.command('sync')
+        estimate = app.command('estimate')
+        assert estimate['totalFee'] > 0
+        assert estimate['totalFee'] == estimate['broadcastFee'] + estimate['claimFee']
         app.command('startExit')
         for _ in range(20):
             progress = app.command('progressExit')
@@ -146,7 +149,7 @@ def extended(apps):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--platform', choices=['ios', 'android', 'both'], default='both')
-    parser.add_argument('--ios-device', default=os.environ.get('IOS_DEVICE', '0AA67A95-92DB-4C1A-82AE-6C6CF7770EAD'))
+    parser.add_argument('--ios-device', default=os.environ.get('IOS_DEVICE'))
     parser.add_argument('--android-device', default=os.environ.get('ANDROID_SERIAL', 'emulator-5554'))
     parser.add_argument('--run-id', default='integration-' + str(int(time.time())))
     parser.add_argument('--action', help='Execute one debug command instead of the full acceptance sequence')
@@ -155,6 +158,8 @@ def main():
     options = parser.parse_args()
     apps = []
     if options.platform in ['ios', 'both']:
+        if not options.ios_device:
+            parser.error('--ios-device or IOS_DEVICE is required for iOS')
         apps.append(App('ios', options.ios_device, options.run_id))
     if options.platform in ['android', 'both']:
         app = App('android', options.android_device, options.run_id)

@@ -1,13 +1,15 @@
 # Production migration checklist
 
-Status: the full native API is ported to BoltFFI and both apps build and open
-real RegTest wallets. Packaging, end-to-end transactions and actual Actions runs
-are in progress; unchecked acceptance gates below are still outstanding.
+Status: the full migration and0.7.1 cross-platform Actions acceptance passed.
+The user then requested current-master alignment and cleanup (task14). The core
+now pins bfbe6b7c and57 Rust tests pass; updated SDK/app/CI acceptance is required
+before releasing. Unchecked gates below remain outstanding.
 
 ## Agreed decisions
 
-- New private GitHub repository: https://github.com/niteshbalusu11/bark-bolt-ffi,
-  created in the authenticated GitHub account; local checkout: bark-bolt-ffi.
+- GitHub repository: https://github.com/smolcars/bark-bolt-ffi (now public after
+  an external transfer from the initially private niteshbalusu11 repository);
+  local checkout: bark-bolt-ffi.
 - One repository for the Rust FFI core, Swift SDK, Kotlin Android/JVM SDKs,
   native example apps, RegTest infrastructure and GitHub Actions.
 - Consumer languages: Swift and Kotlin only. Use SwiftUI and Jetpack Compose.
@@ -63,8 +65,8 @@ different claims. Record them separately; do not mark one from evidence of anoth
   isolated project names/ports/volumes instead of that reset path.
 - Docker/OrbStack is available. An iOS simulator is available. Android SDK/NDK
   exists, but its emulator package and a system image still need installation.
-- The [native compatibility proof](../experiments/boltffi/README.md) is complete;
-  real Bark wallet, mobile app and RegTest behavior remain to be validated.
+- The feasibility prototype was superseded by real SDK contracts/apps and removed
+  during final cleanup. Its history remains in earlier commits.
 
 ## Tasks
 
@@ -134,7 +136,7 @@ entry has an implemented counterpart.
 
 ### 04 — Verify persistence and async/object lifecycle
 
-- [ ] Test the real SDK's persistence, callbacks, cancellation and daemon shutdown.
+- [x] Test the real SDK's persistence, callbacks, cancellation and daemon shutdown.
 
 **Engineering plan:** define callback/handle retention and release, in-flight
 object lifetime, Tokio behavior, notification reuse and shutdown. Foreign task
@@ -228,7 +230,7 @@ reachable endpoints. Missing runtimes/devices are resolved, not counted as passe
 
 ### 10 — Run end-to-end RegTest acceptance on both apps
 
-- [ ] Demonstrate actual wallet workflows and assertions on iOS and Android.
+- [x] Demonstrate actual wallet workflows and assertions on iOS and Android.
 
 **Engineering plan:** define deterministic balances/state transitions, block
 mining and bounded confirmation waits. Separate complete API contract coverage
@@ -292,6 +294,22 @@ archive the proof when real tests supersede it; preserve license/attribution.
 documented commands; every API is accounted for, required runtime/CI checks pass,
 packaged consumers work and remaining limitations are accurately recorded.
 
+### 14 — Align current master, user Docker images and cleanup
+
+- [ ] Revalidate the final migration against current Bark master and dated user images.
+
+**Engineering plan:** docs/plans/14-master-and-cleanup.md records source/image
+revision inspection, ownership/PSBT/typed-height adaptations, cleanup and checks.
+
+**Implement:** pin bfbe6b7c, retain all original exports, add master sign-only
+callback/swept state/fee margin, use dated multiarch images and delete superseded
+prototype/unused dependencies/assets. Preserve prior wallet volumes.
+
+**Done when:** strict generation/parity,57 Rust tests/Clippy/audit, full release
+SDKs, clean package consumers, both rebuilt apps, extended RegTest and actual
+hosted Actions pass for the updated implementation. Prior0.7.1 evidence remains
+historical and is not substituted for this acceptance.
+
 ## Dependency order
 
 00 -> 01 -> 02 -> 03 -> 04 -> 05 -> 06 -> 07/08 -> 09 -> 10 -> 11/12 -> 13.
@@ -300,11 +318,10 @@ are written; dependencies and completion evidence still apply.
 
 ## Current evidence
 
-The new private GitHub repository exists and the local checkout preserves source
-history/license. Earlier proof results are available in experiments/boltffi.
-For this plan, Docker responds, Nitro's Compose config parses and iOS device
-tooling is available. No RegTest services or mobile apps were started during
-planning.
+The GitHub repository preserves upstream history/license. All54 Rust tests,
+Swift/JVM contracts and full local RegTest acceptance pass. Runtime evidence
+is in docs/validation/2026-10-18.md; actual hosted and release gates are recorded
+separately. The superseded feasibility experiment has been deleted.
 
 ## Completion record — task 00
 
@@ -396,3 +413,18 @@ Validation: wait-devices.py passes for both; installed apps create real wallets,
 complete transactions, and local XCTest/Compose instrumentation tests pass.
 Artifacts: docs/validation/2026-10-18.md and local device/test reports.
 Remaining limits: CI device execution is verified under tasks11–12, not inferred.
+
+## Completion record — tasks 04 and 10
+
+Engineering plan and paths: docs/plans/03-native-port.md, 05-sdk-packaging.md,
+07-08-native-apps.md; src/ffi, SDK contracts and scripts/app-regtest.py.
+Implemented: native runtime/RAII cancellation cleanup, callback release and
+in-flight handle retention, logger replacement, SQLite reopen, full cross-app
+transaction driver with node/LND assertions and funded seed recovery.
+Validation: all54 Rust tests,3 Swift contracts,3 real-wallet JVM contracts and
+3 contracts through the actual packaged JVM JAR pass locally. Both local r5
+and Actions39195200829 report passed=true, extended=true for iOS and Android.
+Artifacts: docs/validation/2026-10-18.md and integration-39195200829.json; Actions
+retains full JSONL and sanitized backend logs for3 days.
+Remaining limits: LNURL/LNAddress and BOLT12 external fixtures were not run;
+minimum-OS and physical-device execution are not claimed.

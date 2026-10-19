@@ -16,3 +16,11 @@ publishing { publications { create<MavenPublication>("jvm") {
     from(components["java"])
     groupId = "io.github.niteshbalusu11"; artifactId = "bark-bolt-ffi-jvm-$nativeHost"; version = "0.1.0"
 } } }
+
+tasks.register<JavaExec>("testPackaged") {
+    dependsOn(tasks.testClasses, tasks.jar)
+    classpath = files(tasks.jar) + (sourceSets.test.get().runtimeClasspath - sourceSets.main.get().output)
+    mainClass.set("org.junit.runner.JUnitCore")
+    args("ContractTest")
+    environment("BARK_REGTEST", System.getenv("BARK_REGTEST") ?: "")
+}

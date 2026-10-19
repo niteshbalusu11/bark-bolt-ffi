@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage or verify the self-contained, optimized SwiftPM SDK."""
+"""Stage or verify the versioned, optimized SwiftPM SDK."""
 import argparse
 import hashlib
 import json
@@ -9,6 +9,7 @@ import plistlib
 import shutil
 import subprocess
 import tempfile
+import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 SDK = ROOT / 'sdk/swift'
@@ -52,7 +53,6 @@ def stage():
     with tempfile.TemporaryDirectory(prefix='bark-swift-check-') as directory:
         for library in info['AvailableLibraries']:
             binary = framework / library['LibraryIdentifier'] / library['LibraryPath']
-            assert binary.stat().st_size < 100 * 1024 * 1024, f'{binary} exceeds the GitHub file limit'
             architectures = library['SupportedArchitectures']
             for arch in architectures:
                 key = (library['SupportedPlatform'], library.get('SupportedPlatformVariant'), arch)
@@ -66,19 +66,27 @@ def stage():
                 seen.add(key)
         assert seen == set(TARGETS), f'Missing Apple slices: {set(TARGETS) - seen}'
     SDK.mkdir(parents=True, exist_ok=True)
-    for name in ['FFI', 'Sources', 'BarkBoltFFI.xcframework']:
+    for name in ['FFI', 'Sources']:
         destination = SDK / name
         if destination.exists():
             shutil.rmtree(destination)
         shutil.copytree(generated / name, destination)
+    archive = ROOT / 'dist/BarkBoltFFI.xcframework.zip'
+    with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as output:
+        for file in sorted(framework.rglob('*')):
+            if file.is_file():
+                output.write(file, file.relative_to(framework.parent))
+    archive_hash = checksum(archive)
     package = (generated / 'Package.swift').read_text().replace('path: "', 'path: "sdk/swift/')
+    package = package.replace('path: "sdk/swift/BarkBoltFFI.xcframework"',
+        'url: "https://github.com/smolcars/bark-bolt-ffi/releases/download/v0.1.0/BarkBoltFFI.xcframework.zip", checksum: "' + archive_hash + '"')
     (ROOT / 'Package.swift').write_text(package + '\n')
     (SDK / 'provenance.json').write_text(json.dumps({
-        'version': '0.1.0', 'bark': '0.7.1', 'boltffi': '0.31.1',
-        'rust': '1.90.0', 'profile': 'release', 'source_sha256': source_digest(),
+        'version': '0.1.0', 'bark': '0.7.1-dev', 'bark_revision': 'bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c', 'boltffi': '0.31.1',
+        'rust': '1.90.0', 'profile': 'release', 'archive_sha256': archive_hash, 'source_sha256': source_digest(),
         'files': artifacts(), 'package_sha256': checksum(ROOT / 'Package.swift'),
     }, indent=2, sort_keys=True) + '\n')
-    print('Staged five optimized Apple ABI slices, generated bindings and root SwiftPM manifest')
+    print(f'Staged release SwiftPM manifest and generated sources; archive: {archive.stat().st_size} bytes')
 
 
 def verify():
@@ -87,6 +95,7 @@ def verify():
     assert metadata['files'] == artifacts(), 'Swift SDK files changed or are missing'
     assert metadata['package_sha256'] == checksum(ROOT / 'Package.swift'), 'Root SwiftPM manifest changed'
     assert metadata['profile'] == 'release'
+    assert metadata['archive_sha256'] in (ROOT / 'Package.swift').read_text()
     print('Swift SDK source, artifact and manifest checksums match')
 
 

@@ -33,6 +33,7 @@ struct WalletView: View {
     @State private var amount = "10000"
     @State private var boardAmount = "1000000"
     @State private var confirmExit = false
+    @State private var errorDetails = false
 
     var body: some View {
         NavigationStack {
@@ -45,8 +46,8 @@ struct WalletView: View {
                 }
                 if !model.opened {
                     Section("Connect") {
-                        TextField("Ark server", text: $model.endpoint).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
-                        TextField("Bitcoin RPC", text: $model.bitcoinEndpoint).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
+                        LabeledContent("Ark server") { TextField("Ark server", text: $model.endpoint).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled() }
+                        LabeledContent("Bitcoin RPC") { TextField("Bitcoin RPC", text: $model.bitcoinEndpoint).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled() }
                         SecureField("Recovery phrase (optional)", text: $restore).textInputAutocapitalization(.never).autocorrectionDisabled()
                         Button("Create or open wallet") { model.perform { try await model.open(restore: restore); restore = "" } }
                             .accessibilityIdentifier("open-wallet")
@@ -65,7 +66,7 @@ struct WalletView: View {
                     Section("Send") {
                         TextField("Ark address or Lightning invoice", text: $destination, axis: .vertical)
                             .textInputAutocapitalization(.never).autocorrectionDisabled().accessibilityIdentifier("destination")
-                        TextField("Amount in sats", text: $amount).keyboardType(.numberPad).accessibilityIdentifier("send-amount")
+                        LabeledContent("Amount in sats") { TextField("Amount in sats", text: $amount).keyboardType(.numberPad).accessibilityIdentifier("send-amount") }
                         Button("Send payment") { model.perform { try await model.send(destination: destination, amount: amount) } }.accessibilityIdentifier("send-payment")
                     }
                     Section("Lightning receive") {
@@ -76,7 +77,7 @@ struct WalletView: View {
                         Button("Claim received payments") { model.perform { _ = try await model.wallet!.tryClaimAllLightningReceives(wait: true) } }
                     }
                     Section("Activity") {
-                        if model.activity.isEmpty { Text("No activity yet. Fund the onchain address, then board to Ark.").foregroundStyle(.secondary) }
+                        if model.activity.isEmpty { Text("No saved activity yet.").foregroundStyle(.secondary) }
                         ForEach(Array(model.activity.enumerated()), id: \.offset) { _, movement in
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(movement.subsystemKind.capitalized).font(.headline)
@@ -85,7 +86,7 @@ struct WalletView: View {
                         }
                     }
                     Section("Board & maintain") {
-                        TextField("Board amount in sats", text: $boardAmount).keyboardType(.numberPad)
+                        LabeledContent("Board amount in sats") { TextField("Board amount in sats", text: $boardAmount).keyboardType(.numberPad) }
                         Button("Board to Ark") { model.perform { _ = try await model.wallet!.boardAmount(amountSats: model.amount(boardAmount)); model.status = "Board submitted. Mine a block, then sync." } }.accessibilityIdentifier("board-wallet")
                         Button("Refresh VTXOs") { model.perform { let ids = try await model.wallet!.spendableVtxos().map(\.id); _ = try await model.wallet!.refreshVtxos(vtxoIds: ids) } }
                         Button("Offboard all to onchain address") { model.perform { _ = try await model.wallet!.offboardAll(bitcoinAddress: model.onchainAddress) } }
@@ -102,6 +103,25 @@ struct WalletView: View {
                 }
             }
             .disabled(model.busy)
+            .safeAreaInset(edge: .bottom) {
+                HStack {
+                    if model.busy { ProgressView() }
+                    Text(model.busy ? "Working…" : model.error == nil ? model.status : "Operation failed")
+                        .font(.subheadline).frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityIdentifier("operation-feedback")
+                    if model.error != nil { Button("Details") { errorDetails = true } }
+                }.padding().background(.bar)
+            }
+            .onChange(of: model.busy) { if $0 { UIAccessibility.post(notification: .announcement, argument: "Working") } }
+            .onChange(of: model.status) { UIAccessibility.post(notification: .announcement, argument: $0) }
+            .onChange(of: model.error) { if let message = $0 { UIAccessibility.post(notification: .announcement, argument: message) } }
+            .sheet(isPresented: $errorDetails) {
+                NavigationStack {
+                    ScrollView { Text(model.error ?? "No error details").textSelection(.enabled).padding() }
+                        .navigationTitle("Operation failed")
+                        .toolbar { Button("Done") { errorDetails = false } }
+                }
+            }
             .navigationTitle("Bark Wallet")
             .tint(Color(uiColor: UIColor { traits in
                 traits.userInterfaceStyle == .dark

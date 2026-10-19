@@ -67,16 +67,6 @@ pub struct Config {
     pub vtxo_key_gap_limit: Option<u32>,
 }
 
-/// Compile-time default user-agent. Each language wrapper sets
-/// `BARK_FFI_DEFAULT_LANG` in its `.cargo/config.toml [env]` (e.g. `"swift"`,
-/// `"kotlin"`); cargo propagates it to dependency builds, and bark-ffi composes
-/// `bark-{lang}/{bark-ffi-version}` from it. Returns `None` when bark-ffi is
-/// built standalone.
-fn default_user_agent() -> Option<String> {
-    let lang = option_env!("BARK_FFI_DEFAULT_LANG")?;
-    Some(format!("bark-{}/{}", lang, env!("CARGO_PKG_VERSION")))
-}
-
 impl Config {
     pub(crate) fn into_bark(
         self,
@@ -90,7 +80,7 @@ impl Config {
         {
             ret.server_access_token = self.server_access_token;
         }
-        ret.user_agent = self.user_agent.or_else(default_user_agent);
+        ret.user_agent = self.user_agent;
         ret.esplora_address = self.esplora_address;
         ret.bitcoind_address = self.bitcoind_address;
         ret.bitcoind_cookiefile = self.bitcoind_cookiefile.map(std::path::PathBuf::from);
@@ -99,25 +89,29 @@ impl Config {
         ret.bitcoind_pass = self.bitcoind_pass.map(bark::secret::Secret::new);
 
         if let Some(threshold) = self.vtxo_refresh_expiry_threshold {
-            ret.vtxo_refresh_expiry_threshold = threshold;
+            ret.vtxo_refresh_expiry_threshold = threshold.into();
         }
         if let Some(margin) = self.vtxo_exit_margin {
-            ret.vtxo_exit_margin = margin;
+            ret.vtxo_exit_margin = margin.into();
         }
         if let Some(delta) = self.htlc_recv_claim_delta {
-            ret.htlc_recv_claim_delta = delta;
+            ret.htlc_recv_claim_delta = delta.into();
         }
         if let Some(rate) = self.fallback_fee_rate {
             ret.fallback_fee_rate = Some(bitcoin::FeeRate::from_sat_per_kwu(rate));
         }
         if let Some(confs) = self.round_tx_required_confirmations {
-            ret.round_tx_required_confirmations = confs;
+            ret.round_tx_required_confirmations = confs.try_into().map_err(|_| {
+                crate::error::BarkError::from("round_tx_required_confirmations exceeds 65535")
+            })?;
         }
         if let Some(secs) = self.daemon_sync_interval_secs {
             ret.daemon_sync_interval_secs = secs;
         }
         if let Some(confs) = self.offboard_required_confirmations {
-            ret.offboard_required_confirmations = confs;
+            ret.offboard_required_confirmations = confs.try_into().map_err(|_| {
+                crate::error::BarkError::from("offboard_required_confirmations exceeds 65535")
+            })?;
         }
         if let Some(manual) = self.daemon_manual_sync {
             ret.daemon_manual_sync = manual;
@@ -200,5 +194,25 @@ mod tests {
             "{}",
             err.message()
         );
+    }
+    #[test]
+    fn confirmation_deltas_reject_overflow() {
+        for offboard in [false, true] {
+            let mut config = minimal();
+            if offboard {
+                config.offboard_required_confirmations = Some(65536);
+            } else {
+                config.round_tx_required_confirmations = Some(65536);
+            }
+            assert!(config
+                .into_bark(bitcoin::Network::Regtest)
+                .unwrap_err()
+                .message
+                .contains("exceeds 65535"));
+        }
+        let mut config = minimal();
+        config.round_tx_required_confirmations = Some(65535);
+        let converted = config.into_bark(bitcoin::Network::Regtest).unwrap();
+        assert_eq!(u32::from(converted.round_tx_required_confirmations), 65535);
     }
 }

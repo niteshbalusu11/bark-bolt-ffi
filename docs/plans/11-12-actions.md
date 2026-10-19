@@ -35,3 +35,16 @@ SDK package `tools`; SDK CLI12 rejects it. Set the action's `packages` input to
 only `platform-tools`, then install pinned NDK/platform/build-tools explicitly.
 Re-run the actual Android job; no project compile or emulator result is inferred
 from successful SDK installation.
+
+Final integration cleanup: the manual workflow creates a new Compose project
+named from github.run_id. After evidence upload, remove only that job's services
+and volumes with `down --volumes`, instead of retaining test databases on a
+persistent runner. Local scripts/regtest.py stop continues to preserve wallets,
+and original/reference projects are untouched.
+
+Hosted Apple finding: Xcode16.4/Swift6.1 annotates XCUIApplication APIs MainActor,
+while the local newer XCTest headers allow the original synchronous test. Make
+the UI test method explicitly @MainActor, matching the framework's contract;
+retain Swift6 and run the test again. The app and SDK compiled on that runner.
+Hosted Android's full ABI build, JVM contracts, emulator UI and real RegTest
+smoke passed in run39195303038; Apple needs this correction and an actual rerun.

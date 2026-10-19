@@ -77,10 +77,14 @@ final class WalletModel: ObservableObject {
 
     func perform(_ action: @escaping @MainActor () async throws -> Void) {
         guard !busy else { return }
+        let previousStatus = status
         busy = true; error = nil
         Task {
             defer { busy = false }
-            do { try await action(); if opened { try await readBalances() } }
+            do {
+                try await action(); if opened { try await readBalances() }
+                if status == previousStatus { status = "Wallet updated · RegTest" }
+            }
             catch let failure as BarkError { error = failure.message }
             catch { self.error = error.localizedDescription }
         }
@@ -125,6 +129,11 @@ final class WalletModel: ObservableObject {
             case "claim": _ = try await wallet.tryClaimAllLightningReceives(wait: true)
             case "refresh": extra["txid"] = try await wallet.refreshVtxos(vtxoIds: wallet.spendableVtxos().map(\.id)) ?? ""
             case "offboard": extra["txid"] = try await wallet.offboardVtxos(vtxoIds: wallet.spendableVtxos().prefix(1).map(\.id), bitcoinAddress: destination).txid
+            case "estimate":
+                let estimate = try await wallet.estimateEmergencyExitFee(vtxoIds: [], feeRateSatPerVb: 1, destination: onchainAddress)
+                extra["totalFee"] = estimate.totalFeeSats
+                extra["broadcastFee"] = estimate.exitBroadcastFeeSats
+                extra["claimFee"] = estimate.claimFeeSats
             case "startExit": try await wallet.startExitForVtxos(vtxoIds: wallet.spendableVtxos().prefix(1).map(\.id))
             case "progressExit":
                 _ = try await wallet.progressExits(feeRateSatPerVb: 1)

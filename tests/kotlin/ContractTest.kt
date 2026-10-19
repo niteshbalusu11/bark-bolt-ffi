@@ -48,6 +48,7 @@ class ContractTest {
             }
             override fun prepareTx(destinations: List<Destination>, feeRateSatPerVb: ULong): String = error("unexpected prepare")
             override fun prepareDrainTx(address: String, feeRateSatPerVb: ULong): String = error("unexpected drain")
+            override fun signPsbt(psbtBase64: String): String = error("unexpected sign")
             override fun finishPsbt(psbtBase64: String): String = error("unexpected finish")
             override fun isMine(scriptPubkeyHex: String): Boolean = false
             override fun registerTx(txHex: String) {}

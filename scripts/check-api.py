@@ -41,4 +41,7 @@ for kind in ['records', 'enums', 'callbacks']:
         name = item['name']
         for language, source in [('Swift', swift), ('Kotlin', kotlin)]:
             assert re.search(r'\b(?:struct|enum|class|interface|protocol) ' + name + r'\b', source), f'{language}: missing {name}'
-print(f"API parity: {len(baseline['exports'])} original exports, 40 records, 14 enums, 2 callbacks present in both hosts; openWithOnchain added")
+for source in [swift, kotlin]:
+    assert re.search(r'\b(?:func|fun) signPsbt\s*\(', source), 'Missing master sign-only callback'
+    assert re.search(r'\b(?:vtxoSwept|VtxoSwept)\b', source), 'Missing master swept exit state'
+print(f"API parity: {len(baseline['exports'])} original exports, 40 records, 14 enums, 2 callbacks present in both hosts; openWithOnchain/signPsbt/VtxoSwept added")

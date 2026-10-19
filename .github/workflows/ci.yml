@@ -30,6 +30,7 @@ jobs:
             target
           key: rust-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: rust-${{ runner.os }}-
+      - run: python3 scripts/swift-artifact.py
       - run: cargo fmt --check
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo test --locked
@@ -64,7 +65,8 @@ jobs:
       - run: scripts/install-boltffi.sh
       - run: BOLTFFI="$PWD/target/tools/boltffi" scripts/build-sdk.sh android --release
       - run: target/tools/boltffi generate swift --deny-skipped && python3 scripts/check-api.py
-      - run: ./gradlew :sdk:android:assembleRelease :sdk:jvm:test :sdk:jvm:jar :examples:android:assembleDebug :examples:android:assembleDebugAndroidTest
+      - run: ./gradlew :sdk:android:assembleRelease :sdk:jvm:test :sdk:jvm:jar :sdk:jvm:testPackaged :examples:android:assembleRelease :examples:android:assembleDebug :examples:android:assembleDebugAndroidTest
+      - run: python3 scripts/check-kotlin-artifacts.py
       - name: Enable emulator acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -79,7 +81,7 @@ jobs:
           disable-animations: true
           script: |
             ./gradlew :examples:android:connectedDebugAndroidTest
-            BARK_REGTEST=1 ./gradlew :sdk:jvm:test
+            BARK_REGTEST=1 ./gradlew :sdk:jvm:test :sdk:jvm:testPackaged
             adb install -r examples/android/build/outputs/apk/debug/android-debug.apk
             python3 scripts/app-regtest.py --platform android
       - if: always()

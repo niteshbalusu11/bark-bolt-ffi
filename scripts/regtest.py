@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Isolated, repeatable Bark 0.7.1 RegTest stack. Never deletes wallet volumes."""
+"""Isolated, repeatable Bark master RegTest stack. Never deletes wallet volumes."""
 import argparse
 import json
 from pathlib import Path

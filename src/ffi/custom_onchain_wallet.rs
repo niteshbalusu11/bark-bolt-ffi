@@ -12,7 +12,7 @@ use bitcoin::{Address, Amount, FeeRate, Psbt, Script, ScriptBuf, Transaction};
 use log::{error, warn};
 
 use bark::chain::ChainSource;
-use bark::onchain::{CpfpError, CpfpWalkEstimate, MakeCpfpFees, OnchainWalletTrait};
+use bark::onchain::{CpfpError, MakeCpfpFees, OnchainWalletTrait};
 
 use crate::error::BarkError;
 use crate::types::{CpfpParams, Destination};
@@ -56,7 +56,11 @@ pub trait CustomOnchainWalletCallbacks: Send + Sync {
         fee_rate_sat_per_vb: u64,
     ) -> Result<String, BarkError>;
 
-    /// Sign and finalize a PSBT
+    /// Sign/finalize without storing or registering the transaction.
+    /// The returned PSBT must preserve its unsigned transaction.
+    fn sign_psbt(&self, psbt_base64: String) -> Result<String, BarkError>;
+
+    /// Sign, finalize and store a PSBT
     ///
     /// # Arguments
     /// * `psbt_base64` - Base64-encoded PSBT
@@ -130,6 +134,16 @@ impl CallbackWalletAdapter {
             last_balance: Mutex::new(None),
         }
     }
+}
+
+fn validate_signed_psbt(original: &Psbt, signed_base64: &str) -> anyhow::Result<Psbt> {
+    use base64::Engine;
+    let bytes = base64::engine::general_purpose::STANDARD.decode(signed_base64)?;
+    let signed = Psbt::deserialize(&bytes)?;
+    if signed.unsigned_tx != original.unsigned_tx {
+        bail!("PSBT signer returned a different transaction than it was given");
+    }
+    Ok(signed)
 }
 
 /// Check that `tx` pays every `(script, amount)` in `required`, counted as a
@@ -296,28 +310,20 @@ impl OnchainWalletTrait for CallbackWalletAdapter {
         Ok(psbt)
     }
 
-    async fn finish_psbt(&mut self, psbt: Psbt) -> anyhow::Result<Psbt> {
-        // Serialize PSBT to base64
-        use base64::Engine;
-        let psbt_bytes = psbt.serialize();
-        let psbt_base64 = base64::engine::general_purpose::STANDARD.encode(&psbt_bytes);
-
-        // Call callback
-        let signed_base64 = self
+    async fn sign_psbt(&mut self, psbt: Psbt) -> anyhow::Result<Psbt> {
+        let signed = self
             .callbacks
-            .finish_psbt(psbt_base64)
-            .map_err(|e| anyhow::anyhow!("finish_psbt failed: {}", e.message()))?;
+            .sign_psbt(psbt.to_string())
+            .context("sign_psbt failed")?;
+        validate_signed_psbt(&psbt, &signed)
+    }
 
-        // Decode the fully signed PSBT returned by the callback
-        let signed_bytes = base64::engine::general_purpose::STANDARD.decode(&signed_base64)?;
-        let signed_psbt = Psbt::deserialize(&signed_bytes)?;
-
-        // Signing fills in witnesses; it must not touch inputs or outputs.
-        if signed_psbt.unsigned_tx != psbt.unsigned_tx {
-            bail!("finish_psbt returned a different transaction than it was given");
-        }
-
-        Ok(signed_psbt)
+    async fn finish_psbt(&mut self, psbt: Psbt) -> anyhow::Result<Psbt> {
+        let signed = self
+            .callbacks
+            .finish_psbt(psbt.to_string())
+            .context("finish_psbt failed")?;
+        validate_signed_psbt(&psbt, &signed)
     }
 
     async fn make_signed_p2a_cpfp(
@@ -373,22 +379,6 @@ impl OnchainWalletTrait for CallbackWalletAdapter {
         }
 
         Ok(cpfp_tx)
-    }
-
-    /// Not supported for callback wallets.
-    ///
-    /// Estimating the exit cost means replaying the whole CPFP broadcast walk
-    /// without mutating the wallet, which the callback interface cannot express:
-    /// [CustomOnchainWalletCallbacks::make_signed_p2a_cpfp] is free to consume
-    /// addresses and coins. Only `Wallet::estimate_emergency_exit_fee` needs
-    /// this, so the rest of the wallet is unaffected.
-    fn estimate_p2a_cpfp_walk(
-        &self,
-        _parents: &[(Transaction, MakeCpfpFees)],
-    ) -> Result<CpfpWalkEstimate, CpfpError> {
-        Err(CpfpError::InternalError(
-            "estimate_p2a_cpfp_walk() not supported for callback wallets".into(),
-        ))
     }
 
     async fn store_signed_p2a_cpfp(&mut self, tx: &Transaction) -> anyhow::Result<(), CpfpError> {
@@ -463,5 +453,16 @@ mod tests {
 
         let two = tx_paying(&[(spk(1), 1000), (spk(1), 1000)]);
         check_pays(&two, &required).unwrap();
+    }
+    #[test]
+    fn signing_preserves_the_requested_transaction() {
+        let original = Psbt::from_unsigned_tx(tx_paying(&[(spk(1), 1000)])).unwrap();
+        validate_signed_psbt(&original, &original.to_string()).unwrap();
+        let substituted = Psbt::from_unsigned_tx(tx_paying(&[(spk(7), 1000)])).unwrap();
+        assert!(validate_signed_psbt(&original, &substituted.to_string())
+            .unwrap_err()
+            .to_string()
+            .contains("different transaction"));
+        assert!(validate_signed_psbt(&original, "invalid base64").is_err());
     }
 }

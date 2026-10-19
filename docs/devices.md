@@ -38,5 +38,7 @@ gh workflow run integration.yml
 
 The helper requires authenticated GitHub CLI repository-admin access, registers
 an ephemeral runner, accepts one job, unregisters and removes its temporary
-files. It uses an isolated Compose project/ports. A permanent integration runner
+files. It uses an isolated Compose project/ports; after uploading evidence,
+the workflow removes its own per-run containers/volumes. Local `regtest.py stop`
+preserves developer wallets. A permanent integration runner
 can instead use the same bark-bolt-regtest label and documented prerequisites.

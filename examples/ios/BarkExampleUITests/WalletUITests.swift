@@ -1,6 +1,7 @@
 import XCTest
 
 final class WalletUITests: XCTestCase {
+    @MainActor
     func testOnboardingAndLocalValidation() {
         let app = XCUIApplication()
         app.launch()

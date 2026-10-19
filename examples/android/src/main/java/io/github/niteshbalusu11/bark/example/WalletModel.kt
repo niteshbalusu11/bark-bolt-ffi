@@ -62,9 +62,10 @@ class WalletModel(application: Application) : AndroidViewModel(application) {
     fun amount(text: String): ULong = requireNotNull(text.toULongOrNull()?.takeIf { it > 0uL }) { "Enter a positive whole number of sats." }
     fun perform(action: suspend () -> Unit) {
         if (busy) return
+        val previousStatus = status
         busy = true; error = null
         viewModelScope.launch {
-            try { action(); if (opened) readBalances() }
+            try { action(); if (opened) readBalances(); if (status == previousStatus) status = "Wallet updated · RegTest" }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (failure: Exception) { error = failure.message ?: "Operation failed. Try again." }
             finally { busy = false }
@@ -109,6 +110,10 @@ class WalletModel(application: Application) : AndroidViewModel(application) {
                 "claim" -> claim()
                 "refresh" -> result.put("txid", ark.refreshVtxos(ark.spendableVtxos().map { it.id }) ?: "")
                 "offboard" -> result.put("txid", ark.offboardVtxos(ark.spendableVtxos().take(1).map { it.id }, destination).txid)
+                "estimate" -> {
+                    val estimate = ark.estimateEmergencyExitFee(emptyList(), 1u, onchainAddress)
+                    result.put("totalFee", estimate.totalFeeSats.toLong()).put("broadcastFee", estimate.exitBroadcastFeeSats.toLong()).put("claimFee", estimate.claimFeeSats.toLong())
+                }
                 "startExit" -> ark.startExitForVtxos(ark.spendableVtxos().take(1).map { it.id })
                 "progressExit" -> { ark.progressExits(1u); result.put("claimable", ark.listClaimableExits().size).put("claimHeight", ark.allExitsClaimableAtHeight()?.toLong() ?: -1) }
                 "drainExit" -> {

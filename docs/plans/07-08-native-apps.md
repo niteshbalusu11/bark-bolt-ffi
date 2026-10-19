@@ -38,3 +38,15 @@ committed validation record with real dates/commands/IDs.
 Simulator Keychain requires an ad-hoc signed app with application-identifier and
 keychain-access-groups entitlements; an unsigned simulator build fails -34018.
 Use local ad-hoc signing (no Apple developer credentials) for simulator tests.
+
+Independent native finish review: retain visible labels for prefilled iOS Ark
+server/Bitcoin RPC/send amount/board amount fields. Add platform-native pinned
+operation feedback outside the scrollable task content on both platforms, so
+busy/error/result state remains visible from Send/maintenance. A details action
+must expose the full error without truncation; announce state changes using
+native accessibility mechanisms. Preserve the existing task layout and actual
+SDK calls. Make generic successful actions report an updated status when they
+did not supply a specific message. Replace empty-history copy with factual
+“No saved activity yet” because restoring funds need not restore history.
+Build once, run native UI checks, then recapture required phone views for the
+reviewer's verdict. Do not change the Rust interface or generated bindings.

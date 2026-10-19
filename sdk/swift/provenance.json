@@ -1,0 +1,18 @@
+{
+  "archive_sha256": "14afb3037fe89e7fd9068563f0135fb0fcc5a5f3362343312ef205aad9d1dc67",
+  "bark": "0.7.1-dev",
+  "bark_revision": "bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c",
+  "boltffi": "0.31.1",
+  "files": {
+    "FFI/discovery.c": "04bd35ec8619b7338d45d06da982daad26d980198e2a36704386226dcb1fe7ff",
+    "FFI/include/ffi.h": "3b58b81a2b64c08441bcb57f4209b6b46498886863aac468dfbf7c15fc8e981e",
+    "FFI/include/module.modulemap": "5417b8b003a67199f854575adaccfee47a51c147be3025bcc34bbb8903e2cc8b",
+    "Sources/BoltFFI/BarkBoltFfiBoltFFI.swift": "aac8402464d59137d93277f477b4610484095cfd8d180d4a3147f0bb6ffa1533",
+    "Sources/BoltFFI/Concurrency.swift": "defe435152b826509ce5b954697ccd5ff2d7ec499b212c6582cf845ff85990db"
+  },
+  "package_sha256": "06e0d1eefe29ff868858367ca8d8b4e225e3402bd4fbdba641aef70314b32876",
+  "profile": "release",
+  "rust": "1.90.0",
+  "source_sha256": "d174751b260436a11c040996936eb3f91cc46f1a59de938e4386fc395409a346",
+  "version": "0.1.0"
+}

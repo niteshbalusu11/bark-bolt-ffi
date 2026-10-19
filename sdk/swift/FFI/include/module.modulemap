@@ -1,0 +1,4 @@
+module BarkBoltFFIFFI {
+    header "ffi.h"
+    export *
+}

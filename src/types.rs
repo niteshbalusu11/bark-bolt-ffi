@@ -137,7 +137,7 @@ impl From<BarkBalance> for Balance {
         Self {
             spendable_sats: b.spendable.to_sat(),
             pending_in_round_sats: b.pending_in_round.to_sat(),
-            pending_exit_sats: b.pending_exit.unwrap_or_default().to_sat(),
+            pending_exit_sats: b.pending_exit.to_sat(),
             pending_lightning_send_sats: b.pending_lightning_send.to_sat(),
             // Note: Bark's Balance only has claimable_lightning_receive field.
             // There is no separate "total pending receive" field in upstream.
@@ -158,7 +158,7 @@ impl From<BarkBalance> for Balance {
 /// receive) lock with `Movement`. As upstream converts subsystems to
 /// actions, new locks migrate from `Movement` to `Action` per-subsystem.
 ///
-/// Serde/TS tags match upstream's serialization: `"action"` / `"movement"`.
+/// Serde tags match upstream's serialization: `"action"` / `"movement"`.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "kebab-case")]
 #[boltffi::data]
@@ -192,7 +192,7 @@ impl From<VtxoLockHolder> for bark::vtxo::VtxoLockHolder {
 
 /// Rich VTXO state, mirroring `bark::vtxo::VtxoState`.
 ///
-/// Serde/TS tags match upstream's kebab-case serialization:
+/// Serde tags match upstream's kebab-case serialization:
 /// `"spendable"` | `"locked"` | `"spent"` | `"exited"`.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "kebab-case")]
@@ -250,7 +250,7 @@ impl From<BarkWalletVtxo> for Vtxo {
         Self {
             id: v.vtxo.id().to_string(),
             amount_sats: v.vtxo.amount().to_sat(),
-            expiry_height: v.vtxo.expiry_height(),
+            expiry_height: v.vtxo.expiry_height().into(),
             kind: format!("{:?}", v.vtxo.policy_type()),
             state: (&v.state).into(),
             exit_depth: v.exit_depth as u32,
@@ -544,7 +544,7 @@ impl From<bark::FeeEstimate> for FeeEstimate {
 /// onchain funds to CPFP-bump every not-yet-confirmed exit transaction, while
 /// `claim_fee_sats` is deducted later from the recovered value when the
 /// matured outputs are drained.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 #[boltffi::data]
 pub struct EmergencyExitFeeEstimate {
     /// CPFP fees to broadcast every not-yet-confirmed exit transaction. Paid
@@ -563,11 +563,6 @@ pub struct EmergencyExitFeeEstimate {
     /// Number of exit transactions that still need to be broadcast and
     /// CPFP-bumped. Already-confirmed tree transactions are not counted.
     pub txs_to_broadcast: u64,
-    /// Whether the wallet's current confirmed onchain balance covers the full
-    /// serial broadcast walk. Each CPFP child can only spend confirmed coins,
-    /// so `false` means the exit would stall midway even if a single bump
-    /// looks affordable.
-    pub fundable: bool,
 }
 
 impl From<bark::exit::ExitFeeEstimate> for EmergencyExitFeeEstimate {
@@ -578,7 +573,6 @@ impl From<bark::exit::ExitFeeEstimate> for EmergencyExitFeeEstimate {
             claim_fee_sats: e.claim_fee.to_sat(),
             fee_rate_sat_per_vb: e.fee_rate.to_sat_per_vb_ceil(),
             txs_to_broadcast: e.txs_to_broadcast as u64,
-            fundable: e.fundable,
         }
     }
 }
@@ -701,12 +695,12 @@ impl From<&bark::onchain::Utxo> for OnchainUtxo {
                     vout: l.outpoint.vout,
                 },
                 amount_sats: l.amount.to_sat(),
-                confirmation_height: l.confirmation_height,
+                confirmation_height: l.confirmation_height.map(Into::into),
             },
             bark::onchain::Utxo::Exit(e) => Self::Exit {
                 vtxo_id: e.vtxo.id().to_string(),
                 amount_sats: e.vtxo.amount().to_sat(),
-                height: e.height,
+                height: e.height.into(),
             },
         }
     }
@@ -920,14 +914,14 @@ impl From<&bark::ark::ArkInfo> for ArkInfo {
             server_pubkey: info.server_pubkey.serialize().as_hex().to_string(),
             round_interval_secs: info.round_interval.as_secs(),
             nb_round_nonces: info.nb_round_nonces as u32,
-            vtxo_exit_delta: info.vtxo_exit_delta as u32,
-            vtxo_lifetime: info.vtxo_lifetime as u32,
-            vtxo_expiry_delta: info.vtxo_lifetime as u32,
-            htlc_send_expiry_delta: info.htlc_send_expiry_delta as u32,
-            htlc_expiry_delta: info.htlc_expiry_delta as u32,
+            vtxo_exit_delta: u32::from(info.vtxo_exit_delta),
+            vtxo_lifetime: u32::from(info.vtxo_lifetime),
+            vtxo_expiry_delta: u32::from(info.vtxo_lifetime),
+            htlc_send_expiry_delta: u32::from(info.htlc_send_expiry_delta),
+            htlc_expiry_delta: u32::from(info.htlc_expiry_delta),
             max_vtxo_amount_sats: info.max_vtxo_amount.map(|a| a.to_sat()),
             required_board_confirmations: info.required_board_confirmations as u32,
-            max_user_invoice_cltv_delta: info.max_user_invoice_cltv_delta,
+            max_user_invoice_cltv_delta: info.max_user_invoice_cltv_delta.into(),
             min_board_amount_sats: info.min_board_amount.to_sat(),
             ln_receive_anti_dos_required: info.ln_receive_anti_dos_required,
             fee_schedule: (&info.fees).into(),
@@ -1053,9 +1047,9 @@ impl From<&bark::exit::ExitTx> for ExitTx {
 
 /// State of a unilateral exit, mirroring `bark::exit::ExitState`.
 ///
-/// Serde/TS tags match upstream's kebab-case serialization (`"start"`,
+/// Serde tags match upstream's kebab-case serialization (`"start"`,
 /// `"processing"`, `"awaiting-delta"`, `"claimable"`, `"claim-in-progress"`,
-/// `"claimed"`, `"vtxo-already-spent"`, `"canceled"`), with camelCase fields.
+/// `"claimed"`, `"vtxo-already-spent"`, `"vtxo-swept"`, `"canceled"`), with camelCase fields.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(
     tag = "type",
@@ -1098,6 +1092,11 @@ pub enum ExitState {
     /// Terminal: the VTXO was already spent offchain, so the exit cannot
     /// proceed.
     VtxoAlreadySpent { tip_height: u32 },
+    /// Terminal: confirmed spends took inputs needed by the exit.
+    VtxoSwept {
+        tip_height: u32,
+        spent_inputs: Vec<OutPoint>,
+    },
     /// Resumable: the user canceled the exit before its final transaction
     /// was broadcast. The VTXO stays spendable.
     Canceled { tip_height: u32 },
@@ -1108,37 +1107,48 @@ impl From<&bark::exit::ExitState> for ExitState {
         use bark::exit::ExitState as B;
         match s {
             B::Start(v) => Self::Start {
-                tip_height: v.tip_height,
+                tip_height: v.tip_height.into(),
             },
             B::Processing(v) => Self::Processing {
-                tip_height: v.tip_height,
+                tip_height: v.tip_height.into(),
                 transactions: v.transactions.iter().map(Into::into).collect(),
             },
             B::AwaitingDelta(v) => Self::AwaitingDelta {
-                tip_height: v.tip_height,
+                tip_height: v.tip_height.into(),
                 confirmed_block: (&v.confirmed_block).into(),
-                claimable_height: v.claimable_height,
+                claimable_height: v.claimable_height.into(),
             },
             B::Claimable(v) => Self::Claimable {
-                tip_height: v.tip_height,
+                tip_height: v.tip_height.into(),
                 claimable_since: (&v.claimable_since).into(),
                 last_scanned_block: v.last_scanned_block.as_ref().map(Into::into),
             },
             B::ClaimInProgress(v) => Self::ClaimInProgress {
-                tip_height: v.tip_height,
+                tip_height: v.tip_height.into(),
                 claimable_since: (&v.claimable_since).into(),
                 claim_txid: v.claim_txid.to_string(),
             },
             B::Claimed(v) => Self::Claimed {
-                tip_height: v.tip_height,
+                tip_height: v.tip_height.into(),
                 txid: v.txid.to_string(),
                 block: (&v.block).into(),
             },
             B::VtxoAlreadySpent(v) => Self::VtxoAlreadySpent {
-                tip_height: v.tip_height,
+                tip_height: v.tip_height.into(),
+            },
+            B::VtxoSwept(v) => Self::VtxoSwept {
+                tip_height: v.tip_height.into(),
+                spent_inputs: v
+                    .spent_inputs
+                    .iter()
+                    .map(|p| OutPoint {
+                        txid: p.txid.to_string(),
+                        vout: p.vout,
+                    })
+                    .collect(),
             },
             B::Canceled(v) => Self::Canceled {
-                tip_height: v.tip_height,
+                tip_height: v.tip_height.into(),
             },
         }
     }
@@ -1148,7 +1158,7 @@ impl From<&bark::exit::ExitState> for ExitState {
 /// `bark::exit::ExitStateKind`.
 ///
 /// Carries no payload — use it where only the variant matters (e.g. reporting
-/// which state blocked a cancellation). Serde/TS tags match upstream's
+/// which state blocked a cancellation). Serde tags match upstream's
 /// kebab-case serialization.
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
@@ -1161,6 +1171,7 @@ pub enum ExitStateKind {
     ClaimInProgress,
     Claimed,
     VtxoAlreadySpent,
+    VtxoSwept,
     Canceled,
 }
 
@@ -1175,6 +1186,7 @@ impl From<bark::exit::ExitStateKind> for ExitStateKind {
             B::ClaimInProgress => Self::ClaimInProgress,
             B::Claimed => Self::Claimed,
             B::VtxoAlreadySpent => Self::VtxoAlreadySpent,
+            B::VtxoSwept => Self::VtxoSwept,
             B::Canceled => Self::Canceled,
         }
     }
@@ -1310,7 +1322,7 @@ use bark::round::RoundFlowKind as BarkRoundFlowKind;
 /// Lifecycle phase of a round participation, mirroring
 /// `bark::round::RoundFlowKind`.
 ///
-/// Serde/TS tags match upstream's `Display` form: `"delegated-pending"` |
+/// Serde tags match upstream's `Display` form: `"delegated-pending"` |
 /// `"pending"` | `"ongoing"` | `"awaiting-confirmations"` | `"failed"` |
 /// `"canceled"`.
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -1366,7 +1378,7 @@ impl From<StoredRoundState<Unlocked>> for RoundState {
             id: rs.id().0,
             ongoing: rs.state().ongoing_participation(),
             state: rs.state().flow_kind().into(),
-            scheduled_height: rs.state().scheduled_height(),
+            scheduled_height: rs.state().scheduled_height().map(Into::into),
         }
     }
 }
@@ -1499,7 +1511,7 @@ impl From<&bark::RecoveryReport> for RecoveryReport {
 /// missing until a retry succeeds, and `Completed` carries the report — whose
 /// `is_complete` can still be `false` for individual VTXOs.
 ///
-/// Serde/TS tags: `"not-run"` | `"failed"` | `"completed"`.
+/// Serde tags: `"not-run"` | `"failed"` | `"completed"`.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "kebab-case")]
 #[boltffi::data]
@@ -1550,7 +1562,7 @@ pub struct Destination {
 }
 
 /// A Bitcoin transaction outpoint (reference to a previous output)
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[boltffi::data]
 pub struct OutPoint {
     pub txid: String,
@@ -1568,7 +1580,7 @@ pub struct BlockRef {
 impl From<&bark_bitcoin_ext::BlockRef> for BlockRef {
     fn from(br: &bark_bitcoin_ext::BlockRef) -> Self {
         Self {
-            height: br.height,
+            height: br.height.into(),
             hash: br.hash.to_string(),
         }
     }
@@ -1650,7 +1662,7 @@ mod tests {
 
     fn block_ref(height: u32, byte: u8) -> bark_bitcoin_ext::BlockRef {
         bark_bitcoin_ext::BlockRef {
-            height,
+            height: height.into(),
             hash: bitcoin::BlockHash::from_str(&hex::encode([byte; 32])).unwrap(),
         }
     }
@@ -1774,7 +1786,7 @@ mod tests {
         use bark::exit as be;
 
         let claimed: ExitState = (&be::ExitState::Claimed(be::ExitClaimedState {
-            tip_height: 900,
+            tip_height: 900.into(),
             txid: txid(0xaa),
             block: block_ref(890, 0xbb),
         }))
@@ -1792,9 +1804,9 @@ mod tests {
         );
 
         let awaiting: ExitState = (&be::ExitState::AwaitingDelta(be::ExitAwaitingDeltaState {
-            tip_height: 100,
+            tip_height: 100.into(),
             confirmed_block: block_ref(95, 0xcc),
-            claimable_height: 107,
+            claimable_height: 107.into(),
         }))
             .into();
         assert_eq!(
@@ -1816,7 +1828,7 @@ mod tests {
         use std::collections::HashSet;
 
         let upstream = be::ExitState::Processing(be::ExitProcessingState {
-            tip_height: 5,
+            tip_height: 5.into(),
             transactions: vec![be::ExitTx {
                 txid: txid(0x01),
                 status: be::ExitTxStatus::AwaitingInputConfirmation {
@@ -1882,7 +1894,6 @@ mod tests {
             // 2.5 sat/vB → reported as 3 sat/vB, like bark-json.
             fee_rate: FeeRate::from_sat_per_kwu(625),
             txs_to_broadcast: 3,
-            fundable: false,
         };
 
         let local: EmergencyExitFeeEstimate = upstream.into();
@@ -1891,14 +1902,12 @@ mod tests {
         assert_eq!(local.total_fee_sats, 4576 + 645);
         assert_eq!(local.fee_rate_sat_per_vb, 3);
         assert_eq!(local.txs_to_broadcast, 3);
-        assert!(!local.fundable);
 
         let json = serde_json::to_string(&local).unwrap();
         let back: EmergencyExitFeeEstimate = serde_json::from_str(&json).unwrap();
         assert_eq!(back.total_fee_sats, local.total_fee_sats);
         assert_eq!(back.fee_rate_sat_per_vb, local.fee_rate_sat_per_vb);
         assert_eq!(back.txs_to_broadcast, local.txs_to_broadcast);
-        assert_eq!(back.fundable, local.fundable);
     }
 
     #[test]
@@ -2112,5 +2121,31 @@ mod tests {
                 level.to_level_filter()
             );
         }
+    }
+    #[test]
+    fn swept_exit_preserves_spent_inputs() {
+        let upstream = bark::exit::ExitState::new_vtxo_swept(
+            123.into(),
+            vec![bitcoin::OutPoint {
+                txid: txid(0x42),
+                vout: 7,
+            }],
+        );
+        let local = ExitState::from(&upstream);
+        assert_eq!(
+            local,
+            ExitState::VtxoSwept {
+                tip_height: 123,
+                spent_inputs: vec![OutPoint {
+                    txid: hex::encode([0x42; 32]),
+                    vout: 7
+                }]
+            }
+        );
+        assert_eq!(serde_json::to_value(&local).unwrap()["type"], "vtxo-swept");
+        assert_eq!(
+            ExitStateKind::from(bark::exit::ExitStateKind::VtxoSwept),
+            ExitStateKind::VtxoSwept
+        );
     }
 }

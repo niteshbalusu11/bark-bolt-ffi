@@ -53,6 +53,7 @@ private final class Callbacks: CustomOnchainWalletCallbacks {
     func getBalance() throws -> UInt64 { UInt64.max }
     func prepareTx(destinations: [Destination], feeRateSatPerVb: UInt64) throws -> String { throw BarkError(message: "unexpected prepare") }
     func prepareDrainTx(address: String, feeRateSatPerVb: UInt64) throws -> String { throw BarkError(message: "unexpected drain") }
+    func signPsbt(psbtBase64: String) throws -> String { throw BarkError(message: "unexpected sign") }
     func finishPsbt(psbtBase64: String) throws -> String { throw BarkError(message: "unexpected finish") }
     func isMine(scriptPubkeyHex: String) throws -> Bool { false }
     func registerTx(txHex: String) throws {}

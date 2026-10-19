@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-19T03:47:40+00:00",
+  "title": "Design System: Bark native examples",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Deep action green"
+      },
+      "primary-dark": {
+        "role": "primary",
+        "displayName": "Light action green"
+      }
+    },
+    "native": {
+      "ios": {
+        "source": "examples/ios/BarkExample/BarkExampleApp.swift",
+        "structure": "NavigationStack, grouped List sections, safeAreaInset bottom feedback, sheet details",
+        "type": "System semantic styles; monospaced caption for addresses and invoices",
+        "materials": "Native List surfaces, secondary text, separators and bar material",
+        "minimumTarget": "44pt contract; native control sizing",
+        "announcements": "UIAccessibility announcement for busy, status and error changes"
+      },
+      "android": {
+        "source": "examples/android/src/main/java/io/github/niteshbalusu11/bark/example/MainActivity.kt",
+        "structure": "Material 3 Scaffold, TopAppBar, LazyColumn and inset-aware bottom feedback Surface",
+        "type": "Default Material 3 type roles; monospaced bodySmall for addresses and invoices",
+        "minimumTarget": "48dp contract; Material control sizing",
+        "layout": "20dp content padding; 12dp item spacing; 6dp address-stack spacing; footer 20dp horizontal/8dp vertical padding with 12dp gaps",
+        "elevation": "3dp tonal elevation for the feedback Surface",
+        "announcements": "Polite live region on operation feedback"
+      },
+      "components": [
+        {
+          "name": "Wallet actions",
+          "implementation": "SwiftUI List buttons and Material filled/outlined/text buttons; disabled while busy"
+        },
+        {
+          "name": "Persistent fields",
+          "implementation": "SwiftUI LabeledContent for endpoint and amount fields; Material OutlinedTextField labels; masked recovery input"
+        },
+        {
+          "name": "Wallet values",
+          "implementation": "Wrapping selectable monospaced addresses/invoices; iOS ShareLink"
+        },
+        {
+          "name": "Pinned operation feedback",
+          "implementation": "Status, busy indicator or failure with Details outside scrolling content"
+        },
+        {
+          "name": "Error details",
+          "implementation": "Selectable full error in native iOS sheet or scrollable Android AlertDialog, dismissed with Done"
+        }
+      ],
+      "preview": "Native components have no HTML/CSS renderer; browser approximations and unobserved tonal ramps are intentionally omitted."
+    },
+    "evidence": {
+      "review": "docs/validation/screenshots/native-finish-review.md",
+      "captures": [
+        "docs/validation/screenshots/phone-android-dark-large.png",
+        "docs/validation/screenshots/phone-android-error-details.png",
+        "docs/validation/screenshots/phone-android-maintain.png",
+        "docs/validation/screenshots/phone-android-onboarding.png",
+        "docs/validation/screenshots/phone-android-send-error.png",
+        "docs/validation/screenshots/phone-android.png",
+        "docs/validation/screenshots/phone-ios-dark-large.png",
+        "docs/validation/screenshots/phone-ios-error-details.png",
+        "docs/validation/screenshots/phone-ios-maintain.png",
+        "docs/validation/screenshots/phone-ios-onboarding.png",
+        "docs/validation/screenshots/phone-ios-send-error.png",
+        "docs/validation/screenshots/phone-ios.png"
+      ],
+      "scope": "Ship disposition covers persistent iOS field labels and pinned feedback/error details only.",
+      "limits": [
+        "No approved comp, FORM seed or QUALITY BAR card",
+        "Simulator/emulator evidence only",
+        "Transient busy rendering and announcement implementation checked in source; delivered announcements unverified"
+      ],
+      "notCanonized": "Small iOS tint rounding drift remains implementation detail; no new palette token or repair."
+    }
+  },
+  "components": [],
+  "narrative": {
+    "northStar": "Native wallet example",
+    "overview": "Mode: Operate. The SwiftUI and Compose examples use their platform's controls, type and semantic surfaces to expose real RegTest wallet state. The green action tint is the only custom palette decision.",
+    "keyCharacteristics": [
+      "Native navigation and controls.",
+      "System-scaled text and selectable wallet data.",
+      "Persistent operation feedback with dismissible error details."
+    ],
+    "rules": [
+      {
+        "name": "The Action Tint Rule",
+        "body": "Use green for actions; use platform error and destructive roles for failures and exit actions.",
+        "section": "colors"
+      },
+      {
+        "name": "The Native Type Rule",
+        "body": "Keep semantic text styles and system scaling; let long labels and values wrap.",
+        "section": "typography"
+      }
+    ],
+    "dos": [
+      "**Do** preserve native controls, safe areas, text scaling and minimum touch targets.",
+      "**Do** keep populated field labels, operation status and error details available while tasks scroll.",
+      "**Do** show actual RegTest balances, addresses, outcomes and empty states."
+    ],
+    "donts": [
+      "**Don't** replace native navigation with custom navigation or decorative card stacks.",
+      "**Don't** add decorative charts, synthetic activity or an invented brand type scale.",
+      "**Don't** treat simulator captures or source inspection as hardware or screen-reader verification."
+    ]
+  }
+}

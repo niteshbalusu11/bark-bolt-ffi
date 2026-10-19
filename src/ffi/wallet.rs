@@ -1027,19 +1027,18 @@ impl Wallet {
     /// use the chain's fast rate for the broadcast leg and regular rate for
     /// the claim leg. `destination` only affects the claim transaction's weight.
     ///
-    /// The onchain wallet is synced first so `fundable` reflects the current
-    /// confirmed balance. Requires a BDK onchain wallet: callback-backed
-    /// wallets (`CustomOnchainWalletCallbacks`) cannot simulate the CPFP walk
-    /// and return an error.
+    /// Pure weight arithmetic; `fee_margin` scales broadcast fees (default 1.2).
+    /// The margin must be finite and non-negative.
     pub async fn estimate_emergency_exit_fee(
         &self,
         vtxo_ids: Vec<String>,
         fee_rate_sat_per_vb: Option<u64>,
         destination: Option<String>,
+        #[boltffi::default(None)] fee_margin: Option<f64>,
     ) -> Result<types::EmergencyExitFeeEstimate, BarkError> {
         let core = self.core.clone();
         run_async(async move {
-            core.estimate_emergency_exit_fee(vtxo_ids, fee_rate_sat_per_vb, destination)
+            core.estimate_emergency_exit_fee(vtxo_ids, fee_rate_sat_per_vb, destination, fee_margin)
                 .await
         })
         .await

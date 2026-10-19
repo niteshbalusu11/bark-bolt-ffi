@@ -1,16 +1,24 @@
 # Bark BoltFFI
 
-Native **Swift and Kotlin** bindings for [Bark 0.7.1](https://gitlab.com/ark-bitcoin/bark),
+Native **Swift and Kotlin** bindings for [Bark master](https://gitlab.com/ark-bitcoin/bark/-/commit/bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c),
 using BoltFFI 0.31.1. Includes SwiftUI and Jetpack Compose example wallets,
 isolated Bitcoin/Ark/Lightning RegTest infrastructure and GitHub Actions.
 
-The migration is being validated. See [the production checklist](docs/production-migration-todo.md)
-for actual completion gates and evidence; app compilation and a successful
-RegTest transaction are recorded separately.
+See [installation and breaking changes](docs/migration.md), the
+[production checklist](docs/production-migration-todo.md) and
+[validation evidence](docs/validation/2026-10-19-master.md). The examples perform wallet
+operations through the generated SDKs; RegTest helpers supply test coins and blocks.
 
 Targets: iOS 16+, macOS 13+, Android API24+, JVM17. Swift and Kotlin APIs may
 break from the original UniFFI API. Rust retains upstream wallet logic,
 transaction/PSBT validation, SQLite persistence and native datadir locking.
+
+## Install
+
+Swift: add `https://github.com/smolcars/bark-bolt-ffi` in Xcode and link
+`BarkBoltFFI`. The root SwiftPM package uses the versioned, checksummed release
+XCFramework. Kotlin: build the AAR/JVM JAR below, or download Actions artifacts;
+[the migration guide](docs/migration.md) documents local Maven publication.
 
 ## Local build
 
@@ -79,7 +87,9 @@ dispatched on a macOS ARM64 runner labelled `bark-bolt-regtest` with Xcode,
 Docker, JDK17, Android SDK/NDK, a booted simulator/emulator, `IOS_DEVICE` and
 `ANDROID_SERIAL`. This explicitly avoids assuming Linux containers work on a
 hosted macOS runner. Tests use a separate Compose project/ports. The validation
-record will link actual completed runs.
+record links actual completed runs. Full integration passed in
+[Actions39195200829](https://github.com/smolcars/bark-bolt-ffi/actions/runs/39195200829);
+see [device/runner setup](docs/devices.md) to repeat it.
 
 ## Upstream
 

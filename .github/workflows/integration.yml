@@ -43,4 +43,4 @@ jobs:
             app-regtest-results.jsonl
             regtest.log
       - if: always()
-        run: docker compose -f regtest/compose.yaml stop
+        run: docker compose -f regtest/compose.yaml down --volumes
