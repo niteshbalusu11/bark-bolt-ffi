@@ -2,6 +2,7 @@ name: SDK and native apps
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -31,6 +32,9 @@ jobs:
           key: rust-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: rust-${{ runner.os }}-
       - run: python3 scripts/swift-artifact.py
+      - if: github.ref_type == 'tag'
+        run: python3 scripts/swift-artifact.py --check-source
+      - run: python3 -m unittest discover -s tests/python -v
       - run: cargo fmt --check
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo test --locked

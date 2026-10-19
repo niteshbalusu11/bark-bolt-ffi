@@ -83,11 +83,12 @@ Android AAR/JVM JAR and both apps on GitHub-hosted Linux/macOS runners. It execu
 SDK contracts, iOS UI tests and Android UI/RegTest tests.
 
 [Full cross-platform acceptance](.github/workflows/integration.yml) is manually
-dispatched on a macOS ARM64 runner labelled `bark-bolt-regtest` with Xcode,
+dispatched on a macOS ARM64 runner with Xcode,
 Docker, JDK17, Android SDK/NDK, a booted simulator/emulator, `IOS_DEVICE` and
 `ANDROID_SERIAL`. This explicitly avoids assuming Linux containers work on a
-hosted macOS runner. Tests use a separate Compose project/ports. The validation
-record links actual completed runs. Current-master integration passed in
+hosted macOS runner. Tests use a separate Compose project/ports. The helper
+registers a unique per-job label and dispatches the trusted main workflow.
+The validation record links actual completed runs. Current-master integration passed in
 [Actions39202007139](https://github.com/smolcars/bark-bolt-ffi/actions/runs/39202007139),
 and [all hosted SDK/app jobs passed](https://github.com/smolcars/bark-bolt-ffi/actions/runs/39201332568);
 see [device/runner setup](docs/devices.md) to repeat it.

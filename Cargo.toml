@@ -35,7 +35,6 @@ default-features = false
 # Wallet dependencies
 bitcoin = { version = "0.32.7", features = ["serde", "rand", "rand-std"] }
 bip39 = { version = "2.0.0", features = ["rand"] }
-lightning-invoice = { version = "0.34.0", features = ["std", "serde"] }
 anyhow = { version = "1.0", features = ["backtrace"] }
 async-trait = "0.1.83"
 serde = { version = "1.0", features = ["derive"] }
@@ -44,7 +43,7 @@ base64 = "0.22"
 hex = "0.4"
 chrono = "0.4"
 log = "0.4"
-tokio = { version = "1.35", default-features = false, features = ["sync", "macros", "rt-multi-thread", "signal", "fs"] }
+tokio = { version = "1.35", default-features = false, features = ["sync", "macros", "rt-multi-thread", "time"] }
 futures-util = "0.3"
 
 # Native FFI and persistence.

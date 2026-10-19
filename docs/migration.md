@@ -54,6 +54,7 @@ explicitly; local file dependencies do not resolve the attached Maven POM.
 | Errors | `BarkError.message` contains the complete Rust error chain; update catches that matched the old UniFFI enum. Unexpected callback exceptions are converted to this error. |
 | Factories | BoltFFI uses concrete object factories. Swift `Wallet.openWithOnchain(...)`, Kotlin `Wallet.openWithOnchain(...)` construct a wallet with an existing onchain handle. |
 | Open arguments | `WalletOpenArgs` contains values only. Pass the onchain object separately to `openWithOnchain`; `open` supports wallets without one. |
+| User agent | Set `Config.userAgent` explicitly to send a custom value. BoltFFI does not infer a Swift/Kotlin user-agent from build-time language variables. |
 | Defaults | Optional config fields use nil/null defaults. Check generated declarations for unsigned integer and enum spellings. |
 | Kotlin resources | Object wrappers implement `close()`. Keep them alive while needed and close notification/onchain/wallet wrappers during teardown. In-flight native work retains its own references. Calling a closed wrapper fails. |
 | Swift resources | ARC releases native handles. The separate concurrency adapter marks synchronized native object wrappers Sendable for Swift 6 actor crossing. |
@@ -95,6 +96,30 @@ seed recovery. LNURL/LNAddress and BOLT12 exports remain available and retain
 upstream validation, but no external provider acceptance fixture was run.
 See `validation/2026-10-19-master.md` for current-master results and CI links;
 `validation/2026-10-18.md` retains prior release 0.7.1 evidence.
+
+## Developing and preparing a release
+
+The root SwiftPM package and `sdk/swift` describe the last published release.
+Development source changes build fresh SDKs in `dist/`; normal PR/main CI checks
+the integrity of the committed release files without requiring them to match
+the newer Rust source. Tag CI additionally checks source/version provenance.
+
+For a new release, bump `[package].version` in Cargo.toml first; Gradle reads that
+version for SDK publications and the Android example. Build the full optimized
+Apple SDK, then run `python3 scripts/swift-artifact.py --stage-release` and
+`python3 scripts/swift-artifact.py --check-source`. Staging checks local/remote
+tags and refuses an already-published version before writing anything. The ZIP
+uses fixed timestamps/permissions, so unchanged input bytes produce the same
+archive despite file mtime changes. Publish the new archive at its versioned URL
+and run the clean Git consumer. Never replace a published version's binary.
+
+Both example restore paths scan onchain from height 0. Each automated restore
+uses a new database and checks a completed recovery report. Re-entering the
+same phrase is allowed; a different phrase cannot replace an existing seed.
+Seeds stay persisted before wallet opening so a failed open can retry safely.
+iOS wallet directories and Android wallet files/encrypted seed preferences are
+excluded from backup/device transfer because their seed protection is bound to
+the original device. See [Android's backup behavior](https://developer.android.com/about/versions/12/behavior-changes-12#backup-restore).
 
 ## Current-master changes
 

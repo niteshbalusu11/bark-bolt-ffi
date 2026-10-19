@@ -8,6 +8,7 @@ import io.github.niteshbalusu11.bark.*
 import kotlinx.coroutines.*
 import org.json.JSONObject
 import java.io.File
+import java.util.UUID
 
 class WalletModel(application: Application) : AndroidViewModel(application) {
     var status by mutableStateOf("Open your RegTest wallet"); private set
@@ -28,13 +29,15 @@ class WalletModel(application: Application) : AndroidViewModel(application) {
     private var notification: NotificationHolder? = null
     private var listen: Job? = null
     private var seed = ""
+    private var directory = ""
     var account = "wallet"
 
     suspend fun open(restore: String = "", restoredDirectory: Boolean = false) {
-        if (seed.isEmpty()) seed = SeedStore(getApplication()).loadOrCreate(account, restore)
+        val restoring = restore.isNotBlank()
+        if (seed.isEmpty() || restoring) seed = SeedStore(getApplication()).loadOrCreate(account, restore)
         listen?.cancel(); notification?.cancelNextNotificationWait(); notification?.close(); notification = null
-        wallet?.stopDaemonWait(); wallet?.close(); wallet = null; onchain?.close(); onchain = null
-        val directory = File(getApplication<Application>().filesDir, account + if (restoredDirectory) "-restored" else "").path
+        wallet?.stopDaemonWait(); wallet?.close(); wallet = null; onchain?.close(); onchain = null; opened = false
+        directory = File(getApplication<Application>().filesDir, account + if (restoredDirectory) "-restored-${UUID.randomUUID()}" else "").path
         val config = Config(serverAddress = endpoint, bitcoindAddress = bitcoinEndpoint,
             bitcoindUser = "second", bitcoindPass = "ark", vtxoExitMargin = 2u,
             fallbackFeeRate = 250u, daemonSyncIntervalSecs = 2u, offboardRequiredConfirmations = 1u)
@@ -42,9 +45,9 @@ class WalletModel(application: Application) : AndroidViewModel(application) {
         val ark = try { Wallet.openWithOnchain(Network.REGTEST, seed, config, WalletOpenArgs(datadir = directory), chain) }
                   catch (failure: Throwable) { chain.close(); throw failure }
         onchain = chain; wallet = ark
-        if (restoredDirectory) chain.initialScan(0u)
+        if (restoring) chain.initialScan(0u)
         arkAddress = ark.newAddress(); onchainAddress = chain.newAddress()
-        opened = true; sync(); status = "Connected · RegTest"
+        sync(); opened = true; status = "Connected · RegTest"
         val holder = ark.notifications(); notification = holder
         listen = viewModelScope.launch {
             try { while (isActive && holder.nextNotification() != null) { notificationsReceived++; readBalances() } }
@@ -120,7 +123,10 @@ class WalletModel(application: Application) : AndroidViewModel(application) {
                     val claim = ark.drainExits(emptyList(), true, destination, 1u)
                     result.put("txid", ark.broadcastTx(extractTxFromPsbt(ark.signExitClaimInputs(claim.psbtBase64))))
                 }
-                "restore" -> open(restoredDirectory = true)
+                "restore" -> {
+                    open(restore = seed, restoredDirectory = true)
+                    result.put("databaseName", File(directory).name).put("recoveryComplete", wallet?.recoveryReport()?.isComplete == true)
+                }
                 "cancel" -> {
                     val holder = ark.notifications()
                     try {

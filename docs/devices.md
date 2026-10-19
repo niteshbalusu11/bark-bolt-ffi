@@ -27,18 +27,26 @@ The driver configures adb reverse for the selected RegTest ports. T3 users can
 open both devices in the Device panel; verification in this migration used the
 agent-device launcher returned by device_open for interactive navigation.
 
-Full Actions integration needs these tools on a macOS ARM64 runner. For one
-trusted repository-scoped job, without installing a service:
+Full Actions integration needs these tools on an isolated macOS ARM64 account
+or machine that runs only trusted repository code. Start one bounded job with:
 
 ```sh
 python3 scripts/ci-regtest-runner.py --ios-device IOS_UDID --android-device emulator-5554
-# In another terminal, dispatch the workflow:
-gh workflow run integration.yml
 ```
 
-The helper requires authenticated GitHub CLI repository-admin access, registers
-an ephemeral runner, accepts one job, unregisters and removes its temporary
-files. It uses an isolated Compose project/ports; after uploading evidence,
-the workflow removes its own per-run containers/volumes. Local `regtest.py stop`
-preserves developer wallets. A permanent integration runner
-can instead use the same bark-bolt-regtest label and documented prerequisites.
+The helper requires authenticated GitHub CLI repository-admin access. Before
+registering, it checks that fork workflows require approval for **all external
+contributors**. It registers an ephemeral runner with a random per-job label and
+no default labels, then dispatches `integration.yml` on `main` with that label.
+The workflow rejects other events/refs. No separate `gh workflow run` is needed.
+After one job the runner unregisters and removes its temporary files. CI uses a
+unique Compose project; teardown removes only that run's containers and volumes.
+Local `regtest.py stop` preserves developer wallets.
+
+The listener receives an explicit build/device environment without inherited
+GH tokens, SSH agent variables or unrelated credentials. This is **not a sandbox**:
+a job still runs as its OS user and can access that user's files, Keychain and
+Docker. Never approve untrusted fork code for this machine. For managed runners,
+use a dedicated isolated host/account and workflow-restricted runner groups
+where available; a public-repository runner should not be a permanent process
+on a personal developer account. See [GitHub's runner access guidance](https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/manage-access).

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		35AAC9909093D2B1E8CF965B /* SeedStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2DFC46C21C4710233B4404E /* SeedStoreTests.swift */; };
 		5FA0C70A0531D7056D11E57B /* BarkBoltFFI in Frameworks */ = {isa = PBXBuildFile; productRef = FA7CDFC10FA0AB1A156073C3 /* BarkBoltFFI */; };
 		6437509F0475A302DBD5BBB5 /* BarkExampleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E517159876832AEEC823F78 /* BarkExampleApp.swift */; };
 		8A6366648159633CC89A7CCE /* WalletUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A90D3DCA2F3B0D36E78A812 /* WalletUITests.swift */; };
@@ -15,6 +16,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		21E293FEED1EC1255EF0BA4C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 54B85B44C6A71C5A0A35A35C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DE362EB19B1E85D1A2C7B775;
+			remoteInfo = BarkExample;
+		};
 		38C32E94F0D749C1E170E730 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 54B85B44C6A71C5A0A35A35C /* Project object */;
@@ -25,6 +33,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		059B45CD214B16EB77CA9CA1 /* BarkExampleTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = BarkExampleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A90D3DCA2F3B0D36E78A812 /* WalletUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletUITests.swift; sourceTree = "<group>"; };
 		244E15EB38378E7D50AFED88 /* SeedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeedStore.swift; sourceTree = "<group>"; };
 		2FC871AFA01F4896FC23857E /* WalletModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletModel.swift; sourceTree = "<group>"; };
@@ -32,6 +41,7 @@
 		6753674EAD4FFCD5D46FDA16 /* BarkExampleUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = BarkExampleUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A21C6B6B1AC45C4274B1A60E /* BarkExample.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BarkExample.entitlements; sourceTree = "<group>"; };
 		B1AC4EE5A2313A04C2CD0568 /* BarkExample.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = BarkExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B2DFC46C21C4710233B4404E /* SeedStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeedStoreTests.swift; sourceTree = "<group>"; };
 		FE68D276EDB0716A04396F35 /* apple */ = {isa = PBXFileReference; lastKnownFileType = folder; name = apple; path = ../../dist/apple; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -58,6 +68,14 @@
 			path = BarkExample;
 			sourceTree = "<group>";
 		};
+		548A17E7093B9C52325161C0 /* BarkExampleTests */ = {
+			isa = PBXGroup;
+			children = (
+				B2DFC46C21C4710233B4404E /* SeedStoreTests.swift */,
+			);
+			path = BarkExampleTests;
+			sourceTree = "<group>";
+		};
 		6B46C9F974620AEAE8252A64 /* BarkExampleUITests */ = {
 			isa = PBXGroup;
 			children = (
@@ -70,6 +88,7 @@
 			isa = PBXGroup;
 			children = (
 				B1AC4EE5A2313A04C2CD0568 /* BarkExample.app */,
+				059B45CD214B16EB77CA9CA1 /* BarkExampleTests.xctest */,
 				6753674EAD4FFCD5D46FDA16 /* BarkExampleUITests.xctest */,
 			);
 			name = Products;
@@ -79,6 +98,7 @@
 			isa = PBXGroup;
 			children = (
 				39F0AF92FE7947D2A4F8CD9C /* BarkExample */,
+				548A17E7093B9C52325161C0 /* BarkExampleTests */,
 				6B46C9F974620AEAE8252A64 /* BarkExampleUITests */,
 				CAC2013319D2B0EF5C19F615 /* Packages */,
 				A4D42A3F161894F8E7A72F48 /* Products */,
@@ -113,6 +133,24 @@
 			productName = BarkExampleUITests;
 			productReference = 6753674EAD4FFCD5D46FDA16 /* BarkExampleUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		9BA26B3DBEBD9C756E22278D /* BarkExampleTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 94625D32489C06ADB64A0312 /* Build configuration list for PBXNativeTarget "BarkExampleTests" */;
+			buildPhases = (
+				5A76E82CE6E076981E8DAC2C /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				59001301A0BF364F31A235BB /* PBXTargetDependency */,
+			);
+			name = BarkExampleTests;
+			packageProductDependencies = (
+			);
+			productName = BarkExampleTests;
+			productReference = 059B45CD214B16EB77CA9CA1 /* BarkExampleTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		DE362EB19B1E85D1A2C7B775 /* BarkExample */ = {
 			isa = PBXNativeTarget;
@@ -165,12 +203,21 @@
 			projectRoot = "";
 			targets = (
 				DE362EB19B1E85D1A2C7B775 /* BarkExample */,
+				9BA26B3DBEBD9C756E22278D /* BarkExampleTests */,
 				7E42F8628ED7A54FE9113F2B /* BarkExampleUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXSourcesBuildPhase section */
+		5A76E82CE6E076981E8DAC2C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				35AAC9909093D2B1E8CF965B /* SeedStoreTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A067F89661B77BFA9C6FCF05 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -196,6 +243,11 @@
 			isa = PBXTargetDependency;
 			target = DE362EB19B1E85D1A2C7B775 /* BarkExample */;
 			targetProxy = 38C32E94F0D749C1E170E730 /* PBXContainerItemProxy */;
+		};
+		59001301A0BF364F31A235BB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DE362EB19B1E85D1A2C7B775 /* BarkExample */;
+			targetProxy = 21E293FEED1EC1255EF0BA4C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -348,6 +400,23 @@
 			};
 			name = Debug;
 		};
+		4B841577C0C458E130CFD730 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.niteshbalusu11.bark.example.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BarkExample.app/BarkExample";
+			};
+			name = Release;
+		};
 		A0AB2129AB61C85B49BBCC13 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -364,6 +433,23 @@
 				TEST_TARGET_NAME = BarkExample;
 			};
 			name = Release;
+		};
+		C38F2B6174ADB647CFCE1601 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.niteshbalusu11.bark.example.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BarkExample.app/BarkExample";
+			};
+			name = Debug;
 		};
 		D2B0B10B83E566671B9DF345 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -420,6 +506,15 @@
 			buildConfigurations = (
 				E6F305DA4C7C8BC488309813 /* Debug */,
 				A0AB2129AB61C85B49BBCC13 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		94625D32489C06ADB64A0312 /* Build configuration list for PBXNativeTarget "BarkExampleTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C38F2B6174ADB647CFCE1601 /* Debug */,
+				4B841577C0C458E130CFD730 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

@@ -18,7 +18,7 @@ with zipfile.ZipFile(aar) as package:
     classes = zipfile.ZipFile(io.BytesIO(package.read('classes.jar')))
     for name in ['Wallet', 'OnchainWallet', 'NotificationHolder', 'BarkError']:
         assert 'io/github/niteshbalusu11/bark/' + name + '.class' in classes.namelist(), name
-jars = list((ROOT / 'sdk/jvm/build/libs').glob('bark-bolt-ffi-jvm-*-0.1.0.jar'))
+jars = list((ROOT / 'sdk/jvm/build/libs').glob('bark-bolt-ffi-jvm-*.jar'))
 assert jars, 'No versioned JVM JAR'
 for jar in jars:
     with zipfile.ZipFile(jar) as package:

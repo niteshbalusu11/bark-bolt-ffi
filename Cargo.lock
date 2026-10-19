@@ -169,7 +169,6 @@ dependencies = [
  "chrono",
  "futures-util",
  "hex",
- "lightning-invoice",
  "log",
  "once_cell",
  "serde",

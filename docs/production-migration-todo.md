@@ -1,6 +1,6 @@
 # Production migration checklist
 
-Status: all tasks 00–14 complete. Bark master, BoltFFI Swift/Kotlin SDKs, native
+Status: tasks 00–14 complete; task15 implements independently validated Opus 5.5 review findings. Bark master, BoltFFI Swift/Kotlin SDKs, native
 apps, RegTest acceptance, GitHub Actions, cleanup and published release consumers
 pass. [Current evidence](validation/2026-10-19-master.md) records exact sources,
 runs, artifacts and scope limits. [Release v0.1.0](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.1.0)
@@ -310,6 +310,19 @@ prototype/unused dependencies/assets. Preserve prior wallet volumes.
 SDKs, clean package consumers, both rebuilt apps, extended RegTest and actual
 hosted Actions pass for the updated implementation. Prior 0.7.1 evidence remains
 historical and is not substituted for this acceptance.
+
+### 15 — Validate and fix Opus 5.5 review findings
+
+- [ ] Fix confirmed review issues and record validation evidence.
+
+**Engineering plan:** [review fixes](plans/15-opus-review-fixes.md) records the
+finding dispositions, affected interfaces, seed/data invariants and checks.
+
+**Implement:** safe release staging/development CI, runner hardening, shared fresh
+recovery paths/backup exclusions, public API documentation and focused Rust cleanup.
+
+**Done when:** regression checks, contracts, rebuilt native apps, fresh paired
+RegTest and actual hosted CI pass, fixes are pushed and remaining limits are explicit.
 
 ## Dependency order
 

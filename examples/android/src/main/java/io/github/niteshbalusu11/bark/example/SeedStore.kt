@@ -27,10 +27,11 @@ class SeedStore(context: Context) {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         val stored = preferences.getString(account, null)
         if (stored != null) {
-            require(restore.isBlank()) { "A wallet already exists. Open it to preserve its funds." }
             val bytes = Base64.decode(stored, Base64.NO_WRAP)
             cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, bytes.copyOfRange(0, 12)))
-            return cipher.doFinal(bytes.copyOfRange(12, bytes.size)).toString(Charsets.UTF_8)
+            val seed = cipher.doFinal(bytes.copyOfRange(12, bytes.size)).toString(Charsets.UTF_8)
+            require(restore.isBlank() || restore.trim() == seed) { "A wallet already exists. Open it to preserve its funds." }
+            return seed
         }
         val seed = if (restore.isBlank()) generateMnemonic() else restore.trim()
         require(validateMnemonic(seed)) { "Enter a valid recovery phrase." }

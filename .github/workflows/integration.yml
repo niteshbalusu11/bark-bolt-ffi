@@ -1,6 +1,11 @@
 name: Cross-platform RegTest acceptance
 on:
   workflow_dispatch:
+    inputs:
+      runner_label:
+        description: Unique ephemeral runner label supplied by ci-regtest-runner.py
+        required: true
+        type: string
 permissions:
   contents: read
 concurrency:
@@ -8,7 +13,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   native-regtest:
-    runs-on: [self-hosted, macOS, ARM64, bark-bolt-regtest]
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && startsWith(inputs.runner_label, 'bark-bolt-regtest-')
+    runs-on: ${{ inputs.runner_label }}
     timeout-minutes: 120
     env:
       COMPOSE_PROJECT_NAME: bark-bolt-ffi-ci-${{ github.run_id }}
@@ -19,6 +25,8 @@ jobs:
       RUSTUP_TOOLCHAIN: 1.90.0
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
       - run: scripts/install-boltffi.sh
       - run: BOLTFFI="$PWD/target/tools/boltffi" scripts/build-sdk.sh apple --overlay boltffi.local.toml
       - run: BOLTFFI="$PWD/target/tools/boltffi" scripts/build-sdk.sh android --overlay boltffi.local.toml

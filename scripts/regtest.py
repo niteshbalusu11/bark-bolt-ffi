@@ -82,6 +82,8 @@ def bootstrap():
     if wallet['rounds']['trusted_balance'] < 100000000:
         fund(wallet['rounds']['address'], 25)
         mine(6)
+    # LND requires a recent tip even when an existing stack needs no new funds.
+    mine(1)
     wait_for('LND', lambda: lnd('getinfo'), lambda v: v.get('synced_to_chain', False))
     peer_info = wait_for('CLN', lambda: cln('getinfo'))
     peer = peer_info['id']

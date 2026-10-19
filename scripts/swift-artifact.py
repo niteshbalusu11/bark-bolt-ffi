@@ -81,7 +81,31 @@ def check_build():
     return framework
 
 
+def package_version():
+    metadata = json.loads(subprocess.check_output(
+        ['cargo', 'metadata', '--format-version=1', '--no-deps', '--locked'], cwd=ROOT, text=True))
+    return next(p['version'] for p in metadata['packages']
+                if Path(p['manifest_path']).resolve() == (ROOT / 'Cargo.toml').resolve())
+
+
+def require_unpublished_version(version):
+    tag = 'refs/tags/v' + version
+    local = subprocess.run(['git', 'show-ref', '--verify', '--quiet', tag], cwd=ROOT)
+    if local.returncode == 0:
+        raise RuntimeError(f'Release tag v{version} already exists; bump the Cargo version first')
+    if local.returncode != 1:
+        raise RuntimeError('Cannot check local release tags')
+    remote = subprocess.run(['git', 'ls-remote', '--exit-code', '--tags', 'origin', tag],
+                            cwd=ROOT, capture_output=True)
+    if remote.returncode == 0:
+        raise RuntimeError(f'Release tag v{version} already exists; bump the Cargo version first')
+    if remote.returncode != 2:
+        raise RuntimeError('Cannot check remote release tags; refusing to stage')
+
+
 def stage():
+    version = package_version()
+    require_unpublished_version(version)
     framework = check_build()
     generated = framework.parent
     SDK.mkdir(parents=True, exist_ok=True)
@@ -91,41 +115,49 @@ def stage():
             shutil.rmtree(destination)
         shutil.copytree(generated / name, destination)
     archive = ROOT / 'dist/BarkBoltFFI.xcframework.zip'
-    with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as output:
+    with zipfile.ZipFile(archive, 'w') as output:
         for file in sorted(framework.rglob('*')):
             if file.is_file():
-                output.write(file, file.relative_to(framework.parent))
+                info = zipfile.ZipInfo(file.relative_to(framework.parent).as_posix(), (1980, 1, 1, 0, 0, 0))
+                info.compress_type = zipfile.ZIP_DEFLATED
+                info.external_attr = 0o100644 << 16
+                with file.open('rb') as source, output.open(info, 'w') as destination:
+                    shutil.copyfileobj(source, destination)
     archive_hash = checksum(archive)
     package = (generated / 'Package.swift').read_text().replace('path: "', 'path: "sdk/swift/')
     package = package.replace('path: "sdk/swift/BarkBoltFFI.xcframework"',
-        'url: "https://github.com/smolcars/bark-bolt-ffi/releases/download/v0.1.0/BarkBoltFFI.xcframework.zip", checksum: "' + archive_hash + '"')
+        'url: "https://github.com/smolcars/bark-bolt-ffi/releases/download/v' + version + '/BarkBoltFFI.xcframework.zip", checksum: "' + archive_hash + '"')
     (ROOT / 'Package.swift').write_text(package + '\n')
     (SDK / 'provenance.json').write_text(json.dumps({
-        'version': '0.1.0', 'bark': '0.7.1-dev', 'bark_revision': 'bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c', 'boltffi': '0.31.1',
+        'version': version, 'bark': '0.7.1-dev', 'bark_revision': 'bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c', 'boltffi': '0.31.1',
         'rust': '1.90.0', 'minimum_ios': '16.0', 'minimum_macos': '13.0', 'profile': 'release', 'archive_sha256': archive_hash, 'source_sha256': source_digest(),
         'files': artifacts(), 'package_sha256': checksum(ROOT / 'Package.swift'),
     }, indent=2, sort_keys=True) + '\n')
     print(f'Staged release SwiftPM manifest and generated sources; archive: {archive.stat().st_size} bytes')
 
 
-def verify():
+def verify(check_source=False):
     metadata = json.loads((SDK / 'provenance.json').read_text())
-    assert metadata['source_sha256'] == source_digest(), 'Swift SDK is stale; rebuild release SDK and stage it'
+    if check_source:
+        assert metadata['source_sha256'] == source_digest(), 'Swift SDK is stale; rebuild release SDK and stage it'
+        assert metadata['version'] == package_version(), 'Swift SDK version differs from Cargo'
     assert metadata['files'] == artifacts(), 'Swift SDK files changed or are missing'
     assert metadata['package_sha256'] == checksum(ROOT / 'Package.swift'), 'Root SwiftPM manifest changed'
     assert metadata['profile'] == 'release'
     assert metadata['archive_sha256'] in (ROOT / 'Package.swift').read_text()
-    print('Swift SDK source, artifact and manifest checksums match')
+    print('Committed Swift release files and manifest checksums match')
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--stage-release', action='store_true')
-    parser.add_argument('--check-build', action='store_true')
+    commands = parser.add_mutually_exclusive_group()
+    commands.add_argument('--stage-release', action='store_true')
+    commands.add_argument('--check-build', action='store_true')
+    commands.add_argument('--check-source', action='store_true', help='Require release artifacts to match current source/version')
     options = parser.parse_args()
     if options.check_build:
         check_build()
     else:
         if options.stage_release:
             stage()
-        verify()
+        verify(check_source=options.stage_release or options.check_source)

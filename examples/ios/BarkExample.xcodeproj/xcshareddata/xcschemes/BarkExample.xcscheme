@@ -29,6 +29,20 @@
             buildForAnalyzing = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "9BA26B3DBEBD9C756E22278D"
+               BuildableName = "BarkExampleTests.xctest"
+               BlueprintName = "BarkExampleTests"
+               ReferencedContainer = "container:BarkExample.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "7E42F8628ED7A54FE9113F2B"
                BuildableName = "BarkExampleUITests.xctest"
                BlueprintName = "BarkExampleUITests"
@@ -53,6 +67,17 @@
          </BuildableReference>
       </MacroExpansion>
       <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "9BA26B3DBEBD9C756E22278D"
+               BuildableName = "BarkExampleTests.xctest"
+               BlueprintName = "BarkExampleTests"
+               ReferencedContainer = "container:BarkExample.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
          <TestableReference
             skipped = "NO"
             parallelizable = "NO">

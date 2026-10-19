@@ -20,6 +20,7 @@ class ContractTest {
             val args = WalletOpenArgs(runDaemon = false, datadir = directory, createWithoutServer = true, skipRecovery = true)
             val wallet = Wallet.open(Network.REGTEST, mnemonic, config, args)
             val fingerprint = wallet.fingerprint()
+            assertEquals(config.serverAddress, wallet.config().serverAddress)
             val holder = wallet.notifications()
             try {
                 val first = launch { holder.nextNotification() }

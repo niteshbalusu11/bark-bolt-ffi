@@ -3,12 +3,14 @@ plugins {
     kotlin("android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+group = "io.github.niteshbalusu11.bark.example"
+
 android {
     namespace = "io.github.niteshbalusu11.bark.example"
     compileSdk = 35
     defaultConfig {
         applicationId = "io.github.niteshbalusu11.bark.example"
-        minSdk = 24; targetSdk = 35; versionCode = 1; versionName = "0.1.0"
+        minSdk = 24; targetSdk = 35; versionCode = 1; versionName = project.version.toString()
         ndk { abiFilters += setOf("arm64-v8a", "armeabi-v7a", "x86_64") }
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

@@ -22,7 +22,6 @@ use crate::{types, Network};
 
 /// Core Bark wallet logic. No binding-specific behavior — pure async over
 /// `bark::Wallet`. The native adapter adds runtime offload, callbacks and lifetime control.
-#[derive(Clone)]
 pub struct Wallet {
     inner: bark::Wallet,
     /// Outcome of the seed recovery scan `bark::Wallet::open` ran.
@@ -113,18 +112,7 @@ fn describe_state(state: &types::VtxoState) -> String {
     }
 }
 
-#[allow(dead_code)] // some methods are wired only via the native adapter
 impl Wallet {
-    /// Build from an already-constructed `bark::Wallet`. `pub(crate)` so binding
-    /// wrappers that construct the inner wallet themselves (e.g. the native
-    /// callback-onchain path) can reuse it.
-    pub(crate) fn from_inner(inner: bark::Wallet) -> Self {
-        Self {
-            inner,
-            recovery_status: types::RecoveryStatus::NotRun,
-        }
-    }
-
     pub(crate) fn inner(&self) -> &bark::Wallet {
         &self.inner
     }

@@ -26,14 +26,24 @@ final class WalletModel: ObservableObject {
 
     init(account: String = "wallet") { self.account = account }
 
+    static func walletDirectory(account: String, restored: Bool) throws -> URL {
+        let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        var directory = root.appendingPathComponent(account + (restored ? "-restored-" + UUID().uuidString : ""), isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        var resources = URLResourceValues()
+        resources.isExcludedFromBackup = true
+        try directory.setResourceValues(resources)
+        return directory
+    }
+
     func open(restore: String = "", restoredDirectory: Bool = false) async throws {
-        if seed.isEmpty { seed = try SeedStore.loadOrCreate(account: account, restore: restore) }
+        let restoring = !restore.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        if seed.isEmpty || restoring { seed = try SeedStore.loadOrCreate(account: account, restore: restore) }
         notification?.cancelNextNotificationWait()
         notificationTask?.cancel()
         if let wallet { try await wallet.stopDaemonWait() }
-        notification = nil; wallet = nil; onchain = nil
-        let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        directory = root.appendingPathComponent(account + (restoredDirectory ? "-restored" : "")).path
+        notification = nil; wallet = nil; onchain = nil; opened = false
+        directory = try Self.walletDirectory(account: account, restored: restoredDirectory).path
         let config = Config(serverAddress: endpoint, bitcoindAddress: bitcoinEndpoint,
                             bitcoindUser: "second", bitcoindPass: "ark", vtxoExitMargin: 2,
                             fallbackFeeRate: 250, daemonSyncIntervalSecs: 2, offboardRequiredConfirmations: 1)
@@ -41,11 +51,11 @@ final class WalletModel: ObservableObject {
         let openedWallet = try await Wallet.openWithOnchain(network: .regtest, mnemonicOrSeed: seed,
             config: config, args: WalletOpenArgs(datadir: directory), onchain: chain)
         self.onchain = chain; self.wallet = openedWallet
-        if restoredDirectory { _ = try await chain.initialScan(birthdayHeight: 0) }
+        if restoring { _ = try await chain.initialScan(birthdayHeight: 0) }
         arkAddress = try await openedWallet.newAddress()
         onchainAddress = try await chain.newAddress()
-        opened = true
         try await sync()
+        opened = true
         status = "Connected · RegTest"
         let holder = openedWallet.notifications()
         notification = holder
@@ -143,7 +153,10 @@ final class WalletModel: ObservableObject {
                 let claim = try await wallet.drainExits(vtxoIds: [], drainAll: true, address: destination, feeRateSatPerVb: 1)
                 let signed = try await wallet.signExitClaimInputs(psbtBase64: claim.psbtBase64)
                 extra["txid"] = try await wallet.broadcastTx(txHex: extractTxFromPsbt(psbtBase64: signed))
-            case "restore": try await open(restoredDirectory: true)
+            case "restore":
+                try await open(restore: seed, restoredDirectory: true)
+                extra["databaseName"] = URL(fileURLWithPath: directory).lastPathComponent
+                extra["recoveryComplete"] = self.wallet?.recoveryReport()?.isComplete == true
             case "cancel":
                 let holder = wallet.notifications()
                 let wait = Task { try await holder.nextNotification() }

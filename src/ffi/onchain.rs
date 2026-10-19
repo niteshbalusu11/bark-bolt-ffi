@@ -20,7 +20,6 @@ pub struct OnchainWallet {
     inner: OnchainWalletInner,
 }
 
-//TODO(stevenroose) try to un-Arc because wrapper is Arc
 enum OnchainWalletInner {
     Bdk(Arc<CoreOnchainWallet>),
     Callback(Arc<RwLock<CallbackWalletAdapter>>),

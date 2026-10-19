@@ -50,6 +50,7 @@ pub struct Config {
     #[boltffi::default(None)]
     pub lightning_receive_claim_retries: Option<u8>,
 
+    /// Optional custom user-agent. No host-language user-agent is inferred.
     #[boltffi::default(None)]
     pub user_agent: Option<String>,
     /// How many consecutive unused seed-derived VTXO key indices a scan

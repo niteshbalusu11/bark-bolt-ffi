@@ -24,6 +24,7 @@ def run(args, *, env=None, check=True):
 class App:
     def __init__(self, platform, device, account):
         self.platform, self.device, self.account = platform, device, account
+        self.restore_databases = set()
         self.adb = [shutil.which('adb') or str(Path.home() / 'Library/Android/sdk/platform-tools/adb'), '-s', device]
 
     def command(self, action, *, allow_error=False, **values):
@@ -51,6 +52,11 @@ class App:
                 if result:
                     if not allow_error and not result.get('ok'):
                         raise RuntimeError(f'{self.platform} {action}: {result}')
+                    if action == 'restore' and result.get('ok'):
+                        database = result.get('databaseName')
+                        assert database and database not in self.restore_databases, 'Each recovery must use a new database'
+                        assert result.get('recoveryComplete'), 'Seed recovery report must be complete'
+                        self.restore_databases.add(database)
                     print(json.dumps({'platform': self.platform, 'action': action, 'result': result}), flush=True)
                     return result
             except json.JSONDecodeError:
@@ -118,6 +124,7 @@ def extended(apps):
         original = app.command('sync')
         restored = app.command('restore')
         assert restored['spendable'] == original['spendable'] > 0, 'Seed recovery must recover spendable Ark funds'
+        assert restored['historyCount'] == 0, 'Fresh recovery before exits must not reuse persisted movement history'
         offboard = app.command('offboard', destination=address)
         regtest.mine(6)
         assert regtest.bitcoin('getrawtransaction', offboard['txid'], 'true')['confirmations'] > 0

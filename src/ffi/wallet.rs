@@ -1,3 +1,4 @@
+use std::future::Future;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -53,23 +54,24 @@ pub struct WalletOpenArgs {
 /// BoltFFI-facing Bark wallet.
 ///
 /// Wraps `core::Wallet` and adds:
-/// - `run_async` runtime offload on every entry point
+/// - Tokio runtime offload for asynchronous Bark work
 /// - daemon shutdown on drop
 /// - LNURL `pay_lightning_address`
 /// - Daemon control methods
 /// - Notification holder
 /// - Callback onchain dispatch
 pub struct Wallet {
-    core: CoreWallet,
-    /// Direct handle to bark::Wallet so callback-onchain methods can bypass
-    /// `core::Wallet` (which only knows BDK).
-    inner: bark::Wallet,
+    core: Arc<CoreWallet>,
 }
 
 impl Wallet {
-    fn wrap(core: CoreWallet) -> Self {
-        let inner = core.inner().clone();
-        Self { core, inner }
+    fn run<F, Fut, T>(&self, action: F) -> impl Future<Output = T>
+    where
+        F: FnOnce(Arc<CoreWallet>) -> Fut,
+        Fut: Future<Output = T> + Send + 'static,
+        T: Send + 'static,
+    {
+        run_async(action(self.core.clone()))
     }
 }
 
@@ -147,8 +149,7 @@ impl Wallet {
     // ------------------------------------------------------------------------
 
     pub async fn sync(&self) -> Result<(), BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.sync().await }).await
+        self.run(|core| async move { core.sync().await }).await
     }
 
     /// Scan for VTXOs that were force-exited on-chain without the user asking
@@ -157,18 +158,18 @@ impl Wallet {
     /// This already runs automatically as part of [`Self::sync`]; call it
     /// directly to trigger the scan on demand.
     pub async fn sync_force_exited_vtxos(&self) -> Result<(), BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.sync_force_exited_vtxos().await }).await
+        self.run(|core| async move { core.sync_force_exited_vtxos().await })
+            .await
     }
 
     pub async fn maintenance(&self) -> Result<(), BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.maintenance().await }).await
+        self.run(|core| async move { core.maintenance().await })
+            .await
     }
 
     pub async fn maintenance_delegated(&self) -> Result<(), BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.maintenance_delegated().await }).await
+        self.run(|core| async move { core.maintenance_delegated().await })
+            .await
     }
 
     // ------------------------------------------------------------------------
@@ -176,18 +177,18 @@ impl Wallet {
     // ------------------------------------------------------------------------
 
     pub async fn new_address(&self) -> Result<String, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.new_address().await }).await
+        self.run(|core| async move { core.new_address().await })
+            .await
     }
 
     pub async fn new_address_with_index(&self) -> Result<types::AddressWithIndex, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.new_address_with_index().await }).await
+        self.run(|core| async move { core.new_address_with_index().await })
+            .await
     }
 
     pub async fn peek_address(&self, index: u32) -> Result<String, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.peek_address(index).await }).await
+        self.run(|core| async move { core.peek_address(index).await })
+            .await
     }
 
     // ------------------------------------------------------------------------
@@ -195,41 +196,38 @@ impl Wallet {
     // ------------------------------------------------------------------------
 
     pub async fn balance(&self) -> Result<types::Balance, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.balance().await }).await
+        self.run(|core| async move { core.balance().await }).await
     }
 
     pub async fn vtxos(&self) -> Result<Vec<types::Vtxo>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.vtxos().await }).await
+        self.run(|core| async move { core.vtxos().await }).await
     }
 
     pub async fn get_vtxo_by_id(&self, vtxo_id: String) -> Result<types::Vtxo, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.get_vtxo_by_id(vtxo_id).await }).await
+        self.run(|core| async move { core.get_vtxo_by_id(vtxo_id).await })
+            .await
     }
 
     pub async fn spendable_vtxos(&self) -> Result<Vec<types::Vtxo>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.spendable_vtxos().await }).await
+        self.run(|core| async move { core.spendable_vtxos().await })
+            .await
     }
 
     pub async fn all_vtxos(&self) -> Result<Vec<types::Vtxo>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.all_vtxos().await }).await
+        self.run(|core| async move { core.all_vtxos().await }).await
     }
 
     pub async fn get_expiring_vtxos(
         &self,
         threshold_blocks: u32,
     ) -> Result<Vec<types::Vtxo>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.get_expiring_vtxos(threshold_blocks).await }).await
+        self.run(|core| async move { core.get_expiring_vtxos(threshold_blocks).await })
+            .await
     }
 
     pub async fn get_vtxos_to_refresh(&self) -> Result<Vec<types::Vtxo>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.get_vtxos_to_refresh().await }).await
+        self.run(|core| async move { core.get_vtxos_to_refresh().await })
+            .await
     }
 
     // ------------------------------------------------------------------------
@@ -247,8 +245,8 @@ impl Wallet {
         vtxo_ids: Vec<String>,
         holder: Option<types::VtxoLockHolder>,
     ) -> Result<(), BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.lock_vtxos(vtxo_ids, holder).await }).await
+        self.run(|core| async move { core.lock_vtxos(vtxo_ids, holder).await })
+            .await
     }
 
     /// Release VTXOs locked by `lockVtxos`.
@@ -262,8 +260,8 @@ impl Wallet {
         vtxo_ids: Vec<String>,
         expected_holder: Option<types::VtxoLockHolder>,
     ) -> Result<(), BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.unlock_vtxos(vtxo_ids, expected_holder).await }).await
+        self.run(|core| async move { core.unlock_vtxos(vtxo_ids, expected_holder).await })
+            .await
     }
 
     // ------------------------------------------------------------------------
@@ -274,8 +272,8 @@ impl Wallet {
         &self,
         bitcoin_address: String,
     ) -> Result<types::OffboardResult, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.offboard_all(bitcoin_address).await }).await
+        self.run(|core| async move { core.offboard_all(bitcoin_address).await })
+            .await
     }
 
     pub async fn offboard_vtxos(
@@ -283,8 +281,8 @@ impl Wallet {
         vtxo_ids: Vec<String>,
         bitcoin_address: String,
     ) -> Result<types::OffboardResult, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.offboard_vtxos(vtxo_ids, bitcoin_address).await }).await
+        self.run(|core| async move { core.offboard_vtxos(vtxo_ids, bitcoin_address).await })
+            .await
     }
 
     // ------------------------------------------------------------------------
@@ -297,8 +295,8 @@ impl Wallet {
         amount_sats: Option<u64>,
         #[boltffi::default(false)] wait: bool,
     ) -> Result<types::LightningSendStatus, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.pay_lightning_invoice(invoice, amount_sats, wait).await }).await
+        self.run(|core| async move { core.pay_lightning_invoice(invoice, amount_sats, wait).await })
+            .await
     }
 
     /// Pay to a Lightning Address (`user@domain`), resolved via LNURL-pay.
@@ -309,8 +307,7 @@ impl Wallet {
         comment: Option<String>,
         #[boltffi::default(false)] wait: bool,
     ) -> Result<types::LightningSendStatus, BarkError> {
-        let core = self.core.clone();
-        run_async(async move {
+        self.run(|core| async move {
             core.pay_lightning_address(lightning_address, amount_sats, comment, wait)
                 .await
         })
@@ -328,8 +325,8 @@ impl Wallet {
         comment: Option<String>,
         #[boltffi::default(false)] wait: bool,
     ) -> Result<types::LightningSendStatus, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.pay_lnurl(lnurl, amount_sats, comment, wait).await }).await
+        self.run(|core| async move { core.pay_lnurl(lnurl, amount_sats, comment, wait).await })
+            .await
     }
 
     pub async fn pay_lightning_offer(
@@ -338,8 +335,8 @@ impl Wallet {
         amount_sats: Option<u64>,
         #[boltffi::default(false)] wait: bool,
     ) -> Result<types::LightningSendStatus, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.pay_lightning_offer(offer, amount_sats, wait).await }).await
+        self.run(|core| async move { core.pay_lightning_offer(offer, amount_sats, wait).await })
+            .await
     }
 
     pub async fn check_lightning_payment(
@@ -347,8 +344,8 @@ impl Wallet {
         payment_hash: String,
         #[boltffi::default(false)] wait: bool,
     ) -> Result<types::LightningSendStatus, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.check_lightning_payment(payment_hash, wait).await }).await
+        self.run(|core| async move { core.check_lightning_payment(payment_hash, wait).await })
+            .await
     }
 
     /// Read-only triage, for polling after a send started with `wait = false`.
@@ -357,28 +354,28 @@ impl Wallet {
         &self,
         payment_hash: String,
     ) -> Result<types::LightningSendStatus, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.lightning_send_state(payment_hash).await }).await
+        self.run(|core| async move { core.lightning_send_state(payment_hash).await })
+            .await
     }
 
     /// Cheap "has this invoice ever been paid?", answered from the local fact
     /// table without consulting the server.
     pub async fn is_invoice_paid(&self, payment_hash: String) -> Result<bool, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.is_invoice_paid(payment_hash).await }).await
+        self.run(|core| async move { core.is_invoice_paid(payment_hash).await })
+            .await
     }
 
     pub async fn pending_lightning_sends(&self) -> Result<Vec<types::LightningSend>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.pending_lightning_sends().await }).await
+        self.run(|core| async move { core.pending_lightning_sends().await })
+            .await
     }
 
     /// Failed lightning sends whose HTLC revocation also failed.
     pub async fn stuck_failed_lightning_sends(
         &self,
     ) -> Result<Vec<types::LightningSend>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.stuck_failed_lightning_sends().await }).await
+        self.run(|core| async move { core.stuck_failed_lightning_sends().await })
+            .await
     }
 
     /// Opt one stuck send into auto-exiting its HTLCs as they near expiry.
@@ -386,8 +383,8 @@ impl Wallet {
         &self,
         payment_hash: String,
     ) -> Result<(), BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.allow_lightning_send_to_exit(payment_hash).await }).await
+        self.run(|core| async move { core.allow_lightning_send_to_exit(payment_hash).await })
+            .await
     }
 
     // ------------------------------------------------------------------------
@@ -400,8 +397,8 @@ impl Wallet {
         description: Option<String>,
         #[boltffi::default(None)] token: Option<String>,
     ) -> Result<types::LightningInvoice, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.bolt11_invoice(amount_sats, description, token).await }).await
+        self.run(|core| async move { core.bolt11_invoice(amount_sats, description, token).await })
+            .await
     }
 
     /// Create an invoice whose claimed VTXO is delivered to `claim_destination`
@@ -425,8 +422,7 @@ impl Wallet {
         #[boltffi::default(None)] description: Option<String>,
         #[boltffi::default(None)] token: Option<String>,
     ) -> Result<types::LightningInvoice, BarkError> {
-        let core = self.core.clone();
-        run_async(async move {
+        self.run(|core| async move {
             core.bolt11_invoice_for_address(amount_sats, claim_destination, description, token)
                 .await
         })
@@ -437,20 +433,20 @@ impl Wallet {
         &self,
         #[boltffi::default(false)] wait: bool,
     ) -> Result<Vec<types::LightningReceive>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.try_claim_all_lightning_receives(wait).await }).await
+        self.run(|core| async move { core.try_claim_all_lightning_receives(wait).await })
+            .await
     }
 
     pub async fn pending_lightning_receives(
         &self,
     ) -> Result<Vec<types::LightningReceive>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.pending_lightning_receives().await }).await
+        self.run(|core| async move { core.pending_lightning_receives().await })
+            .await
     }
 
     pub async fn claimable_lightning_receive_balance_sats(&self) -> Result<u64, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.claimable_lightning_receive_balance_sats().await }).await
+        self.run(|core| async move { core.claimable_lightning_receive_balance_sats().await })
+            .await
     }
 
     /// Triage a payment hash: settled or in-progress. Errors if no lightning
@@ -459,8 +455,8 @@ impl Wallet {
         &self,
         payment_hash: String,
     ) -> Result<types::LightningReceive, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.lightning_receive_state(payment_hash).await }).await
+        self.run(|core| async move { core.lightning_receive_state(payment_hash).await })
+            .await
     }
 
     pub async fn try_claim_lightning_receive(
@@ -468,13 +464,13 @@ impl Wallet {
         payment_hash: String,
         #[boltffi::default(false)] wait: bool,
     ) -> Result<types::LightningReceive, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.try_claim_lightning_receive(payment_hash, wait).await }).await
+        self.run(|core| async move { core.try_claim_lightning_receive(payment_hash, wait).await })
+            .await
     }
 
     pub async fn cancel_lightning_receive(&self, payment_hash: String) -> Result<(), BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.cancel_lightning_receive(payment_hash).await }).await
+        self.run(|core| async move { core.cancel_lightning_receive(payment_hash).await })
+            .await
     }
 
     /// Force-exit an unfinished lightning receive.
@@ -482,8 +478,8 @@ impl Wallet {
         &self,
         payment_hash: String,
     ) -> Result<(), BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.attempt_lightning_receive_exit(payment_hash).await }).await
+        self.run(|core| async move { core.attempt_lightning_receive_exit(payment_hash).await })
+            .await
     }
 
     // ------------------------------------------------------------------------
@@ -499,8 +495,8 @@ impl Wallet {
         ark_address: String,
         amount_sats: u64,
     ) -> Result<(), BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.send_arkoor_payment(ark_address, amount_sats).await }).await
+        self.run(|core| async move { core.send_arkoor_payment(ark_address, amount_sats).await })
+            .await
     }
 
     /// Whether this wallet can pay `address` out-of-round: same network and
@@ -508,8 +504,8 @@ impl Wallet {
     /// supports. An address listing no delivery mechanism is valid. Errors only
     /// when the address does not parse.
     pub async fn validate_arkoor_address(&self, address: String) -> Result<bool, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.validate_arkoor_address(address).await }).await
+        self.run(|core| async move { core.validate_arkoor_address(address).await })
+            .await
     }
 
     pub async fn send_onchain(
@@ -517,8 +513,8 @@ impl Wallet {
         address: String,
         amount_sats: u64,
     ) -> Result<String, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.send_onchain(address, amount_sats).await }).await
+        self.run(|core| async move { core.send_onchain(address, amount_sats).await })
+            .await
     }
 
     // ------------------------------------------------------------------------
@@ -526,8 +522,7 @@ impl Wallet {
     // ------------------------------------------------------------------------
 
     pub async fn history(&self) -> Result<Vec<types::Movement>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.history().await }).await
+        self.run(|core| async move { core.history().await }).await
     }
 
     pub async fn history_by_payment_method(
@@ -535,8 +530,7 @@ impl Wallet {
         payment_method_type: String,
         payment_method_value: String,
     ) -> Result<Vec<types::Movement>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move {
+        self.run(|core| async move {
             core.history_by_payment_method(payment_method_type, payment_method_value)
                 .await
         })
@@ -548,21 +542,21 @@ impl Wallet {
     // ------------------------------------------------------------------------
 
     pub async fn refresh_vtxos(&self, vtxo_ids: Vec<String>) -> Result<Option<String>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.refresh_vtxos(vtxo_ids).await }).await
+        self.run(|core| async move { core.refresh_vtxos(vtxo_ids).await })
+            .await
     }
 
     pub async fn maintenance_refresh(&self) -> Result<Option<String>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.maintenance_refresh().await }).await
+        self.run(|core| async move { core.maintenance_refresh().await })
+            .await
     }
 
     pub async fn refresh_vtxos_delegated(
         &self,
         vtxo_ids: Vec<String>,
     ) -> Result<Option<types::RoundState>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.refresh_vtxos_delegated(vtxo_ids).await }).await
+        self.run(|core| async move { core.refresh_vtxos_delegated(vtxo_ids).await })
+            .await
     }
 
     /// Schedule a delegated refresh for `scheduled_height` instead of the next
@@ -574,8 +568,7 @@ impl Wallet {
         vtxo_ids: Vec<String>,
         scheduled_height: u32,
     ) -> Result<Option<types::RoundState>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move {
+        self.run(|core| async move {
             core.refresh_vtxos_scheduled(vtxo_ids, scheduled_height)
                 .await
         })
@@ -598,8 +591,8 @@ impl Wallet {
         vtxo_ids: Vec<String>,
         #[boltffi::default(None)] gap_limit: Option<u32>,
     ) -> Result<types::RecoveryReport, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.recover_vtxos(vtxo_ids, gap_limit).await }).await
+        self.run(|core| async move { core.recover_vtxos(vtxo_ids, gap_limit).await })
+            .await
     }
 
     /// Outcome of the seed-recovery scan that ran during `Wallet::open`.
@@ -627,8 +620,8 @@ impl Wallet {
     // ------------------------------------------------------------------------
 
     pub async fn properties(&self) -> Result<types::WalletProperties, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.properties().await }).await
+        self.run(|core| async move { core.properties().await })
+            .await
     }
 
     pub fn fingerprint(&self) -> String {
@@ -636,23 +629,20 @@ impl Wallet {
     }
 
     pub async fn network(&self) -> Result<types::Network, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.network().await }).await
+        self.run(|core| async move { core.network().await }).await
     }
 
     pub async fn config(&self) -> Config {
-        let core = self.core.clone();
-        run_async(async move { core.config() }).await
+        self.core.config()
     }
 
     pub async fn ark_info(&self) -> Option<types::ArkInfo> {
-        let core = self.core.clone();
-        run_async(async move { core.ark_info().await }).await
+        self.run(|core| async move { core.ark_info().await }).await
     }
 
     pub async fn next_round_start_time(&self) -> Result<u64, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.next_round_start_time().await }).await
+        self.run(|core| async move { core.next_round_start_time().await })
+            .await
     }
 
     // ------------------------------------------------------------------------
@@ -660,18 +650,17 @@ impl Wallet {
     // ------------------------------------------------------------------------
 
     pub async fn board_amount(&self, amount_sats: u64) -> Result<types::PendingBoard, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.board_amount(amount_sats).await }).await
+        self.run(|core| async move { core.board_amount(amount_sats).await })
+            .await
     }
 
     pub async fn board_all(&self) -> Result<types::PendingBoard, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.board_all().await }).await
+        self.run(|core| async move { core.board_all().await }).await
     }
 
     pub async fn board_funding_address(&self) -> Result<types::BoardFundingInfo, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.board_funding_address().await }).await
+        self.run(|core| async move { core.board_funding_address().await })
+            .await
     }
 
     pub async fn board_psbt(
@@ -680,8 +669,7 @@ impl Wallet {
         keypair_index: u32,
         expiry_height: u32,
     ) -> Result<types::PendingBoard, BarkError> {
-        let core = self.core.clone();
-        run_async(async move {
+        self.run(|core| async move {
             core.board_psbt(psbt_base64, keypair_index, expiry_height)
                 .await
         })
@@ -689,28 +677,28 @@ impl Wallet {
     }
 
     pub async fn sync_pending_boards(&self) -> Result<(), BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.sync_pending_boards().await }).await
+        self.run(|core| async move { core.sync_pending_boards().await })
+            .await
     }
 
     pub async fn pending_boards(&self) -> Result<Vec<types::PendingBoard>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.pending_boards().await }).await
+        self.run(|core| async move { core.pending_boards().await })
+            .await
     }
 
     pub async fn pending_board_vtxos(&self) -> Result<Vec<types::Vtxo>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.pending_board_vtxos().await }).await
+        self.run(|core| async move { core.pending_board_vtxos().await })
+            .await
     }
 
     pub async fn pending_round_input_vtxos(&self) -> Result<Vec<types::Vtxo>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.pending_round_input_vtxos().await }).await
+        self.run(|core| async move { core.pending_round_input_vtxos().await })
+            .await
     }
 
     pub async fn pending_lightning_send_vtxos(&self) -> Result<Vec<types::Vtxo>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.pending_lightning_send_vtxos().await }).await
+        self.run(|core| async move { core.pending_lightning_send_vtxos().await })
+            .await
     }
 
     // ------------------------------------------------------------------------
@@ -718,26 +706,26 @@ impl Wallet {
     // ------------------------------------------------------------------------
 
     pub async fn start_exit_for_entire_wallet(&self) -> Result<(), BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.start_exit_for_entire_wallet().await }).await
+        self.run(|core| async move { core.start_exit_for_entire_wallet().await })
+            .await
     }
 
     pub async fn sync_exits(&self) -> Result<(), BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.sync_exits().await }).await
+        self.run(|core| async move { core.sync_exits().await })
+            .await
     }
 
     pub async fn progress_exits(
         &self,
         fee_rate_sat_per_vb: Option<u64>,
     ) -> Result<Vec<types::ExitProgressStatus>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.progress_exits(fee_rate_sat_per_vb).await }).await
+        self.run(|core| async move { core.progress_exits(fee_rate_sat_per_vb).await })
+            .await
     }
 
     pub async fn start_exit_for_vtxos(&self, vtxo_ids: Vec<String>) -> Result<(), BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.start_exit_for_vtxos(vtxo_ids).await }).await
+        self.run(|core| async move { core.start_exit_for_vtxos(vtxo_ids).await })
+            .await
     }
 
     /// Like `startExitForVtxos`, but skips dust and standardness checks.
@@ -748,8 +736,7 @@ impl Wallet {
         &self,
         vtxo_ids: Vec<String>,
     ) -> Result<(), BarkError> {
-        let core = self.core.clone();
-        run_async(async move {
+        self.run(|core| async move {
             core.start_exit_for_vtxos_including_non_standard(vtxo_ids)
                 .await
         })
@@ -762,33 +749,33 @@ impl Wallet {
     /// yours to release. Expected refusals come back in the result rather than
     /// as an error, and cancelling twice succeeds.
     pub async fn cancel_exit(&self, vtxo_id: String) -> Result<types::ExitCancelResult, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.cancel_exit(vtxo_id).await }).await
+        self.run(|core| async move { core.cancel_exit(vtxo_id).await })
+            .await
     }
 
     pub async fn list_claimable_exits(&self) -> Result<Vec<types::ExitVtxo>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.list_claimable_exits().await }).await
+        self.run(|core| async move { core.list_claimable_exits().await })
+            .await
     }
 
     pub async fn get_exit_vtxos(&self) -> Result<Vec<types::ExitVtxo>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.get_exit_vtxos().await }).await
+        self.run(|core| async move { core.get_exit_vtxos().await })
+            .await
     }
 
     pub async fn has_pending_exits(&self) -> Result<bool, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.has_pending_exits().await }).await
+        self.run(|core| async move { core.has_pending_exits().await })
+            .await
     }
 
     pub async fn pending_exits_total_sats(&self) -> Result<u64, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.pending_exits_total_sats().await }).await
+        self.run(|core| async move { core.pending_exits_total_sats().await })
+            .await
     }
 
     pub async fn all_exits_claimable_at_height(&self) -> Result<Option<u32>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.all_exits_claimable_at_height().await }).await
+        self.run(|core| async move { core.all_exits_claimable_at_height().await })
+            .await
     }
 
     pub async fn get_exit_status(
@@ -797,8 +784,7 @@ impl Wallet {
         include_history: bool,
         include_transactions: bool,
     ) -> Result<Option<types::ExitTransactionStatus>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move {
+        self.run(|core| async move {
             core.get_exit_status(vtxo_id, include_history, include_transactions)
                 .await
         })
@@ -817,8 +803,7 @@ impl Wallet {
         address: String,
         fee_rate_sat_per_vb: Option<u64>,
     ) -> Result<types::ExitClaimTransaction, BarkError> {
-        let core = self.core.clone();
-        run_async(async move {
+        self.run(|core| async move {
             core.drain_exits(vtxo_ids, drain_all, address, fee_rate_sat_per_vb)
                 .await
         })
@@ -826,8 +811,8 @@ impl Wallet {
     }
 
     pub async fn sign_exit_claim_inputs(&self, psbt_base64: String) -> Result<String, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.sign_exit_claim_inputs(psbt_base64).await }).await
+        self.run(|core| async move { core.sign_exit_claim_inputs(psbt_base64).await })
+            .await
     }
 
     // ------------------------------------------------------------------------
@@ -835,23 +820,23 @@ impl Wallet {
     // ------------------------------------------------------------------------
 
     pub async fn pending_round_states(&self) -> Result<Vec<types::RoundState>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.pending_round_states().await }).await
+        self.run(|core| async move { core.pending_round_states().await })
+            .await
     }
 
     pub async fn cancel_pending_round(&self, round_id: u32) -> Result<(), BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.cancel_pending_round(round_id).await }).await
+        self.run(|core| async move { core.cancel_pending_round(round_id).await })
+            .await
     }
 
     pub async fn cancel_all_pending_rounds(&self) -> Result<(), BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.cancel_all_pending_rounds().await }).await
+        self.run(|core| async move { core.cancel_all_pending_rounds().await })
+            .await
     }
 
     pub async fn progress_pending_rounds(&self) -> Result<(), BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.progress_pending_rounds().await }).await
+        self.run(|core| async move { core.progress_pending_rounds().await })
+            .await
     }
 
     // ------------------------------------------------------------------------
@@ -859,8 +844,8 @@ impl Wallet {
     // ------------------------------------------------------------------------
 
     pub async fn refresh_server(&self) -> Result<(), BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.refresh_server().await }).await
+        self.run(|core| async move { core.refresh_server().await })
+            .await
     }
 
     // ------------------------------------------------------------------------
@@ -868,13 +853,13 @@ impl Wallet {
     // ------------------------------------------------------------------------
 
     pub async fn get_first_expiring_vtxo_blockheight(&self) -> Result<Option<u32>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.get_first_expiring_vtxo_blockheight().await }).await
+        self.run(|core| async move { core.get_first_expiring_vtxo_blockheight().await })
+            .await
     }
 
     pub async fn get_next_required_refresh_blockheight(&self) -> Result<Option<u32>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.get_next_required_refresh_blockheight().await }).await
+        self.run(|core| async move { core.get_next_required_refresh_blockheight().await })
+            .await
     }
 
     // ------------------------------------------------------------------------
@@ -882,8 +867,8 @@ impl Wallet {
     // ------------------------------------------------------------------------
 
     pub async fn broadcast_tx(&self, tx_hex: String) -> Result<String, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.broadcast_tx(tx_hex).await }).await
+        self.run(|core| async move { core.broadcast_tx(tx_hex).await })
+            .await
     }
 
     // ------------------------------------------------------------------------
@@ -921,8 +906,8 @@ impl Wallet {
         vtxo_base64: String,
         #[boltffi::default(None)] args: Option<types::ImportVtxoArgs>,
     ) -> Result<(), BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.import_vtxo(vtxo_base64, args).await }).await
+        self.run(|core| async move { core.import_vtxo(vtxo_base64, args).await })
+            .await
     }
 
     /// Import several VTXOs (hex or base64) under a single key scan and a
@@ -937,16 +922,16 @@ impl Wallet {
         encoded_vtxos: Vec<String>,
         #[boltffi::default(None)] args: Option<types::ImportVtxoArgs>,
     ) -> Result<Vec<String>, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.import_vtxos(encoded_vtxos, args).await }).await
+        self.run(|core| async move { core.import_vtxos(encoded_vtxos, args).await })
+            .await
     }
 
     /// Hex-encoded serialization of the full VTXO (genesis chain included),
     /// re-importable via [`Wallet::import_vtxo`]. Mirrors bark-rest
     /// `GET /vtxos/{id}/encoded`.
     pub async fn vtxo_encoded(&self, vtxo_id: String) -> Result<String, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.vtxo_encoded(vtxo_id).await }).await
+        self.run(|core| async move { core.vtxo_encoded(vtxo_id).await })
+            .await
     }
 
     // ------------------------------------------------------------------------
@@ -957,8 +942,8 @@ impl Wallet {
         &self,
         amount_sats: u64,
     ) -> Result<types::FeeEstimate, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.estimate_board_fee(amount_sats).await }).await
+        self.run(|core| async move { core.estimate_board_fee(amount_sats).await })
+            .await
     }
 
     pub async fn estimate_offboard_fee(
@@ -966,48 +951,48 @@ impl Wallet {
         address: String,
         vtxo_ids: Vec<String>,
     ) -> Result<types::FeeEstimate, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.estimate_offboard_fee(address, vtxo_ids).await }).await
+        self.run(|core| async move { core.estimate_offboard_fee(address, vtxo_ids).await })
+            .await
     }
 
     pub async fn estimate_refresh_fee(
         &self,
         vtxo_ids: Vec<String>,
     ) -> Result<types::FeeEstimate, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.estimate_refresh_fee(vtxo_ids).await }).await
+        self.run(|core| async move { core.estimate_refresh_fee(vtxo_ids).await })
+            .await
     }
 
     pub async fn estimate_lightning_send_fee(
         &self,
         amount_sats: u64,
     ) -> Result<types::FeeEstimate, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.estimate_lightning_send_fee(amount_sats).await }).await
+        self.run(|core| async move { core.estimate_lightning_send_fee(amount_sats).await })
+            .await
     }
 
     pub async fn estimate_lightning_receive_fee(
         &self,
         amount_sats: u64,
     ) -> Result<types::FeeEstimate, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.estimate_lightning_receive_fee(amount_sats).await }).await
+        self.run(|core| async move { core.estimate_lightning_receive_fee(amount_sats).await })
+            .await
     }
 
     pub async fn estimate_arkoor_payment_fee(
         &self,
         amount_sats: u64,
     ) -> Result<types::FeeEstimate, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.estimate_arkoor_payment_fee(amount_sats).await }).await
+        self.run(|core| async move { core.estimate_arkoor_payment_fee(amount_sats).await })
+            .await
     }
 
     pub async fn estimate_offboard_all_fee(
         &self,
         address: String,
     ) -> Result<types::FeeEstimate, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.estimate_offboard_all_fee(address).await }).await
+        self.run(|core| async move { core.estimate_offboard_all_fee(address).await })
+            .await
     }
 
     pub async fn estimate_send_onchain_fee(
@@ -1015,8 +1000,8 @@ impl Wallet {
         address: String,
         amount_sats: u64,
     ) -> Result<types::FeeEstimate, BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.estimate_send_onchain_fee(address, amount_sats).await }).await
+        self.run(|core| async move { core.estimate_send_onchain_fee(address, amount_sats).await })
+            .await
     }
 
     /// Estimate the onchain cost of unilaterally (emergency) exiting VTXOs.
@@ -1036,8 +1021,7 @@ impl Wallet {
         destination: Option<String>,
         #[boltffi::default(None)] fee_margin: Option<f64>,
     ) -> Result<types::EmergencyExitFeeEstimate, BarkError> {
-        let core = self.core.clone();
-        run_async(async move {
+        self.run(|core| async move {
             core.estimate_emergency_exit_fee(vtxo_ids, fee_rate_sat_per_vb, destination, fee_margin)
                 .await
         })
@@ -1049,7 +1033,7 @@ impl Wallet {
     // ------------------------------------------------------------------------
 
     pub fn notifications(&self) -> NotificationHolder {
-        NotificationHolder::new(&self.inner)
+        NotificationHolder::new(self.core.inner())
     }
 
     // ------------------------------------------------------------------------
@@ -1057,15 +1041,15 @@ impl Wallet {
     // ------------------------------------------------------------------------
 
     /// Start the background daemon. The onchain wallet used by the daemon is
-    /// the one supplied to `Wallet::open` (see `WalletOpenArgs.onchain`).
+    /// the one supplied to `open_with_onchain` (`openWithOnchain` in Swift/Kotlin).
     pub async fn run_daemon(&self) -> Result<(), BarkError> {
-        let inner = self.inner.clone();
+        let inner = self.core.inner().clone();
         run_async(async move { inner.start_daemon().map_err(BarkError::from) }).await?;
         Ok(())
     }
 
     pub async fn stop_daemon(&self) -> Result<(), BarkError> {
-        self.inner.stop_daemon();
+        self.core.inner().stop_daemon();
         Ok(())
     }
 
@@ -1073,14 +1057,14 @@ impl Wallet {
     /// nothing runs in the background afterwards (e.g. before deleting the
     /// wallet's datadir). No-op when no daemon is running.
     pub async fn stop_daemon_wait(&self) -> Result<(), BarkError> {
-        let core = self.core.clone();
-        run_async(async move { core.stop_daemon_wait().await }).await
+        self.run(|core| async move { core.stop_daemon_wait().await })
+            .await
     }
 }
 
 impl Drop for Wallet {
     fn drop(&mut self) {
-        self.inner.stop_daemon();
+        self.core.inner().stop_daemon();
     }
 }
 
@@ -1109,7 +1093,9 @@ impl Wallet {
                 },
             )
             .await?;
-            Ok(Self::wrap(core))
+            Ok(Self {
+                core: Arc::new(core),
+            })
         })
         .await
     }

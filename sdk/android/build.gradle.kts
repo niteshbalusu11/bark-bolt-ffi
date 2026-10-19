@@ -19,6 +19,6 @@ dependencies { api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2") }
 afterEvaluate {
     publishing { publications { create<MavenPublication>("release") {
         from(components["release"])
-        groupId = "io.github.niteshbalusu11"; artifactId = "bark-bolt-ffi-android"; version = "0.1.0"
+        groupId = project.group.toString(); artifactId = "bark-bolt-ffi-android"; version = project.version.toString()
     } } }
 }

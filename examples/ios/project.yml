@@ -32,6 +32,15 @@ targets:
         Debug:
           INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsLocalNetworking: YES
           INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsArbitraryLoads: YES
+  BarkExampleTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [BarkExampleTests]
+    dependencies: [{target: BarkExample}]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.niteshbalusu11.bark.example.tests
+        GENERATE_INFOPLIST_FILE: YES
   BarkExampleUITests:
     type: bundle.ui-testing
     platform: iOS
@@ -47,5 +56,6 @@ schemes:
       targets:
         BarkExample: all
         BarkExampleUITests: [test]
+        BarkExampleTests: [test]
     test:
-      targets: [BarkExampleUITests]
+      targets: [BarkExampleTests, BarkExampleUITests]
