@@ -1,0 +1,162 @@
+{
+  "source_commit": "95d90fd467a341cd90736a33ad5fc4ec0410e439",
+  "native_profile": "development, local arm64 Apple/Android overlays",
+  "raw_results_sha256": "282f8c9a08071a9f80f122e48e1228bae872d0bfadb0c7e1739898a9075ee114",
+  "result": {
+    "passed": true,
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "extended": true,
+    "run_id": "opus55-review-20261019-r2"
+  },
+  "platforms": {
+    "ios": {
+      "completed_commands": 32,
+      "actions": [
+        "board",
+        "cancel",
+        "claim",
+        "drainExit",
+        "estimate",
+        "invoice",
+        "offboard",
+        "open",
+        "progressExit",
+        "refresh",
+        "restore",
+        "send",
+        "startExit",
+        "sync"
+      ],
+      "transactions": [
+        {
+          "action": "board",
+          "txid": "372b15dcacaa46026b7d7e932aa58e955d3ee074abcb6d8bd15fca5f35b8a21e",
+          "confirmations_at_evidence_capture": 90
+        },
+        {
+          "action": "offboard",
+          "txid": "bccb7101829421868fe4695f4398ac07534c7bec898b8f945ef35909b8648c56",
+          "confirmations_at_evidence_capture": 78
+        },
+        {
+          "action": "board",
+          "txid": "853588a026af06222348f9866eecd768870f5d60cb143f03c0c9d7ea291b1722",
+          "confirmations_at_evidence_capture": 72
+        },
+        {
+          "action": "drainExit",
+          "txid": "f68bf223f6d8734547833d5f270a89ff3c69f30def3dbe9774851372d8877ea1",
+          "confirmations_at_evidence_capture": 48
+        }
+      ],
+      "refresh_states": [
+        "Unconfirmed { funding_txid: 4072a18b9e938f0941d0a191a7eb23e175fda0284c31cb6176745e448ae80a91 }"
+      ],
+      "restores": [
+        {
+          "databaseName": "opus55-review-20261019-r2-restored-88ADFC80-FC2C-4B02-BB3C-CBDE87ED14E8",
+          "fingerprint": "67e6ca78",
+          "recoveryComplete": true,
+          "historyCount": 0,
+          "spendable": 1990572,
+          "onchain": 7999845
+        },
+        {
+          "databaseName": "opus55-review-20261019-r2-restored-5D722C9E-7903-4735-9E04-9848734CE532",
+          "fingerprint": "67e6ca78",
+          "recoveryComplete": true,
+          "historyCount": 1,
+          "spendable": 0,
+          "onchain": 7499795
+        }
+      ],
+      "notification_counts": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "expected_errors": [
+        "invalid ark address: bech32m decoding error: parsing failed",
+        "error creating new wallet: Failed to connect to provided server: Failed to connect to Ark server: transport error: tcp connect error: tcp connect error: Connection refused (os error 61)"
+      ]
+    },
+    "android": {
+      "completed_commands": 32,
+      "actions": [
+        "board",
+        "cancel",
+        "claim",
+        "drainExit",
+        "estimate",
+        "invoice",
+        "offboard",
+        "open",
+        "progressExit",
+        "refresh",
+        "restore",
+        "send",
+        "startExit",
+        "sync"
+      ],
+      "transactions": [
+        {
+          "action": "board",
+          "txid": "d66c431289b5f8faf93062e3d955e68805f8ef8476c03ea5fc5e8a87496a3289",
+          "confirmations_at_evidence_capture": 90
+        },
+        {
+          "action": "offboard",
+          "txid": "4e12c1091b510f605a2b2bcb01b71b2ba443249687eb2cada32f5000588e7476",
+          "confirmations_at_evidence_capture": 36
+        },
+        {
+          "action": "board",
+          "txid": "3cfacc45705c62094be2405d31ac7ccb9c7add18ca07159c4399378a66f01804",
+          "confirmations_at_evidence_capture": 30
+        },
+        {
+          "action": "drainExit",
+          "txid": "fcfff7da342a87fe8218e5ba1bbdf7ed2fc85473b83d0aa9f97b57292e5976c4",
+          "confirmations_at_evidence_capture": 6
+        }
+      ],
+      "refresh_states": [
+        "Unconfirmed { funding_txid: 7bec2d45b6b9991e14b87967b31127c6198ba2a809353f80c5923ff5530379f0 }"
+      ],
+      "restores": [
+        {
+          "databaseName": "opus55-review-20261019-r2-restored-fb0b9ab9-8eda-4ced-82b8-625371c5a161",
+          "fingerprint": "1325479a",
+          "recoveryComplete": true,
+          "historyCount": 0,
+          "spendable": 1990577,
+          "onchain": 7999845
+        },
+        {
+          "databaseName": "opus55-review-20261019-r2-restored-619ad1a5-7278-4861-bdc2-6276bf09c9e2",
+          "fingerprint": "1325479a",
+          "recoveryComplete": true,
+          "historyCount": 1,
+          "spendable": 0,
+          "onchain": 7500072
+        }
+      ],
+      "notification_counts": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "expected_errors": [
+        "invalid ark address: bech32m decoding error: parsing failed",
+        "error creating new wallet: Failed to connect to provided server: Failed to connect to Ark server: transport error: tcp connect error: tcp connect error: Connection refused (os error 111)"
+      ]
+    }
+  }
+}

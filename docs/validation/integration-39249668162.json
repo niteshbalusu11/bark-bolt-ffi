@@ -1,0 +1,179 @@
+{
+  "workflow": "https://github.com/smolcars/bark-bolt-ffi/actions/runs/39249668162",
+  "source_commit": "95d90fd467a341cd90736a33ad5fc4ec0410e439",
+  "native_profile": "development, local arm64 Apple/Android overlays",
+  "raw_results_sha256": "7a55ae7cc88fb1f3f239448df636ec60dbf46ed07bfb8f4572819d4ce547e8e4",
+  "result": {
+    "passed": true,
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "extended": true,
+    "run_id": "integration-1792411775"
+  },
+  "runner": {
+    "fork_approval_policy": "all_external_contributors",
+    "unique_custom_label_only": true,
+    "unregistered": true,
+    "temporary_directory_removed": true
+  },
+  "ci_fixture_containers_removed": true,
+  "ci_fixture_volumes_removed": true,
+  "platforms": {
+    "ios": {
+      "completed_commands": 32,
+      "actions": [
+        "board",
+        "cancel",
+        "claim",
+        "drainExit",
+        "estimate",
+        "invoice",
+        "offboard",
+        "open",
+        "progressExit",
+        "refresh",
+        "restore",
+        "send",
+        "startExit",
+        "sync"
+      ],
+      "transactions": [
+        {
+          "action": "board",
+          "txid": "ee0508cb3632b097626104bae10c3a73c5a326a009685122715d83de7d2f2fe2"
+        },
+        {
+          "action": "offboard",
+          "txid": "353c23eea164fb0482412f9c4220132d125539c2c0739b3ad7e8d8ec02910245"
+        },
+        {
+          "action": "board",
+          "txid": "bc2c17f4db2dc1ebdc95cdecdf04289705dbce2e77c7788913b256ab47aeaab6"
+        },
+        {
+          "action": "drainExit",
+          "txid": "7a106bf2a34cf85b59da78e2abb0b3a9cbbdc19b1ae869d24e7769252f210cd6"
+        }
+      ],
+      "refresh_states": [
+        "Unconfirmed { funding_txid: 56142f97c90857c3c10c044b357949d403d18b200ec16f486fd02b5376524a95 }"
+      ],
+      "restores": [
+        {
+          "databaseName": "integration-1792411775-restored-B9292241-CE06-40F4-B39A-F1B799302C6D",
+          "fingerprint": "90d5e6c8",
+          "recoveryComplete": true,
+          "historyCount": 0,
+          "spendable": 1990572,
+          "onchain": 7999845
+        },
+        {
+          "databaseName": "integration-1792411775-restored-E6127DB0-79EA-41DB-AFC3-93F98E8537BD",
+          "fingerprint": "90d5e6c8",
+          "recoveryComplete": true,
+          "historyCount": 1,
+          "spendable": 0,
+          "onchain": 7499795
+        }
+      ],
+      "offboard_and_exit_claim_confirmations_asserted": true,
+      "notification_counts": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "exit_fee_estimates": [
+        {
+          "totalFee": 462,
+          "broadcastFee": 333,
+          "claimFee": 129
+        }
+      ],
+      "expected_errors": [
+        "invalid ark address: bech32m decoding error: parsing failed",
+        "error creating new wallet: Failed to connect to provided server: Failed to connect to Ark server: transport error: tcp connect error: tcp connect error: Connection refused (os error 61)"
+      ]
+    },
+    "android": {
+      "completed_commands": 32,
+      "actions": [
+        "board",
+        "cancel",
+        "claim",
+        "drainExit",
+        "estimate",
+        "invoice",
+        "offboard",
+        "open",
+        "progressExit",
+        "refresh",
+        "restore",
+        "send",
+        "startExit",
+        "sync"
+      ],
+      "transactions": [
+        {
+          "action": "board",
+          "txid": "6ff36caf4d6b95234727be9dd400fc1a1a1952d49dc05bb12c66b0b55c6513e9"
+        },
+        {
+          "action": "offboard",
+          "txid": "e2361d319f21c43e42227e3182288b46bb75326f408f6d240fc35cd424649ca8"
+        },
+        {
+          "action": "board",
+          "txid": "0bdcc2735625d79fbc0df9f59bbc0a6c9eb8e90fefb139bf04597ba44f4f3df7"
+        },
+        {
+          "action": "drainExit",
+          "txid": "060eec3e0f0273583a8efd3f63d6243a3367da204fe2d19c4b69d0d73e6c0d01"
+        }
+      ],
+      "refresh_states": [
+        "Unconfirmed { funding_txid: 8348f47eb8107dfbc4715f6250685db717688f1f63715ae4956752e623fcd156 }"
+      ],
+      "restores": [
+        {
+          "databaseName": "integration-1792411775-restored-d10bc603-2a51-4494-a8f1-fcc2d1218b0b",
+          "fingerprint": "89699b5a",
+          "recoveryComplete": true,
+          "historyCount": 0,
+          "spendable": 1990572,
+          "onchain": 7999845
+        },
+        {
+          "databaseName": "integration-1792411775-restored-896028a7-557e-4292-bba2-8598ff250e46",
+          "fingerprint": "89699b5a",
+          "recoveryComplete": true,
+          "historyCount": 1,
+          "spendable": 0,
+          "onchain": 7499795
+        }
+      ],
+      "offboard_and_exit_claim_confirmations_asserted": true,
+      "notification_counts": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "exit_fee_estimates": [
+        {
+          "totalFee": 462,
+          "broadcastFee": 333,
+          "claimFee": 129
+        }
+      ],
+      "expected_errors": [
+        "invalid ark address: bech32m decoding error: parsing failed",
+        "error creating new wallet: Failed to connect to provided server: Failed to connect to Ark server: transport error: tcp connect error: tcp connect error: Connection refused (os error 111)"
+      ]
+    }
+  }
+}
