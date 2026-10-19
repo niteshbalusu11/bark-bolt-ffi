@@ -175,3 +175,15 @@ extension ContractTests {
         XCTAssertFalse(holder.isActive())
     }
 }
+
+extension ContractTests {
+    func testWalletSyncOnSwiftWorkerStack() async throws {
+        guard ProcessInfo.processInfo.environment["BARK_REGTEST"] == "1" else { throw XCTSkip("requires live RegTest") }
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let env = ProcessInfo.processInfo.environment
+        let config = Config(serverAddress: "http://127.0.0.1:\(env["ARK_PORT"] ?? "3635")", bitcoindAddress: "http://127.0.0.1:\(env["BITCOIN_PORT"] ?? "19443")", bitcoindUser: "second", bitcoindPass: "ark")
+        let wallet = try await Wallet.open(network: .regtest, mnemonicOrSeed: generateMnemonic(), config: config, args: WalletOpenArgs(runDaemon: false, datadir: directory.path, createWithoutServer: true, skipRecovery: true))
+        try await wallet.sync()
+    }
+}

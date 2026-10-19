@@ -78,3 +78,12 @@ Remaining P0 limits: no actual end-user `.noahbackup` archive was supplied;
 validation covers a matching schema42 plaintext fixture and real newly exported
 wallet snapshots. No physical devices were used for these contract tests.
 P1 and release acceptance are pending.
+
+## Swift worker-stack fix
+
+Plan/paths: src/ffi/wallet.rs and Swift contracts. Retaining the DB registration
+in an outer future increased stack copies of Bark's large sync future. Box the
+inner future before the lifetime wrapper; keep ownership/cancellation unchanged.
+The minimal live open+sync contract reproduced SIGBUS, then passed after boxing
+on the combined native parity branch. Keep that regression in this PR as well.
+Full combined Swift and release acceptance remains recorded by the parity task.

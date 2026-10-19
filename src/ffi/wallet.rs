@@ -72,7 +72,8 @@ impl Wallet {
         Fut: Future<Output = T> + Send + 'static,
         T: Send + 'static,
     {
-        let future = action(self.core.clone());
+        // Bark sync futures are too large to nest by value on Swift worker stacks.
+        let future = Box::pin(action(self.core.clone()));
         let db_path = self.db_path.clone();
         run_async(async move {
             let _db_path = db_path;
