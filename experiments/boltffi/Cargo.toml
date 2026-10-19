@@ -1,0 +1,13 @@
+[package]
+name = "bark-boltffi-proof"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "bark_boltffi_proof"
+crate-type = ["lib", "staticlib", "cdylib"]
+
+[dependencies]
+boltffi = { version = "=0.31.1", default-features = false }
+tokio = { version = "1", features = ["rt-multi-thread", "time", "sync", "macros"] }

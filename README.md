@@ -1,77 +1,28 @@
-![bark: Ark on bitcoin](assets/bark-ffi-header-white.jpg)
+# bark-bolt-ffi
 
-<div align="center">
-<h1>bark-ffi: FFI bindings for Bark</h1>
-<p>Built with uniffi-rs to generate native bindings for multiple languages from a single Rust codebase.</p>
-</div>
+Swift and Kotlin bindings for the Bark wallet, migrating from UniFFI to BoltFFI.
 
-<p align="center">
-  <br />
-  <a href="https://docs.second.tech">Docs</a> ·
-  <a href="https://community.second.tech">Community</a> ·
-  <a href="https://second.tech">Website</a> ·
-  <a href="https://blog.second.tech">Blog</a> ·
-  <a href="https://www.youtube.com/@2ndbtc">YouTube</a>
-</p>
+The project will contain the Rust FFI core, Swift and Kotlin Android/JVM SDKs,
+native SwiftUI and Compose example apps, an isolated RegTest environment, and
+GitHub Actions for SDK/app builds and tests.
 
-<br />
+Targets: iOS 16+, macOS 13+, Android API 24+, and JVM 17. Breaking SDK API changes
+are allowed during the migration.
 
-This repo is a language-agnostic Rust FFI implementation with support for different versions of uniffi.
-For the actual bindings, go to [bark-ffi-bindings](https://gitlab.com/ark-bitcoin/bark-ffi-bindings).
+## Current status
 
-## Structure
+The native compatibility proof passes in Swift and Kotlin. The production core
+still contains the original UniFFI/WASM implementation; the migration and native
+apps are not complete. Follow the [production migration checklist](docs/production-migration-todo.md)
+for engineering plans, implementation order and acceptance criteria.
 
-This repo can maintain different branches with different versions of uniffi, for example:
+- [Migration assessment](docs/boltffi-migration-assessment.md)
+- [Runnable native proof](experiments/boltffi/README.md)
 
-```
-v0.9.0+bark.0.1.4.uniffi-v0.31.1
-v0.9.0+bark.0.1.4.uniffi-v0.30.0
-```
+## Upstream
 
-Bindings from [bark-ffi-bindings](https://gitlab.com/ark-bitcoin/bark-ffi-bindings) can tap into these branches to generate their own bindings:
-
-```toml
-# react-native/rust/Cargo.toml
-
-[dependencies]
-bark-ffi = { git = "https://gitlab.com/ark-bitcoin/bark-ffi", tag = "v0.9.0+bark.0.1.4.uniffi.0.31.1" }
-uniffi = { version = "=0.31.1", features = ["cli"] }
-```
-
-## Build flavors
-
-Two mutually-exclusive feature flags select the binding layer:
-
-| Feature             | Target                       | Persister              |
-| ------------------- | ---------------------------- | ---------------------- |
-| `uniffi`            | native (Dart/Swift/Kotlin/…) | SQLite                 |
-| `wasm-web`          | `wasm32-unknown-unknown`     | IndexedDB              |
-
-`uniffi` is the default.
-
-### Native (uniffi)
-
-```sh
-cargo build --no-default-features --features uniffi
-```
-
-### WASM
-
-`secp256k1-sys` compiles a `wasm32` C object. Apple's stock clang has no
-wasm32 backend; on macOS install LLVM clang first:
-
-```sh
-brew install llvm
-rustup target add wasm32-unknown-unknown
-```
-
-On Linux the distro `clang` usually has wasm32 support built-in
-(`apt install clang llvm`).
-
-Set the env vars before building:
-
-```sh
-export CC_wasm32_unknown_unknown=/opt/homebrew/opt/llvm/bin/clang  # macOS
-export AR_wasm32_unknown_unknown=/opt/homebrew/opt/llvm/bin/llvm-ar
-cargo check --no-default-features --features wasm-web --target wasm32-unknown-unknown
-```
+Derived from [Bark FFI](https://gitlab.com/ark-bitcoin/bark-ffi); upstream history
+and the [MIT license](LICENSE) are preserved. Packaging references come from
+[bark-ffi-bindings](https://gitlab.com/ark-bitcoin/bark-ffi-bindings).
+RegTest infrastructure will draw on
+[Nitro Ark](https://github.com/smolcars/react-native-nitro-ark).

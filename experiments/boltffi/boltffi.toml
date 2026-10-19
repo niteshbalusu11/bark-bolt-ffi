@@ -1,0 +1,35 @@
+[package]
+name = "bark_boltffi_proof"
+
+[cargo]
+global_args = ["--locked"]
+
+[targets.apple]
+enabled = true
+include_macos = true
+deployment_target = "14.0"
+ios_architectures = ["arm64"]
+simulator_architectures = ["arm64"]
+macos_architectures = ["arm64"]
+
+[targets.apple.swift]
+output = "dist/swift"
+
+[targets.android]
+enabled = true
+architectures = ["arm64"]
+min_sdk = 24
+
+[targets.android.kotlin]
+package = "tech.second.bark.proof"
+output = "dist/kotlin"
+factory_style = "companion_methods"
+
+[targets.android.kotlin.desktop_pack]
+enabled = true
+
+[targets.java.jvm]
+host_targets = ["current"]
+
+[targets.wasm]
+enabled = false
