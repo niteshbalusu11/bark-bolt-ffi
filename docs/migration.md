@@ -7,10 +7,10 @@ supported consumer languages. The Rust core remains in this repository.
 ## Swift
 
 Add `https://github.com/smolcars/bark-bolt-ffi` in Xcode's package dependencies,
-select version0.1.0, and link the `BarkBoltFFI` product. In a package manifest:
+select version 0.2.0, and link the `BarkBoltFFI` product. In a package manifest:
 
 ```swift
-.package(url: "https://github.com/smolcars/bark-bolt-ffi.git", from: "0.1.0")
+.package(url: "https://github.com/smolcars/bark-bolt-ffi.git", exact: "0.2.0")
 // Target dependency:
 .product(name: "BarkBoltFFI", package: "bark-bolt-ffi")
 ```
@@ -31,7 +31,7 @@ BOLTFFI="$PWD/target/tools/boltffi" scripts/build-sdk.sh android --release
 ./gradlew :sdk:android:publishToMavenLocal :sdk:jvm:publishToMavenLocal
 ```
 
-Use `mavenLocal()` with `io.github.niteshbalusu11:bark-bolt-ffi-android:0.1.0`,
+Use `mavenLocal()` with `io.github.niteshbalusu11:bark-bolt-ffi-android:0.2.0`,
 or the host-specific `bark-bolt-ffi-jvm-darwin-arm64` / `bark-bolt-ffi-jvm-linux-x86_64`
 artifact. Import `io.github.niteshbalusu11.bark.*`. The Maven POM supplies the
 coroutines dependency. The Android AAR embeds all three JNI ABIs and consumer
@@ -39,7 +39,7 @@ R8 rules. JVM JARs contain the native library for the build host; choose a JAR
 matching the deployment OS/architecture. Linux CI builds on Ubuntu24.04; rebuild
 locally when targeting an older libc. Maven Central publication is separate.
 Versioned AAR/JAR/POM files are attached to the
-[v0.1.0 release](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.1.0);
+[v0.2.0 release](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.2.0);
 verify them against its SHA256SUMS. GitHub Actions also uploads artifacts and
 example APKs. To use a downloaded AAR or JVM JAR directly, include it as a local
 file dependency and declare `org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2`
@@ -66,6 +66,7 @@ explicitly; local file dependencies do not resolve the attached Maven POM.
 
 All128 original callable exports, 40 records, 14 enums and both callback traits
 are tracked in `api-baseline.json` and checked against strict host generation.
+Noah parity brings the checked inventory to 149 exports, 50 records and 15 enums.
 Generated files are never patched; the Swift concurrency adapter is handwritten
 in `sdk/swift-support`. There is no UniFFI runtime, JNA or browser product.
 
@@ -94,7 +95,8 @@ Live acceptance covers boarding, two-way Ark transfers, BOLT11 send/receive,
 notifications, refresh, offboarding, unilateral exits/claims, restart and funded
 seed recovery. LNURL/LNAddress and BOLT12 exports remain available and retain
 upstream validation, but no external provider acceptance fixture was run.
-See `validation/2026-10-19-master.md` for current-master results and CI links;
+See `validation/2026-10-19-noah.md` for Noah parity results and CI links,
+and `validation/2026-10-19-master.md` for the previous master release;
 `validation/2026-10-18.md` retains prior release 0.7.1 evidence.
 
 ## Developing and preparing a release
@@ -212,7 +214,8 @@ Noah P1 API changes:
   16KiB in UTF-8 and delegates merging to Bark.
 - `OnchainWallet.isMine(address)` checks ownership. `drain(address, feeRateSatPerVb?)`
   uses BDK's actual drain and returns its txid; omit the sat/vB rate for the
-  chain's regular rate. BDK validates the configured address network. Custom
+  chain's regular rate. Drain validates the configured address network;
+  `isMine` accepts any valid address network and queries its script, as in Nitro. Custom
   callback backends support ownership via scriptPubkey but have no configured
   network and do not implement `drain`.
 - `decodeVtxo(hexOrBase64)` is pure. All VTXOs expose `serverPubkey`, `exitDelta`

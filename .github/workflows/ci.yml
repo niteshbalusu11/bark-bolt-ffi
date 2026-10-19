@@ -70,7 +70,7 @@ jobs:
       - run: scripts/install-boltffi.sh
       - run: BOLTFFI="$PWD/target/tools/boltffi" just build-android --release
       - run: target/tools/boltffi generate swift --deny-skipped && python3 scripts/check-api.py
-      - run: ./gradlew :sdk:android:assembleRelease :sdk:jvm:test :sdk:jvm:jar :sdk:jvm:testPackaged :examples:android:assembleRelease :examples:android:assembleDebug :examples:android:assembleDebugAndroidTest
+      - run: ./gradlew :sdk:android:assembleRelease :sdk:android:generatePomFileForReleasePublication :sdk:jvm:test :sdk:jvm:jar :sdk:jvm:generatePomFileForJvmPublication :sdk:jvm:testPackaged :examples:android:assembleRelease :examples:android:assembleDebug :examples:android:assembleDebugAndroidTest
       - run: python3 scripts/check-kotlin-artifacts.py
       - name: Enable emulator acceleration
         run: |
@@ -100,6 +100,8 @@ jobs:
           path: |
             sdk/android/build/outputs/aar/*.aar
             sdk/jvm/build/libs/*.jar
+            sdk/android/build/publications/release/*.xml
+            sdk/jvm/build/publications/jvm/*.xml
             sdk/jvm/build/reports/tests
             examples/android/build/outputs/apk
             examples/android/build/reports

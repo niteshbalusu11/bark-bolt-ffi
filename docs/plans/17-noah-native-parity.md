@@ -188,3 +188,12 @@ Actual ownership correction outcome: the new Rust regression first failed with
 all 74 live Rust tests pass, including ownership of the same script encoded on
 Bitcoin and false for an unrelated valid Bitcoin address. Swift/Kotlin contracts
 include the foreign-network query; final rebuilt SDK execution remains a gate.
+
+Final local release outcomes: full optimized Apple five-ABI and Android
+three-ABI plus Darwin JNI builds pass. Swift artifact staging/check-source
+passes and compares slices with current Cargo output/deployment targets.
+Final live Swift contracts pass 9/9; final live Kotlin contracts pass 8/8
+normally and 8/8 from the actual JAR, including the ownership correction.
+AAR/JAR ABI/class checks and the 149-export API inventory pass. Both Maven
+POMs are generated, iOS rebuild passes, and Android debug/release APKs build
+successfully. Hosted CI/merge/publication/download acceptance remain pending.

@@ -35,3 +35,21 @@ are recorded there and in the release validation report.
 
 After repair: BARK_REGTEST=1 cargo test --locked passes all 74 tests (including
 the three added regressions), and warnings-denied Clippy passes all targets.
+
+## Follow-up review
+
+Fable 5.1 High round 2, task noah-parity-fable51-high-review-r2-20261019,
+inspected 249386e..901eae3 and connected code. Result: no actionable findings;
+all five dispositions accepted, no identified regression from the repairs.
+The review remained read-only and did not execute builds/tests. It noted that
+nonempty but fully checkpointed WAL files are conservatively rejected; export
+with createSnapshot to obtain a self-contained file. Timing-based lock tests
+can miss contention on an unusually delayed worker, but the actual before-fix
+run did enter the failing path.
+
+Round 3, task noah-parity-fable51-high-review-r3-20261019, inspected the later
+ownership-query correction at 9dbc85f against Nitro's unchecked-address script
+query. Fable accepted the code and regressions and asked that the already
+prepared migration-guide correction be committed with packaging. That edit
+ships in the P1 release commit. No further code finding remained; final rebuilt
+Swift/Kotlin execution is a separate acceptance gate.
