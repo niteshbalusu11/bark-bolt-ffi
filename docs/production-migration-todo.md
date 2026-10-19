@@ -1,7 +1,8 @@
 # Production migration checklist
 
-Status: project bootstrap complete; production migration planned. The compatibility proof passes; production
-bindings, native example apps and production CI have not been migrated.
+Status: the full native API is ported to BoltFFI and both apps build and open
+real RegTest wallets. Packaging, end-to-end transactions and actual Actions runs
+are in progress; unchecked acceptance gates below are still outstanding.
 
 ## Agreed decisions
 
@@ -83,7 +84,7 @@ and local/remote commit IDs agree.
 
 ### 01 — Establish the baseline and complete API inventory
 
-- [ ] Reproduce baseline native checks and map every public API.
+- [x] Reproduce baseline native checks and map every public API.
 
 **Engineering plan:** inspect src/, Cargo.toml and companion SDK contracts.
 Confirm the initial inventory: 128 callable exports, 40 records, 14 data enums,
@@ -325,3 +326,13 @@ main as the default branch.
 
 **Remaining limits:** all production implementation tasks remain unchecked.
 This bootstrap does not claim a working production migration or passing app CI.
+
+## Completion record — task 01
+
+Engineering plan: docs/plans/01-baseline-and-api.md.
+Implemented: docs/api-baseline.json records all 128 exports, 40 records, 14 enums
+and two callback traits with original names/signatures.
+Validation: all 52 original native tests passed; native Clippy with warnings
+denied passed under Rust 1.90 after adding installed Homebrew tools to PATH.
+The first attempt failed only because protoc was outside PATH.
+Remaining limits: migrated signatures and host parity are validated in task 03/05.

@@ -1,43 +1,15 @@
 [package]
-name = "bark-ffi"
-version = "0.29.0+bark-0.7.1.uniffi-0.31.1"
+name = "bark-bolt-ffi"
+version = "0.1.0"
 edition = "2021"
 license = "MIT"
 authors = ["Team Second <hello@second.tech>"]
-repository = "https://gitlab.com/ark-bitcoin/bark-ffi"
-description = "Language-agnostic Rust FFI implementation for Bark SDK bindings using UniFFI and WASM."
+repository = "https://github.com/niteshbalusu11/bark-bolt-ffi"
+description = "Swift and Kotlin bindings for the Bark wallet, using BoltFFI."
 
 [lib]
-name = "bark_ffi"
+name = "bark_bolt_ffi"
 crate-type = ["lib", "staticlib", "cdylib"]
-
-[features]
-default = ["uniffi"]
-
-uniffi = [
-    "dep:uniffi",
-    "dep:rusqlite",
-    "dep:once_cell",
-    "bark/sqlite",
-    "bark/tls-webpki-roots",
-    "bark/native",
-    "bark/onchain-bdk",
-    "tokio/rt-multi-thread",
-    "tokio/signal",
-    "tokio/fs",
-]
-
-wasm-web = [
-    "dep:wasm-bindgen",
-    "dep:wasm-bindgen-futures",
-    "dep:serde-wasm-bindgen",
-    "dep:tsify",
-    "ark/wasm-web",
-    "bark/wasm-web",
-    "bark/indexed-db",
-    "bark/onchain-bdk",
-    "bark-bitcoin-ext/wasm-web",
-]
 
 [dependencies.ark]
 package = "ark-lib"
@@ -47,6 +19,7 @@ default-features = false
 
 [dependencies.bark]
 package = "bark-wallet"
+features = ["sqlite", "tls-webpki-roots", "native", "onchain-bdk", "bitcoind-rpc"]
 git = "https://gitlab.com/ark-bitcoin/bark"
 rev = "bark-0.7.1"
 default-features = false
@@ -59,7 +32,7 @@ default-features = false
 
 [dependencies]
 
-# Common (wasm-compatible) external deps
+# Wallet dependencies
 bitcoin = { version = "0.32.7", features = ["serde", "rand", "rand-std"] }
 bip39 = { version = "2.0.0", features = ["rand"] }
 lightning-invoice = { version = "0.34.0", features = ["std", "serde"] }
@@ -72,16 +45,10 @@ base64 = "0.22"
 hex = "0.4"
 chrono = "0.4"
 log = "0.4"
-tokio = { version = "1.35", default-features = false, features = ["sync", "macros"] }
+tokio = { version = "1.35", default-features = false, features = ["sync", "macros", "rt-multi-thread", "signal", "fs"] }
 futures-util = "0.3"
 
-# uniffi-only optional deps
-uniffi = { version = "=0.31.1", features = ["cli", "tokio"], optional = true }
-rusqlite = { version = "0.31.0", features = ["bundled", "chrono"], optional = true }
-once_cell = { version = "1.20", optional = true }
-
-# wasm-only optional deps
-wasm-bindgen = { version = "0.2.100", optional = true }
-wasm-bindgen-futures = { version = "0.4.56", optional = true }
-serde-wasm-bindgen = { version = "0.6.5", optional = true }
-tsify = { version = "0.5.6", default-features = false, features = ["js"], optional = true }
+# Native FFI and persistence.
+boltffi = "=0.31.1"
+rusqlite = { version = "0.31.0", features = ["bundled", "chrono"] }
+once_cell = "1.20"

@@ -1,10 +1,10 @@
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
 use futures_util::StreamExt;
 use tokio::sync::oneshot;
 
-use crate::error::Error;
+use crate::error::BarkError;
 use crate::types::WalletNotification;
 
 /// Pull-based notification handle exposed over FFI.
@@ -19,7 +19,6 @@ use crate::types::WalletNotification;
 /// This holder is intended for a single consumer loop. Concurrent calls to
 /// `next_notification()` on the same holder are not supported and will return
 /// `None` immediately.
-#[cfg_attr(feature = "uniffi", derive(uniffi::Object))]
 pub struct NotificationHolder {
     /// The bark notification stream. Held in a tokio Mutex because we need to
     /// hold it across the `.await` point inside `next_notification()`.
@@ -38,25 +37,29 @@ pub struct NotificationHolder {
 }
 
 /// RAII guard that clears `wait_in_progress` on drop, including on panic.
-struct WaitGuard<'a>(&'a AtomicBool);
+struct WaitGuard<'a> {
+    wait_in_progress: &'a AtomicBool,
+    cancel: &'a Mutex<Option<oneshot::Sender<()>>>,
+}
 
 impl Drop for WaitGuard<'_> {
     fn drop(&mut self) {
-        self.0.store(false, Ordering::Release);
+        *self.cancel.lock().unwrap() = None;
+        self.wait_in_progress.store(false, Ordering::Release);
     }
 }
 
 impl NotificationHolder {
-    pub(crate) fn new(wallet: &bark::Wallet) -> Arc<Self> {
-        Arc::new(Self {
+    pub(crate) fn new(wallet: &bark::Wallet) -> Self {
+        Self {
             stream: tokio::sync::Mutex::new(wallet.subscribe_notifications()),
             cancel: Mutex::new(None),
             wait_in_progress: AtomicBool::new(false),
-        })
+        }
     }
 }
 
-#[cfg_attr(feature = "uniffi", uniffi::export(async_runtime = "tokio"))]
+#[boltffi::export]
 impl NotificationHolder {
     /// Wait for the next wallet notification.
     ///
@@ -70,9 +73,7 @@ impl NotificationHolder {
     /// After a cancellation this method can be called again normally — the
     /// underlying `NotificationStream` is preserved in `self.stream` and a
     /// fresh per-wait cancel channel is created on every entry.
-    pub async fn next_notification(
-        self: Arc<Self>,
-    ) -> Result<Option<WalletNotification>, Error> {
+    pub async fn next_notification(&self) -> Result<Option<WalletNotification>, BarkError> {
         // Enforce single-consumer: reject concurrent calls with an explicit error.
         if self
             .wait_in_progress
@@ -83,7 +84,10 @@ impl NotificationHolder {
         }
 
         // RAII guard resets wait_in_progress on exit, even on panic.
-        let _guard = WaitGuard(&self.wait_in_progress);
+        let _guard = WaitGuard {
+            wait_in_progress: &self.wait_in_progress,
+            cancel: &self.cancel,
+        };
 
         // Create a fresh one-shot cancel channel for this specific wait cycle.
         // Once consumed — either by cancellation or by next_notification
@@ -128,5 +132,24 @@ impl NotificationHolder {
         if let Some(tx) = self.cancel.lock().unwrap().take() {
             let _ = tx.send(());
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dropped_wait_clears_cancel_before_releasing_wait_flag() {
+        let active = AtomicBool::new(true);
+        let (tx, mut rx) = oneshot::channel();
+        let slot = Mutex::new(Some(tx));
+        drop(WaitGuard {
+            wait_in_progress: &active,
+            cancel: &slot,
+        });
+        assert!(!active.load(Ordering::Acquire));
+        assert!(slot.lock().unwrap().is_none());
+        assert_eq!(rx.try_recv(), Err(oneshot::error::TryRecvError::Closed));
     }
 }

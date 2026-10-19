@@ -1,0 +1,51 @@
+name: BarkExample
+options:
+  deploymentTarget:
+    iOS: "16.0"
+packages:
+  BarkBoltFFI:
+    path: ../../dist/apple
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    TARGETED_DEVICE_FAMILY: "1"
+    CODE_SIGNING_ALLOWED: YES
+    CODE_SIGN_IDENTITY: "-"
+targets:
+  BarkExample:
+    type: application
+    platform: iOS
+    sources: [BarkExample]
+    dependencies:
+      - package: BarkBoltFFI
+        product: BarkBoltFFI
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.niteshbalusu11.bark.example
+        CODE_SIGN_ENTITLEMENTS: BarkExample/BarkExample.entitlements
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Bark Wallet
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: Connect to your local Bitcoin and Ark RegTest servers.
+      configs:
+        Debug:
+          INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsLocalNetworking: YES
+          INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsArbitraryLoads: YES
+  BarkExampleUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [BarkExampleUITests]
+    dependencies: [{target: BarkExample}]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.niteshbalusu11.bark.example.uitests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  BarkExample:
+    build:
+      targets:
+        BarkExample: all
+        BarkExampleUITests: [test]
+    test:
+      targets: [BarkExampleUITests]

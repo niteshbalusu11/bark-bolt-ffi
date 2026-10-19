@@ -4,7 +4,7 @@ pub mod wallet;
 
 use anyhow::Context;
 
-use crate::error::Error;
+use crate::error::BarkError;
 
 /// Parse a Bitcoin address and require it to belong to `network`.
 ///
@@ -14,7 +14,7 @@ use crate::error::Error;
 pub(crate) fn parse_address(
     address: &str,
     network: bitcoin::Network,
-) -> Result<bitcoin::Address, Error> {
+) -> Result<bitcoin::Address, BarkError> {
     let parsed = address
         .trim()
         .parse::<bitcoin::Address<bitcoin::address::NetworkUnchecked>>()
@@ -23,7 +23,7 @@ pub(crate) fn parse_address(
     parsed
         .require_network(network)
         .with_context(|| format!("bitcoin address is not valid on {}", network))
-        .map_err(Error::from)
+        .map_err(BarkError::from)
 }
 
 #[cfg(test)]
@@ -74,6 +74,10 @@ mod tests {
     fn refuses_a_malformed_address() {
         let err = parse_address("not-an-address", Network::Bitcoin)
             .expect_err("a malformed address should be refused");
-        assert!(err.message().contains("invalid bitcoin address"), "{}", err.message());
+        assert!(
+            err.message().contains("invalid bitcoin address"),
+            "{}",
+            err.message()
+        );
     }
 }

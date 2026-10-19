@@ -4,18 +4,18 @@ use anyhow::Context;
 use bark::ark;
 use bip39::Mnemonic;
 
-use crate::error::Error;
+use crate::error::BarkError;
 
 /// Generate a new 12-word BIP39 mnemonic
-#[cfg_attr(feature = "uniffi", uniffi::export)]
-pub fn generate_mnemonic() -> Result<String, Error> {
+#[boltffi::export]
+pub fn generate_mnemonic() -> Result<String, BarkError> {
     let mnemonic = Mnemonic::generate(12).context("Failed to generate mnemonic")?;
     Ok(mnemonic.to_string())
 }
 
 /// Validate a BIP39 mnemonic phrase
-#[cfg_attr(feature = "uniffi", uniffi::export)]
-pub fn validate_mnemonic(mnemonic: String) -> Result<bool, Error> {
+#[boltffi::export]
+pub fn validate_mnemonic(mnemonic: String) -> Result<bool, BarkError> {
     match Mnemonic::parse(mnemonic.trim()) {
         Ok(_) => Ok(true),
         Err(_) => Ok(false),
@@ -27,8 +27,8 @@ pub fn validate_mnemonic(mnemonic: String) -> Result<bool, Error> {
 /// This only validates the format of the address, not whether it belongs
 /// to a specific Ark server. For full validation against a connected server,
 /// use Wallet::validate_arkoor_address() instead.
-#[cfg_attr(feature = "uniffi", uniffi::export)]
-pub fn validate_ark_address(address: String) -> Result<bool, Error> {
+#[boltffi::export]
+pub fn validate_ark_address(address: String) -> Result<bool, BarkError> {
     match address.parse::<ark::Address>() {
         Ok(_) => Ok(true),
         Err(_) => Ok(false),
@@ -47,8 +47,8 @@ pub fn validate_ark_address(address: String) -> Result<bool, Error> {
 /// # Returns
 ///
 /// Hex-encoded signed transaction ready for broadcasting
-#[cfg_attr(feature = "uniffi", uniffi::export)]
-pub fn extract_tx_from_psbt(psbt_base64: String) -> Result<String, Error> {
+#[boltffi::export]
+pub fn extract_tx_from_psbt(psbt_base64: String) -> Result<String, BarkError> {
     use bitcoin::consensus::encode::serialize_hex;
     use bitcoin::psbt::Psbt;
     use std::str::FromStr;
@@ -63,7 +63,7 @@ pub fn extract_tx_from_psbt(psbt_base64: String) -> Result<String, Error> {
 /// Default for `Config.vtxo_key_gap_limit`: the run of consecutive unused
 /// seed-derived VTXO key indices a scan crosses before concluding a VTXO
 /// isn't ours.
-#[cfg_attr(feature = "uniffi", uniffi::export)]
+#[boltffi::export]
 pub fn default_vtxo_key_gap_limit() -> u32 {
     bark::DEFAULT_VTXO_KEY_GAP_LIMIT
 }
@@ -71,7 +71,7 @@ pub fn default_vtxo_key_gap_limit() -> u32 {
 /// Largest value `Config.vtxo_key_gap_limit` (or an import/recovery
 /// `gap_limit` override) accepts. A scan that matches nothing runs the limit
 /// to its end, so an unbounded limit is unbounded work.
-#[cfg_attr(feature = "uniffi", uniffi::export)]
+#[boltffi::export]
 pub fn max_vtxo_key_gap_limit() -> u32 {
     bark::MAX_VTXO_KEY_GAP_LIMIT
 }

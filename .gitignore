@@ -28,3 +28,16 @@ target
 
 # CI cargo home (see CARGO_HOME in .gitlab-ci.yml)
 .cargo-home
+
+# Generated SDKs and native application builds
+/dist/
+.build/
+.gradle/
+**/build/
+**/local.properties
+*.xcuserstate
+xcuserdata/
+.impeccable/review/
+.kotlin/
+artifacts/
+**/__pycache__/

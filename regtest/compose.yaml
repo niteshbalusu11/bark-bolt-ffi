@@ -1,0 +1,60 @@
+name: bark-bolt-ffi
+services:
+  bitcoind:
+    image: bitcoin/bitcoin@sha256:da25cedc66b1daefff9f412ee196c901a899c3fa68a33b20849c3e08b5c40d63
+    command: [bitcoind, -regtest, -server, -txindex, -blockfilterindex, -rpcbind=0.0.0.0, -rpcallowip=0.0.0.0/0, -rpcuser=second, -rpcpassword=ark, -fallbackfee=0.00001]
+    volumes: [bitcoin:/home/bitcoin/.bitcoin]
+    ports: ["127.0.0.1:${BITCOIN_PORT:-19443}:18443"]
+    healthcheck:
+      test: [CMD, bitcoin-cli, -regtest, -rpcuser=second, -rpcpassword=ark, getblockchaininfo]
+      interval: 2s
+      timeout: 3s
+      retries: 60
+  postgres:
+    image: postgres@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+    environment: { POSTGRES_DB: bark-server-db, POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres }
+    volumes: [postgres:/var/lib/postgresql/data, "./init.sql:/docker-entrypoint-initdb.d/01-cln.sql:ro"]
+    healthcheck:
+      test: [CMD, pg_isready, -U, postgres]
+      interval: 2s
+      timeout: 3s
+      retries: 60
+  cln:
+    image: niteshbalusu/bark-cln@sha256:b6e9daef87ff59ef8abb31e1d7e233172f114dc5387054268ef81db9d1618be8
+    hostname: cln
+    volumes: [bitcoin:/root/.bitcoin, cln:/root/.lightning]
+    depends_on:
+      bitcoind: {condition: service_healthy}
+      postgres: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, lightning-cli, --regtest, getinfo]
+      interval: 2s
+      timeout: 3s
+      retries: 60
+  captaind:
+    image: secondark/captaind@sha256:9e1dff4d944ec3049bae08a45c6bb9d37ce66334a131a1faec42dfeac4d5f358
+    platform: linux/amd64
+    command: [sh, -c, "if [ ! -f /data/captaind/mnemonic ]; then captaind -C /config/captaind.toml create; fi; exec captaind -C /config/captaind.toml start"]
+    volumes: [server:/data/captaind, cln:/data/cln, "./captaind.toml:/config/captaind.toml:ro"]
+    ports: ["127.0.0.1:${ARK_PORT:-3635}:3535"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      cln: {condition: service_healthy}
+  bark:
+    image: secondark/bark@sha256:ebbcab48d5c45e83e3b9f4328213bf89151193b9dffca3785e3c35ff6b3fbc02
+    entrypoint: [bark]
+    profiles: [cli]
+    volumes: [wallets:/wallets]
+  lnd:
+    image: lightninglabs/lnd@sha256:4b33e89ce7d2db02bbf3c10649e567c36d175075921c97afc3bdfa36f2e7518a
+    command: [--bitcoin.active, --bitcoin.regtest, --bitcoin.node=bitcoind, --bitcoind.rpcpolling, --bitcoind.rpchost=bitcoind:18443, --bitcoind.rpcuser=second, --bitcoind.rpcpass=ark, --noseedbackup, --listen=0.0.0.0:9735]
+    volumes: [lnd:/root/.lnd]
+    depends_on:
+      bitcoind: {condition: service_healthy}
+volumes:
+  bitcoin:
+  postgres:
+  cln:
+  server:
+  wallets:
+  lnd:

@@ -1,0 +1,1272 @@
+{
+  "upstream_commit": "d3c0f38f29cca1e79f6c81492725acece1f5b8ef",
+  "exports": [
+    {
+      "owner": null,
+      "name": "init_wallet",
+      "async": true,
+      "signature": "pub async fn init_wallet( network: Network, mnemonic_or_seed: String, config: Config, datadir: String, allow_unreachable_server: bool, ) -> Result<(), Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 86
+    },
+    {
+      "owner": "Wallet",
+      "name": "open",
+      "async": true,
+      "signature": "pub async fn open( network: Network, mnemonic_or_seed: String, config: Config, args: WalletOpenArgs, ) -> Result<Arc<Self>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 119
+    },
+    {
+      "owner": "Wallet",
+      "name": "sync",
+      "async": true,
+      "signature": "pub async fn sync(&self) -> Result<(), Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 145
+    },
+    {
+      "owner": "Wallet",
+      "name": "sync_force_exited_vtxos",
+      "async": true,
+      "signature": "pub async fn sync_force_exited_vtxos(&self) -> Result<(), Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 156
+    },
+    {
+      "owner": "Wallet",
+      "name": "maintenance",
+      "async": true,
+      "signature": "pub async fn maintenance(&self) -> Result<(), Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 160
+    },
+    {
+      "owner": "Wallet",
+      "name": "maintenance_delegated",
+      "async": true,
+      "signature": "pub async fn maintenance_delegated(&self) -> Result<(), Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 165
+    },
+    {
+      "owner": "Wallet",
+      "name": "new_address",
+      "async": true,
+      "signature": "pub async fn new_address(&self) -> Result<String, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 174
+    },
+    {
+      "owner": "Wallet",
+      "name": "new_address_with_index",
+      "async": true,
+      "signature": "pub async fn new_address_with_index(&self) -> Result<types::AddressWithIndex, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 179
+    },
+    {
+      "owner": "Wallet",
+      "name": "peek_address",
+      "async": true,
+      "signature": "pub async fn peek_address(&self, index: u32) -> Result<String, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 184
+    },
+    {
+      "owner": "Wallet",
+      "name": "balance",
+      "async": true,
+      "signature": "pub async fn balance(&self) -> Result<types::Balance, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 193
+    },
+    {
+      "owner": "Wallet",
+      "name": "vtxos",
+      "async": true,
+      "signature": "pub async fn vtxos(&self) -> Result<Vec<types::Vtxo>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 198
+    },
+    {
+      "owner": "Wallet",
+      "name": "get_vtxo_by_id",
+      "async": true,
+      "signature": "pub async fn get_vtxo_by_id(&self, vtxo_id: String) -> Result<types::Vtxo, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 203
+    },
+    {
+      "owner": "Wallet",
+      "name": "spendable_vtxos",
+      "async": true,
+      "signature": "pub async fn spendable_vtxos(&self) -> Result<Vec<types::Vtxo>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 208
+    },
+    {
+      "owner": "Wallet",
+      "name": "all_vtxos",
+      "async": true,
+      "signature": "pub async fn all_vtxos(&self) -> Result<Vec<types::Vtxo>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 213
+    },
+    {
+      "owner": "Wallet",
+      "name": "get_expiring_vtxos",
+      "async": true,
+      "signature": "pub async fn get_expiring_vtxos( &self, threshold_blocks: u32, ) -> Result<Vec<types::Vtxo>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 218
+    },
+    {
+      "owner": "Wallet",
+      "name": "get_vtxos_to_refresh",
+      "async": true,
+      "signature": "pub async fn get_vtxos_to_refresh(&self) -> Result<Vec<types::Vtxo>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 226
+    },
+    {
+      "owner": "Wallet",
+      "name": "lock_vtxos",
+      "async": true,
+      "signature": "pub async fn lock_vtxos( &self, vtxo_ids: Vec<String>, holder: Option<types::VtxoLockHolder>, ) -> Result<(), Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 242
+    },
+    {
+      "owner": "Wallet",
+      "name": "unlock_vtxos",
+      "async": true,
+      "signature": "pub async fn unlock_vtxos( &self, vtxo_ids: Vec<String>, expected_holder: Option<types::VtxoLockHolder>, ) -> Result<(), Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 257
+    },
+    {
+      "owner": "Wallet",
+      "name": "offboard_all",
+      "async": true,
+      "signature": "pub async fn offboard_all( &self, bitcoin_address: String, ) -> Result<types::OffboardResult, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 269
+    },
+    {
+      "owner": "Wallet",
+      "name": "offboard_vtxos",
+      "async": true,
+      "signature": "pub async fn offboard_vtxos( &self, vtxo_ids: Vec<String>, bitcoin_address: String, ) -> Result<types::OffboardResult, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 277
+    },
+    {
+      "owner": "Wallet",
+      "name": "pay_lightning_invoice",
+      "async": true,
+      "signature": "pub async fn pay_lightning_invoice( &self, invoice: String, amount_sats: Option<u64>, wait: bool, ) -> Result<types::LightningSendStatus, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 292
+    },
+    {
+      "owner": "Wallet",
+      "name": "pay_lightning_address",
+      "async": true,
+      "signature": "pub async fn pay_lightning_address( &self, lightning_address: String, amount_sats: u64, comment: Option<String>, wait: bool, ) -> Result<types::LightningSendStatus, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 304
+    },
+    {
+      "owner": "Wallet",
+      "name": "pay_lnurl",
+      "async": true,
+      "signature": "pub async fn pay_lnurl( &self, lnurl: String, amount_sats: u64, comment: Option<String>, wait: bool, ) -> Result<types::LightningSendStatus, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 324
+    },
+    {
+      "owner": "Wallet",
+      "name": "pay_lightning_offer",
+      "async": true,
+      "signature": "pub async fn pay_lightning_offer( &self, offer: String, amount_sats: Option<u64>, wait: bool, ) -> Result<types::LightningSendStatus, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 336
+    },
+    {
+      "owner": "Wallet",
+      "name": "check_lightning_payment",
+      "async": true,
+      "signature": "pub async fn check_lightning_payment( &self, payment_hash: String, wait: bool, ) -> Result<types::LightningSendStatus, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 347
+    },
+    {
+      "owner": "Wallet",
+      "name": "lightning_send_state",
+      "async": true,
+      "signature": "pub async fn lightning_send_state( &self, payment_hash: String, ) -> Result<types::LightningSendStatus, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 358
+    },
+    {
+      "owner": "Wallet",
+      "name": "is_invoice_paid",
+      "async": true,
+      "signature": "pub async fn is_invoice_paid(&self, payment_hash: String) -> Result<bool, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 368
+    },
+    {
+      "owner": "Wallet",
+      "name": "pending_lightning_sends",
+      "async": true,
+      "signature": "pub async fn pending_lightning_sends(&self) -> Result<Vec<types::LightningSend>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 372
+    },
+    {
+      "owner": "Wallet",
+      "name": "stuck_failed_lightning_sends",
+      "async": true,
+      "signature": "pub async fn stuck_failed_lightning_sends( &self, ) -> Result<Vec<types::LightningSend>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 379
+    },
+    {
+      "owner": "Wallet",
+      "name": "allow_lightning_send_to_exit",
+      "async": true,
+      "signature": "pub async fn allow_lightning_send_to_exit( &self, payment_hash: String, ) -> Result<(), Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 387
+    },
+    {
+      "owner": "Wallet",
+      "name": "bolt11_invoice",
+      "async": true,
+      "signature": "pub async fn bolt11_invoice( &self, amount_sats: u64, description: Option<String>, token: Option<String>, ) -> Result<types::LightningInvoice, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 400
+    },
+    {
+      "owner": "Wallet",
+      "name": "bolt11_invoice_for_address",
+      "async": true,
+      "signature": "pub async fn bolt11_invoice_for_address( &self, amount_sats: u64, claim_destination: String, description: Option<String>, token: Option<String>, ) -> Result<types::LightningInvoice, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 425
+    },
+    {
+      "owner": "Wallet",
+      "name": "try_claim_all_lightning_receives",
+      "async": true,
+      "signature": "pub async fn try_claim_all_lightning_receives( &self, wait: bool, ) -> Result<Vec<types::LightningReceive>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 443
+    },
+    {
+      "owner": "Wallet",
+      "name": "pending_lightning_receives",
+      "async": true,
+      "signature": "pub async fn pending_lightning_receives( &self, ) -> Result<Vec<types::LightningReceive>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 450
+    },
+    {
+      "owner": "Wallet",
+      "name": "claimable_lightning_receive_balance_sats",
+      "async": true,
+      "signature": "pub async fn claimable_lightning_receive_balance_sats(&self) -> Result<u64, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 457
+    },
+    {
+      "owner": "Wallet",
+      "name": "lightning_receive_state",
+      "async": true,
+      "signature": "pub async fn lightning_receive_state( &self, payment_hash: String, ) -> Result<types::LightningReceive, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 465
+    },
+    {
+      "owner": "Wallet",
+      "name": "try_claim_lightning_receive",
+      "async": true,
+      "signature": "pub async fn try_claim_lightning_receive( &self, payment_hash: String, wait: bool, ) -> Result<types::LightningReceive, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 474
+    },
+    {
+      "owner": "Wallet",
+      "name": "cancel_lightning_receive",
+      "async": true,
+      "signature": "pub async fn cancel_lightning_receive(&self, payment_hash: String) -> Result<(), Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 482
+    },
+    {
+      "owner": "Wallet",
+      "name": "attempt_lightning_receive_exit",
+      "async": true,
+      "signature": "pub async fn attempt_lightning_receive_exit( &self, payment_hash: String, ) -> Result<(), Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 489
+    },
+    {
+      "owner": "Wallet",
+      "name": "send_arkoor_payment",
+      "async": true,
+      "signature": "pub async fn send_arkoor_payment( &self, ark_address: String, amount_sats: u64, ) -> Result<(), Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 505
+    },
+    {
+      "owner": "Wallet",
+      "name": "validate_arkoor_address",
+      "async": true,
+      "signature": "pub async fn validate_arkoor_address(&self, address: String) -> Result<bool, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 518
+    },
+    {
+      "owner": "Wallet",
+      "name": "send_onchain",
+      "async": true,
+      "signature": "pub async fn send_onchain( &self, address: String, amount_sats: u64, ) -> Result<String, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 522
+    },
+    {
+      "owner": "Wallet",
+      "name": "history",
+      "async": true,
+      "signature": "pub async fn history(&self) -> Result<Vec<types::Movement>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 535
+    },
+    {
+      "owner": "Wallet",
+      "name": "history_by_payment_method",
+      "async": true,
+      "signature": "pub async fn history_by_payment_method( &self, payment_method_type: String, payment_method_value: String, ) -> Result<Vec<types::Movement>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 540
+    },
+    {
+      "owner": "Wallet",
+      "name": "refresh_vtxos",
+      "async": true,
+      "signature": "pub async fn refresh_vtxos(&self, vtxo_ids: Vec<String>) -> Result<Option<String>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 557
+    },
+    {
+      "owner": "Wallet",
+      "name": "maintenance_refresh",
+      "async": true,
+      "signature": "pub async fn maintenance_refresh(&self) -> Result<Option<String>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 562
+    },
+    {
+      "owner": "Wallet",
+      "name": "refresh_vtxos_delegated",
+      "async": true,
+      "signature": "pub async fn refresh_vtxos_delegated( &self, vtxo_ids: Vec<String>, ) -> Result<Option<types::RoundState>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 567
+    },
+    {
+      "owner": "Wallet",
+      "name": "refresh_vtxos_scheduled",
+      "async": true,
+      "signature": "pub async fn refresh_vtxos_scheduled( &self, vtxo_ids: Vec<String>, scheduled_height: u32, ) -> Result<Option<types::RoundState>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 580
+    },
+    {
+      "owner": "Wallet",
+      "name": "recover_vtxos",
+      "async": true,
+      "signature": "pub async fn recover_vtxos( &self, vtxo_ids: Vec<String>, gap_limit: Option<u32>, ) -> Result<types::RecoveryReport, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 604
+    },
+    {
+      "owner": "Wallet",
+      "name": "recovery_status",
+      "async": false,
+      "signature": "pub fn recovery_status(&self) -> types::RecoveryStatus",
+      "source": "src/muniffi/wallet.rs",
+      "line": 622
+    },
+    {
+      "owner": "Wallet",
+      "name": "recovery_report",
+      "async": false,
+      "signature": "pub fn recovery_report(&self) -> Option<types::RecoveryReport>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 629
+    },
+    {
+      "owner": "Wallet",
+      "name": "properties",
+      "async": true,
+      "signature": "pub async fn properties(&self) -> Result<types::WalletProperties, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 636
+    },
+    {
+      "owner": "Wallet",
+      "name": "fingerprint",
+      "async": false,
+      "signature": "pub fn fingerprint(&self) -> String",
+      "source": "src/muniffi/wallet.rs",
+      "line": 641
+    },
+    {
+      "owner": "Wallet",
+      "name": "network",
+      "async": true,
+      "signature": "pub async fn network(&self) -> Result<types::Network, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 645
+    },
+    {
+      "owner": "Wallet",
+      "name": "config",
+      "async": true,
+      "signature": "pub async fn config(&self) -> Config",
+      "source": "src/muniffi/wallet.rs",
+      "line": 650
+    },
+    {
+      "owner": "Wallet",
+      "name": "ark_info",
+      "async": true,
+      "signature": "pub async fn ark_info(&self) -> Option<types::ArkInfo>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 655
+    },
+    {
+      "owner": "Wallet",
+      "name": "next_round_start_time",
+      "async": true,
+      "signature": "pub async fn next_round_start_time(&self) -> Result<u64, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 660
+    },
+    {
+      "owner": "Wallet",
+      "name": "board_amount",
+      "async": true,
+      "signature": "pub async fn board_amount( &self, amount_sats: u64, ) -> Result<types::PendingBoard, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 669
+    },
+    {
+      "owner": "Wallet",
+      "name": "board_all",
+      "async": true,
+      "signature": "pub async fn board_all(&self) -> Result<types::PendingBoard, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 677
+    },
+    {
+      "owner": "Wallet",
+      "name": "board_funding_address",
+      "async": true,
+      "signature": "pub async fn board_funding_address(&self) -> Result<types::BoardFundingInfo, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 682
+    },
+    {
+      "owner": "Wallet",
+      "name": "board_psbt",
+      "async": true,
+      "signature": "pub async fn board_psbt( &self, psbt_base64: String, keypair_index: u32, expiry_height: u32, ) -> Result<types::PendingBoard, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 687
+    },
+    {
+      "owner": "Wallet",
+      "name": "sync_pending_boards",
+      "async": true,
+      "signature": "pub async fn sync_pending_boards(&self) -> Result<(), Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 698
+    },
+    {
+      "owner": "Wallet",
+      "name": "pending_boards",
+      "async": true,
+      "signature": "pub async fn pending_boards(&self) -> Result<Vec<types::PendingBoard>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 703
+    },
+    {
+      "owner": "Wallet",
+      "name": "pending_board_vtxos",
+      "async": true,
+      "signature": "pub async fn pending_board_vtxos(&self) -> Result<Vec<types::Vtxo>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 708
+    },
+    {
+      "owner": "Wallet",
+      "name": "pending_round_input_vtxos",
+      "async": true,
+      "signature": "pub async fn pending_round_input_vtxos(&self) -> Result<Vec<types::Vtxo>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 713
+    },
+    {
+      "owner": "Wallet",
+      "name": "pending_lightning_send_vtxos",
+      "async": true,
+      "signature": "pub async fn pending_lightning_send_vtxos(&self) -> Result<Vec<types::Vtxo>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 718
+    },
+    {
+      "owner": "Wallet",
+      "name": "start_exit_for_entire_wallet",
+      "async": true,
+      "signature": "pub async fn start_exit_for_entire_wallet(&self) -> Result<(), Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 727
+    },
+    {
+      "owner": "Wallet",
+      "name": "sync_exits",
+      "async": true,
+      "signature": "pub async fn sync_exits(&self) -> Result<(), Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 732
+    },
+    {
+      "owner": "Wallet",
+      "name": "progress_exits",
+      "async": true,
+      "signature": "pub async fn progress_exits( &self, fee_rate_sat_per_vb: Option<u64>, ) -> Result<Vec<types::ExitProgressStatus>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 737
+    },
+    {
+      "owner": "Wallet",
+      "name": "start_exit_for_vtxos",
+      "async": true,
+      "signature": "pub async fn start_exit_for_vtxos(&self, vtxo_ids: Vec<String>) -> Result<(), Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 745
+    },
+    {
+      "owner": "Wallet",
+      "name": "start_exit_for_vtxos_including_non_standard",
+      "async": true,
+      "signature": "pub async fn start_exit_for_vtxos_including_non_standard( &self, vtxo_ids: Vec<String>, ) -> Result<(), Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 755
+    },
+    {
+      "owner": "Wallet",
+      "name": "cancel_exit",
+      "async": true,
+      "signature": "pub async fn cancel_exit( &self, vtxo_id: String, ) -> Result<types::ExitCancelResult, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 771
+    },
+    {
+      "owner": "Wallet",
+      "name": "list_claimable_exits",
+      "async": true,
+      "signature": "pub async fn list_claimable_exits(&self) -> Result<Vec<types::ExitVtxo>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 778
+    },
+    {
+      "owner": "Wallet",
+      "name": "get_exit_vtxos",
+      "async": true,
+      "signature": "pub async fn get_exit_vtxos(&self) -> Result<Vec<types::ExitVtxo>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 783
+    },
+    {
+      "owner": "Wallet",
+      "name": "has_pending_exits",
+      "async": true,
+      "signature": "pub async fn has_pending_exits(&self) -> Result<bool, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 788
+    },
+    {
+      "owner": "Wallet",
+      "name": "pending_exits_total_sats",
+      "async": true,
+      "signature": "pub async fn pending_exits_total_sats(&self) -> Result<u64, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 793
+    },
+    {
+      "owner": "Wallet",
+      "name": "all_exits_claimable_at_height",
+      "async": true,
+      "signature": "pub async fn all_exits_claimable_at_height(&self) -> Result<Option<u32>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 798
+    },
+    {
+      "owner": "Wallet",
+      "name": "get_exit_status",
+      "async": true,
+      "signature": "pub async fn get_exit_status( &self, vtxo_id: String, include_history: bool, include_transactions: bool, ) -> Result<Option<types::ExitTransactionStatus>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 803
+    },
+    {
+      "owner": "Wallet",
+      "name": "drain_exits",
+      "async": true,
+      "signature": "pub async fn drain_exits( &self, vtxo_ids: Vec<String>, drain_all: bool, address: String, fee_rate_sat_per_vb: Option<u64>, ) -> Result<types::ExitClaimTransaction, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 824
+    },
+    {
+      "owner": "Wallet",
+      "name": "sign_exit_claim_inputs",
+      "async": true,
+      "signature": "pub async fn sign_exit_claim_inputs(&self, psbt_base64: String) -> Result<String, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 838
+    },
+    {
+      "owner": "Wallet",
+      "name": "pending_round_states",
+      "async": true,
+      "signature": "pub async fn pending_round_states(&self) -> Result<Vec<types::RoundState>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 847
+    },
+    {
+      "owner": "Wallet",
+      "name": "cancel_pending_round",
+      "async": true,
+      "signature": "pub async fn cancel_pending_round(&self, round_id: u32) -> Result<(), Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 852
+    },
+    {
+      "owner": "Wallet",
+      "name": "cancel_all_pending_rounds",
+      "async": true,
+      "signature": "pub async fn cancel_all_pending_rounds(&self) -> Result<(), Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 857
+    },
+    {
+      "owner": "Wallet",
+      "name": "progress_pending_rounds",
+      "async": true,
+      "signature": "pub async fn progress_pending_rounds(&self) -> Result<(), Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 862
+    },
+    {
+      "owner": "Wallet",
+      "name": "refresh_server",
+      "async": true,
+      "signature": "pub async fn refresh_server(&self) -> Result<(), Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 871
+    },
+    {
+      "owner": "Wallet",
+      "name": "get_first_expiring_vtxo_blockheight",
+      "async": true,
+      "signature": "pub async fn get_first_expiring_vtxo_blockheight(&self) -> Result<Option<u32>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 880
+    },
+    {
+      "owner": "Wallet",
+      "name": "get_next_required_refresh_blockheight",
+      "async": true,
+      "signature": "pub async fn get_next_required_refresh_blockheight(&self) -> Result<Option<u32>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 885
+    },
+    {
+      "owner": "Wallet",
+      "name": "broadcast_tx",
+      "async": true,
+      "signature": "pub async fn broadcast_tx(&self, tx_hex: String) -> Result<String, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 894
+    },
+    {
+      "owner": "Wallet",
+      "name": "mailbox_identifier",
+      "async": false,
+      "signature": "pub fn mailbox_identifier(&self) -> Result<String, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 903
+    },
+    {
+      "owner": "Wallet",
+      "name": "mailbox_authorization",
+      "async": false,
+      "signature": "pub fn mailbox_authorization(&self, expiry_secs: u32) -> Result<String, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 912
+    },
+    {
+      "owner": "Wallet",
+      "name": "import_vtxo",
+      "async": true,
+      "signature": "pub async fn import_vtxo( &self, vtxo_base64: String, args: Option<types::ImportVtxoArgs>, ) -> Result<(), Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 931
+    },
+    {
+      "owner": "Wallet",
+      "name": "import_vtxos",
+      "async": true,
+      "signature": "pub async fn import_vtxos( &self, encoded_vtxos: Vec<String>, args: Option<types::ImportVtxoArgs>, ) -> Result<Vec<String>, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 948
+    },
+    {
+      "owner": "Wallet",
+      "name": "vtxo_encoded",
+      "async": true,
+      "signature": "pub async fn vtxo_encoded(&self, vtxo_id: String) -> Result<String, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 960
+    },
+    {
+      "owner": "Wallet",
+      "name": "estimate_board_fee",
+      "async": true,
+      "signature": "pub async fn estimate_board_fee( &self, amount_sats: u64, ) -> Result<types::FeeEstimate, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 968
+    },
+    {
+      "owner": "Wallet",
+      "name": "estimate_offboard_fee",
+      "async": true,
+      "signature": "pub async fn estimate_offboard_fee( &self, address: String, vtxo_ids: Vec<String>, ) -> Result<types::FeeEstimate, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 976
+    },
+    {
+      "owner": "Wallet",
+      "name": "estimate_refresh_fee",
+      "async": true,
+      "signature": "pub async fn estimate_refresh_fee( &self, vtxo_ids: Vec<String>, ) -> Result<types::FeeEstimate, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 985
+    },
+    {
+      "owner": "Wallet",
+      "name": "estimate_lightning_send_fee",
+      "async": true,
+      "signature": "pub async fn estimate_lightning_send_fee( &self, amount_sats: u64, ) -> Result<types::FeeEstimate, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 993
+    },
+    {
+      "owner": "Wallet",
+      "name": "estimate_lightning_receive_fee",
+      "async": true,
+      "signature": "pub async fn estimate_lightning_receive_fee( &self, amount_sats: u64, ) -> Result<types::FeeEstimate, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 1001
+    },
+    {
+      "owner": "Wallet",
+      "name": "estimate_arkoor_payment_fee",
+      "async": true,
+      "signature": "pub async fn estimate_arkoor_payment_fee( &self, amount_sats: u64, ) -> Result<types::FeeEstimate, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 1009
+    },
+    {
+      "owner": "Wallet",
+      "name": "estimate_offboard_all_fee",
+      "async": true,
+      "signature": "pub async fn estimate_offboard_all_fee( &self, address: String, ) -> Result<types::FeeEstimate, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 1017
+    },
+    {
+      "owner": "Wallet",
+      "name": "estimate_send_onchain_fee",
+      "async": true,
+      "signature": "pub async fn estimate_send_onchain_fee( &self, address: String, amount_sats: u64, ) -> Result<types::FeeEstimate, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 1025
+    },
+    {
+      "owner": "Wallet",
+      "name": "estimate_emergency_exit_fee",
+      "async": true,
+      "signature": "pub async fn estimate_emergency_exit_fee( &self, vtxo_ids: Vec<String>, fee_rate_sat_per_vb: Option<u64>, destination: Option<String>, ) -> Result<types::EmergencyExitFeeEstimate, Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 1047
+    },
+    {
+      "owner": "Wallet",
+      "name": "notifications",
+      "async": false,
+      "signature": "pub fn notifications(&self) -> Arc<NotificationHolder>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 1063
+    },
+    {
+      "owner": "Wallet",
+      "name": "run_daemon",
+      "async": true,
+      "signature": "pub async fn run_daemon(&self) -> Result<(), Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 1074
+    },
+    {
+      "owner": "Wallet",
+      "name": "stop_daemon",
+      "async": true,
+      "signature": "pub async fn stop_daemon(&self) -> Result<(), Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 1079
+    },
+    {
+      "owner": "Wallet",
+      "name": "stop_daemon_wait",
+      "async": true,
+      "signature": "pub async fn stop_daemon_wait(&self) -> Result<(), Error>",
+      "source": "src/muniffi/wallet.rs",
+      "line": 1088
+    },
+    {
+      "owner": "OnchainWallet",
+      "name": "default",
+      "async": true,
+      "signature": "pub async fn default( network: Network, mnemonic: String, config: Config, datadir: String, ) -> Result<Arc<Self>, Error>",
+      "source": "src/muniffi/onchain.rs",
+      "line": 36
+    },
+    {
+      "owner": "OnchainWallet",
+      "name": "custom",
+      "async": false,
+      "signature": "pub fn custom( callbacks: Arc<dyn CustomOnchainWalletCallbacks>, ) -> Result<Arc<Self>, Error>",
+      "source": "src/muniffi/onchain.rs",
+      "line": 52
+    },
+    {
+      "owner": "OnchainWallet",
+      "name": "sync",
+      "async": true,
+      "signature": "pub async fn sync(&self) -> Result<u64, Error>",
+      "source": "src/muniffi/onchain.rs",
+      "line": 61
+    },
+    {
+      "owner": "OnchainWallet",
+      "name": "initial_scan",
+      "async": true,
+      "signature": "pub async fn initial_scan(&self, birthday_height: Option<u32>) -> Result<u64, Error>",
+      "source": "src/muniffi/onchain.rs",
+      "line": 81
+    },
+    {
+      "owner": "OnchainWallet",
+      "name": "balance",
+      "async": true,
+      "signature": "pub async fn balance(&self) -> Result<OnchainBalance, Error>",
+      "source": "src/muniffi/onchain.rs",
+      "line": 92
+    },
+    {
+      "owner": "OnchainWallet",
+      "name": "new_address",
+      "async": true,
+      "signature": "pub async fn new_address(&self) -> Result<String, Error>",
+      "source": "src/muniffi/onchain.rs",
+      "line": 114
+    },
+    {
+      "owner": "OnchainWallet",
+      "name": "send",
+      "async": true,
+      "signature": "pub async fn send( &self, address: String, amount_sats: u64, fee_rate_sat_per_vb: u64, ) -> Result<String, Error>",
+      "source": "src/muniffi/onchain.rs",
+      "line": 126
+    },
+    {
+      "owner": "OnchainWallet",
+      "name": "evict_tx",
+      "async": true,
+      "signature": "pub async fn evict_tx(&self, txid: String) -> Result<(), Error>",
+      "source": "src/muniffi/onchain.rs",
+      "line": 149
+    },
+    {
+      "owner": "OnchainWallet",
+      "name": "tip_height",
+      "async": true,
+      "signature": "pub async fn tip_height(&self) -> Result<u32, Error>",
+      "source": "src/muniffi/onchain.rs",
+      "line": 170
+    },
+    {
+      "owner": "OnchainWallet",
+      "name": "fee_rates",
+      "async": true,
+      "signature": "pub async fn fee_rates(&self) -> Result<crate::types::FeeRates, Error>",
+      "source": "src/muniffi/onchain.rs",
+      "line": 183
+    },
+    {
+      "owner": "OnchainWallet",
+      "name": "transactions",
+      "async": true,
+      "signature": "pub async fn transactions(&self) -> Result<Vec<crate::types::WalletTransaction>, Error>",
+      "source": "src/muniffi/onchain.rs",
+      "line": 197
+    },
+    {
+      "owner": "OnchainWallet",
+      "name": "utxos",
+      "async": true,
+      "signature": "pub async fn utxos(&self) -> Result<Vec<crate::types::OnchainUtxo>, Error>",
+      "source": "src/muniffi/onchain.rs",
+      "line": 210
+    },
+    {
+      "owner": "NotificationHolder",
+      "name": "next_notification",
+      "async": true,
+      "signature": "pub async fn next_notification( self: Arc<Self>, ) -> Result<Option<WalletNotification>, Error>",
+      "source": "src/core/notification.rs",
+      "line": 73
+    },
+    {
+      "owner": "NotificationHolder",
+      "name": "cancel_next_notification_wait",
+      "async": false,
+      "signature": "pub fn cancel_next_notification_wait(&self)",
+      "source": "src/core/notification.rs",
+      "line": 127
+    },
+    {
+      "owner": null,
+      "name": "generate_mnemonic",
+      "async": false,
+      "signature": "pub fn generate_mnemonic() -> Result<String, Error>",
+      "source": "src/functions.rs",
+      "line": 11
+    },
+    {
+      "owner": null,
+      "name": "validate_mnemonic",
+      "async": false,
+      "signature": "pub fn validate_mnemonic(mnemonic: String) -> Result<bool, Error>",
+      "source": "src/functions.rs",
+      "line": 18
+    },
+    {
+      "owner": null,
+      "name": "validate_ark_address",
+      "async": false,
+      "signature": "pub fn validate_ark_address(address: String) -> Result<bool, Error>",
+      "source": "src/functions.rs",
+      "line": 31
+    },
+    {
+      "owner": null,
+      "name": "extract_tx_from_psbt",
+      "async": false,
+      "signature": "pub fn extract_tx_from_psbt(psbt_base64: String) -> Result<String, Error>",
+      "source": "src/functions.rs",
+      "line": 51
+    },
+    {
+      "owner": null,
+      "name": "default_vtxo_key_gap_limit",
+      "async": false,
+      "signature": "pub fn default_vtxo_key_gap_limit() -> u32",
+      "source": "src/functions.rs",
+      "line": 67
+    },
+    {
+      "owner": null,
+      "name": "max_vtxo_key_gap_limit",
+      "async": false,
+      "signature": "pub fn max_vtxo_key_gap_limit() -> u32",
+      "source": "src/functions.rs",
+      "line": 75
+    },
+    {
+      "owner": null,
+      "name": "set_logger",
+      "async": false,
+      "signature": "pub fn set_logger( logger: Arc<dyn BarkLogger>, max_level: LogLevel, ) -> Result<(), Error>",
+      "source": "src/muniffi/logger.rs",
+      "line": 92
+    },
+    {
+      "owner": null,
+      "name": "clear_logger",
+      "async": false,
+      "signature": "pub fn clear_logger()",
+      "source": "src/muniffi/logger.rs",
+      "line": 111
+    }
+  ],
+  "records": [
+    {
+      "name": "WalletProperties",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "Balance",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "Vtxo",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "LightningInvoice",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "OffboardResult",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "AddressWithIndex",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "LightningReceive",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "LightningSend",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "Movement",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "FeeEstimate",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "EmergencyExitFeeEstimate",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "OnchainBalance",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "FeeRates",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "WalletTransaction",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "PendingBoard",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "BoardFundingInfo",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "PpmExpiryFeeEntry",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "BoardFees",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "OffboardFees",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "RefreshFees",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "LightningReceiveFees",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "LightningSendFees",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "FeeSchedule",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "ArkInfo",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "ExitTx",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "ExitCancelResult",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "ExitVtxo",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "ExitProgressStatus",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "ExitClaimTransaction",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "ExitTransactionStatus",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "RoundState",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "RecoveryBucket",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "ImportVtxoArgs",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "RecoveryReport",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "Destination",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "OutPoint",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "BlockRef",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "CpfpParams",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "Config",
+      "source": "src/config.rs"
+    },
+    {
+      "name": "WalletOpenArgs",
+      "source": "src/muniffi/wallet.rs"
+    }
+  ],
+  "enums": [
+    {
+      "name": "Network",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "LogLevel",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "VtxoLockHolder",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "VtxoState",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "LightningSendStatus",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "OnchainUtxo",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "ExitTxOrigin",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "ExitTxStatus",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "ExitState",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "ExitStateKind",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "ExitCancelFailure",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "RoundFlowKind",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "RecoveryStatus",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "WalletNotification",
+      "source": "src/types.rs"
+    }
+  ],
+  "callbacks": [
+    {
+      "name": "CustomOnchainWalletCallbacks",
+      "methods": [
+        "get_balance",
+        "prepare_tx",
+        "prepare_drain_tx",
+        "finish_psbt",
+        "is_mine",
+        "register_tx",
+        "evict_tx",
+        "make_signed_p2a_cpfp",
+        "store_signed_p2a_cpfp",
+        "sync"
+      ]
+    },
+    {
+      "name": "BarkLogger",
+      "methods": [
+        "log"
+      ]
+    }
+  ]
+}

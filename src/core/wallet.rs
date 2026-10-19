@@ -3,21 +3,21 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use base64::Engine;
-use log::{info, warn};
 use bip39::Mnemonic;
 use bitcoin::hex::FromHex;
 use chrono::{DateTime, Duration, Local};
+use log::{info, warn};
 
 use ark::lightning::{Invoice, Offer, PaymentHash};
 use ark::{ProtocolEncoding, VtxoId};
 
-use bark::WalletSeed;
 use bark::onchain::OnchainWalletTrait;
 use bark::persist::BarkPersister;
+use bark::WalletSeed;
 
 use crate::config::Config;
 use crate::core::parse_address;
-use crate::error::Error;
+use crate::error::BarkError;
 use crate::{types, Network};
 
 /// Core Bark wallet logic. No binding-specific behavior — pure async over
@@ -34,10 +34,8 @@ pub struct Wallet {
 /// Optional arguments for [`Wallet::open`].
 pub struct OpenArgs {
     pub run_daemon: bool,
-    #[cfg(feature = "uniffi")]
     pub datadir: Option<String>,
     pub persister: Option<Arc<dyn BarkPersister>>,
-    #[cfg(not(feature = "wasm-web"))]
     pub lock_manager: Option<Box<dyn bark::lock_manager::LockManager>>,
     pub onchain: Option<Arc<tokio::sync::RwLock<dyn OnchainWalletTrait>>>,
     pub create_if_not_exists: bool,
@@ -52,17 +50,11 @@ impl OpenArgs {
         bark::OpenWalletArgs {
             run_daemon: self.run_daemon,
 
-            #[cfg(feature = "uniffi")]
             datadir: self.datadir.map(|s| s.into()),
-            #[cfg(not(feature = "uniffi"))]
-            datadir: None,
 
             persister: self.persister,
 
-            #[cfg(not(feature = "wasm-web"))]
             lock_manager: self.lock_manager,
-            #[cfg(feature = "wasm-web")]
-            lock_manager: None,
 
             onchain: self.onchain,
             create_if_not_exists: self.create_if_not_exists,
@@ -77,15 +69,17 @@ impl OpenArgs {
 pub(crate) fn seed_from_str(
     network: bitcoin::Network,
     mnemonic_or_seed: &str,
-) -> Result<WalletSeed, Error> {
+) -> Result<WalletSeed, BarkError> {
     let seed_or_phrase = mnemonic_or_seed.trim();
 
     // Any whitespace, not just ' ': a phrase pasted with newlines used to fall
     // through to the hex branch and fail as "invalid hex seed".
     if seed_or_phrase.split_whitespace().nth(1).is_some() {
-        let phrase = seed_or_phrase.split_whitespace().collect::<Vec<_>>().join(" ");
-        let mnemonic = Mnemonic::parse(&phrase)
-            .context("invalid mnemonic")?;
+        let phrase = seed_or_phrase
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ");
+        let mnemonic = Mnemonic::parse(&phrase).context("invalid mnemonic")?;
         Ok(WalletSeed::new_from_mnemonic(network, &mnemonic))
     } else {
         let bytes = <[u8; 64]>::from_hex(seed_or_phrase)
@@ -95,13 +89,13 @@ pub(crate) fn seed_from_str(
 }
 
 /// Parse a batch of VTXO id strings, failing on the first malformed one.
-pub(crate) fn parse_vtxo_ids(vtxo_ids: &[String]) -> Result<Vec<VtxoId>, Error> {
+pub(crate) fn parse_vtxo_ids(vtxo_ids: &[String]) -> Result<Vec<VtxoId>, BarkError> {
     vtxo_ids
         .iter()
         .map(|id| {
             id.parse::<VtxoId>()
                 .with_context(|| format!("invalid vtxo id: {}", id))
-                .map_err(Error::from)
+                .map_err(BarkError::from)
         })
         .collect()
 }
@@ -126,7 +120,10 @@ impl Wallet {
     /// wrappers that construct the inner wallet themselves (e.g. the uniffi
     /// callback-onchain path) can reuse it.
     pub(crate) fn from_inner(inner: bark::Wallet) -> Self {
-        Self { inner, recovery_status: types::RecoveryStatus::NotRun }
+        Self {
+            inner,
+            recovery_status: types::RecoveryStatus::NotRun,
+        }
     }
 
     pub(crate) fn inner(&self) -> &bark::Wallet {
@@ -146,24 +143,22 @@ impl Wallet {
         mnemonic_or_seed: String,
         config: Config,
         db: &dyn BarkPersister,
-        #[cfg(not(feature = "wasm-web"))]
         lock_manager: &dyn bark::lock_manager::LockManager,
         allow_unreachable_server: bool,
-    ) -> Result<(), Error> {
+    ) -> Result<(), BarkError> {
         let network = network.into();
         let cfg = config.into_bark(network)?;
         let seed = seed_from_str(network, &mnemonic_or_seed)?;
 
-        #[cfg(feature = "wasm-web")]
-        let lock_manager = bark::lock_manager::platform_default(
-            Option::<&str>::None, Some(seed.fingerprint()),
-        )?;
-        #[cfg(feature = "wasm-web")]
-        let lock_manager = lock_manager.as_ref();
-
         bark::Wallet::create(
-            network, &seed, &cfg, db, lock_manager, allow_unreachable_server,
-        ).await?;
+            network,
+            &seed,
+            &cfg,
+            db,
+            lock_manager,
+            allow_unreachable_server,
+        )
+        .await?;
         Ok(())
     }
 
@@ -173,7 +168,7 @@ impl Wallet {
         mnemonic_or_seed: String,
         config: Config,
         args: OpenArgs,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self, BarkError> {
         let network = network.into();
         let cfg = config.into_bark(network)?;
         let seed = seed_from_str(network, &mnemonic_or_seed)?;
@@ -191,8 +186,11 @@ impl Wallet {
             match &status {
                 types::RecoveryStatus::NotRun => info!("[OPEN] Seed recovery not run"),
                 types::RecoveryStatus::Failed { message } => {
-                    warn!("[OPEN] Seed recovery FAILED, funds may be missing: {}", message)
-                },
+                    warn!(
+                        "[OPEN] Seed recovery FAILED, funds may be missing: {}",
+                        message
+                    )
+                }
                 types::RecoveryStatus::Completed { report } => info!(
                     "[OPEN] Seed recovery finished: {} recovered ({} sats), {} skipped, \
                      {} exited, {} foreign, {} failed, complete={}",
@@ -213,9 +211,7 @@ impl Wallet {
         if inner.ark_info().await.ok().flatten().is_some() {
             info!("[OPEN] Server connection established");
         } else {
-            warn!(
-                "[OPEN] Server connection FAILED - Lightning and Ark operations will not work!"
-            );
+            warn!("[OPEN] Server connection FAILED - Lightning and Ark operations will not work!");
         }
 
         // Upstream guarantees the callback fires on every successful open, so
@@ -226,7 +222,10 @@ impl Wallet {
             .unwrap()
             .take()
             .unwrap_or(types::RecoveryStatus::NotRun);
-        Ok(Self { inner, recovery_status })
+        Ok(Self {
+            inner,
+            recovery_status,
+        })
     }
 
     /// Outcome of the seed-recovery mailbox scan that ran during
@@ -257,8 +256,11 @@ impl Wallet {
     /// Stop the background daemon, if running, and wait until its tasks have
     /// finished, so the caller knows nothing runs in the background anymore
     /// (e.g. before wiping the wallet's datadir). No-op without a daemon.
-    pub async fn stop_daemon_wait(&self) -> Result<(), Error> {
-        self.inner.stop_daemon_wait().await.context("Stop daemon failed")?;
+    pub async fn stop_daemon_wait(&self) -> Result<(), BarkError> {
+        self.inner
+            .stop_daemon_wait()
+            .await
+            .context("Stop daemon failed")?;
         Ok(())
     }
 
@@ -266,7 +268,7 @@ impl Wallet {
     // Synchronization & Maintenance
     // ------------------------------------------------------------------------
 
-    pub async fn sync(&self) -> Result<(), Error> {
+    pub async fn sync(&self) -> Result<(), BarkError> {
         info!("[SYNC] Starting sync...");
         self.inner.sync().await;
         info!("[SYNC] Sync completed");
@@ -294,7 +296,7 @@ impl Wallet {
         Ok(())
     }
 
-    pub async fn maintenance(&self) -> Result<(), Error> {
+    pub async fn maintenance(&self) -> Result<(), BarkError> {
         self.inner.maintenance().await?;
         Ok(())
     }
@@ -305,12 +307,12 @@ impl Wallet {
     ///
     /// This already runs automatically as part of [`Self::sync`]; expose it so
     /// callers can trigger the scan on demand.
-    pub async fn sync_force_exited_vtxos(&self) -> Result<(), Error> {
+    pub async fn sync_force_exited_vtxos(&self) -> Result<(), BarkError> {
         self.inner.sync_force_exited_vtxos().await?;
         Ok(())
     }
 
-    pub async fn maintenance_delegated(&self) -> Result<(), Error> {
+    pub async fn maintenance_delegated(&self) -> Result<(), BarkError> {
         self.inner.maintenance_delegated().await?;
         Ok(())
     }
@@ -319,12 +321,12 @@ impl Wallet {
     // Address Generation
     // ------------------------------------------------------------------------
 
-    pub async fn new_address(&self) -> Result<String, Error> {
+    pub async fn new_address(&self) -> Result<String, BarkError> {
         let addr = self.inner.new_address().await?;
         Ok(addr.to_string())
     }
 
-    pub async fn new_address_with_index(&self) -> Result<types::AddressWithIndex, Error> {
+    pub async fn new_address_with_index(&self) -> Result<types::AddressWithIndex, BarkError> {
         let (addr, index) = self.inner.new_address_with_index().await?;
         Ok(types::AddressWithIndex {
             address: addr.to_string(),
@@ -332,7 +334,7 @@ impl Wallet {
         })
     }
 
-    pub async fn peek_address(&self, index: u32) -> Result<String, Error> {
+    pub async fn peek_address(&self, index: u32) -> Result<String, BarkError> {
         let addr = self.inner.peek_address(index).await?;
         Ok(addr.to_string())
     }
@@ -341,11 +343,11 @@ impl Wallet {
     // Balance & VTXOs
     // ------------------------------------------------------------------------
 
-    pub async fn balance(&self) -> Result<types::Balance, Error> {
+    pub async fn balance(&self) -> Result<types::Balance, BarkError> {
         Ok(self.inner.balance().await?.into())
     }
 
-    pub async fn vtxos(&self) -> Result<Vec<types::Vtxo>, Error> {
+    pub async fn vtxos(&self) -> Result<Vec<types::Vtxo>, BarkError> {
         Ok(self
             .inner
             .vtxos()
@@ -355,12 +357,12 @@ impl Wallet {
             .collect())
     }
 
-    pub async fn get_vtxo_by_id(&self, vtxo_id: String) -> Result<types::Vtxo, Error> {
+    pub async fn get_vtxo_by_id(&self, vtxo_id: String) -> Result<types::Vtxo, BarkError> {
         let id = vtxo_id.parse().context("invalid vtxo id")?;
         Ok(self.inner.get_vtxo_by_id(id).await?.into())
     }
 
-    pub async fn spendable_vtxos(&self) -> Result<Vec<types::Vtxo>, Error> {
+    pub async fn spendable_vtxos(&self) -> Result<Vec<types::Vtxo>, BarkError> {
         Ok(self
             .inner
             .spendable_vtxos()
@@ -370,7 +372,7 @@ impl Wallet {
             .collect())
     }
 
-    pub async fn all_vtxos(&self) -> Result<Vec<types::Vtxo>, Error> {
+    pub async fn all_vtxos(&self) -> Result<Vec<types::Vtxo>, BarkError> {
         Ok(self
             .inner
             .all_vtxos()
@@ -383,7 +385,7 @@ impl Wallet {
     pub async fn get_expiring_vtxos(
         &self,
         threshold_blocks: u32,
-    ) -> Result<Vec<types::Vtxo>, Error> {
+    ) -> Result<Vec<types::Vtxo>, BarkError> {
         Ok(self
             .inner
             .get_expiring_vtxos(threshold_blocks)
@@ -393,7 +395,7 @@ impl Wallet {
             .collect())
     }
 
-    pub async fn get_vtxos_to_refresh(&self) -> Result<Vec<types::Vtxo>, Error> {
+    pub async fn get_vtxos_to_refresh(&self) -> Result<Vec<types::Vtxo>, BarkError> {
         Ok(self
             .inner
             .get_vtxos_to_refresh()
@@ -429,7 +431,7 @@ impl Wallet {
         &self,
         vtxo_ids: Vec<String>,
         holder: Option<types::VtxoLockHolder>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), BarkError> {
         let ids = parse_vtxo_ids(&vtxo_ids)?;
         if ids.is_empty() {
             return Ok(());
@@ -472,7 +474,7 @@ impl Wallet {
         &self,
         vtxo_ids: Vec<String>,
         expected_holder: Option<types::VtxoLockHolder>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), BarkError> {
         use bark::vtxo::{VtxoState, VtxoStateKind};
 
         let ids = parse_vtxo_ids(&vtxo_ids)?;
@@ -489,7 +491,7 @@ impl Wallet {
                     .unlock_vtxos(ids, Some(expected.into()))
                     .await
                     .context("Unlock VTXOs failed")?;
-            },
+            }
             // No expected holder: release unconditionally, whoever holds the
             // lock. Upstream's `unlock_vtxos(.., None)` would instead release
             // only locks that carry *no* holder, so drive the state transition
@@ -506,7 +508,7 @@ impl Wallet {
                     )
                     .await
                     .context("Unlock VTXOs failed")?;
-            },
+            }
         }
 
         info!("Unlocked {} VTXOs", vtxo_ids.len());
@@ -521,7 +523,7 @@ impl Wallet {
         &self,
         ids: &[VtxoId],
         expected: &types::VtxoLockHolder,
-    ) -> Result<(), Error> {
+    ) -> Result<(), BarkError> {
         let mut mismatches = Vec::new();
 
         for id in ids {
@@ -533,14 +535,14 @@ impl Wallet {
 
             match types::VtxoState::from(&vtxo.state) {
                 // Unlocking is idempotent, so an already-released VTXO is fine.
-                types::VtxoState::Spendable => {},
-                types::VtxoState::Locked { holder: Some(h) } if &h == expected => {},
+                types::VtxoState::Spendable => {}
+                types::VtxoState::Locked { holder: Some(h) } if &h == expected => {}
                 other => mismatches.push(format!("{} is {}", id, describe_state(&other))),
             }
         }
 
         if !mismatches.is_empty() {
-            return Err(Error::from(anyhow::anyhow!(
+            return Err(BarkError::from(anyhow::anyhow!(
                 "refusing to unlock {} VTXO(s) not locked by the expected holder: {}",
                 mismatches.len(),
                 mismatches.join(", "),
@@ -557,7 +559,7 @@ impl Wallet {
     pub async fn offboard_all(
         &self,
         bitcoin_address: String,
-    ) -> Result<types::OffboardResult, Error> {
+    ) -> Result<types::OffboardResult, BarkError> {
         let addr = parse_address(&bitcoin_address, self.inner.network().await?)?;
 
         let txid = self.inner.offboard_all(addr).await?;
@@ -570,7 +572,7 @@ impl Wallet {
         &self,
         vtxo_ids: Vec<String>,
         bitcoin_address: String,
-    ) -> Result<types::OffboardResult, Error> {
+    ) -> Result<types::OffboardResult, BarkError> {
         let addr = parse_address(&bitcoin_address, self.inner.network().await?)?;
 
         let ids: Result<Vec<_>, _> = vtxo_ids
@@ -593,7 +595,7 @@ impl Wallet {
         invoice: String,
         amount_sats: Option<u64>,
         wait: bool,
-    ) -> Result<types::LightningSendStatus, Error> {
+    ) -> Result<types::LightningSendStatus, BarkError> {
         let invoice: Invoice = invoice.parse().context("invalid invoice")?;
         let amount = amount_sats.map(bitcoin::Amount::from_sat);
         let resolved = self
@@ -608,9 +610,9 @@ impl Wallet {
         offer: String,
         amount_sats: Option<u64>,
         wait: bool,
-    ) -> Result<types::LightningSendStatus, Error> {
-        let offer_obj = Offer::from_str(&offer)
-            .map_err(|e| anyhow::anyhow!("invalid BOLT12 offer: {e:?}"))?;
+    ) -> Result<types::LightningSendStatus, BarkError> {
+        let offer_obj =
+            Offer::from_str(&offer).map_err(|e| anyhow::anyhow!("invalid BOLT12 offer: {e:?}"))?;
         let amount = amount_sats.map(bitcoin::Amount::from_sat);
         let resolved = self
             .inner
@@ -632,7 +634,7 @@ impl Wallet {
         amount_sats: u64,
         comment: Option<String>,
         wait: bool,
-    ) -> Result<types::LightningSendStatus, Error> {
+    ) -> Result<types::LightningSendStatus, BarkError> {
         let addr: bark::lnurllib::lightning_address::LightningAddress = lightning_address
             .trim()
             .parse()
@@ -657,9 +659,8 @@ impl Wallet {
         amount_sats: u64,
         comment: Option<String>,
         wait: bool,
-    ) -> Result<types::LightningSendStatus, Error> {
-        let lnurl: bark::lnurllib::lnurl::LnUrl =
-            lnurl.trim().parse().context("invalid lnurl")?;
+    ) -> Result<types::LightningSendStatus, BarkError> {
+        let lnurl: bark::lnurllib::lnurl::LnUrl = lnurl.trim().parse().context("invalid lnurl")?;
         let amount = bitcoin::Amount::from_sat(amount_sats);
         let resolved = self
             .inner
@@ -674,7 +675,7 @@ impl Wallet {
     pub(crate) async fn lightning_send_status(
         &self,
         invoice: Invoice,
-    ) -> Result<types::LightningSendStatus, Error> {
+    ) -> Result<types::LightningSendStatus, BarkError> {
         let state = self
             .inner
             .lightning_send_state(invoice.payment_hash())
@@ -686,7 +687,7 @@ impl Wallet {
         &self,
         payment_hash: String,
         wait: bool,
-    ) -> Result<types::LightningSendStatus, Error> {
+    ) -> Result<types::LightningSendStatus, BarkError> {
         let payment_hash_obj =
             PaymentHash::from_str(&payment_hash).context("invalid payment hash")?;
         let state = self
@@ -702,7 +703,7 @@ impl Wallet {
     pub async fn lightning_send_state(
         &self,
         payment_hash: String,
-    ) -> Result<types::LightningSendStatus, Error> {
+    ) -> Result<types::LightningSendStatus, BarkError> {
         let payment_hash_obj =
             PaymentHash::from_str(&payment_hash).context("invalid payment hash")?;
         let state = self.inner.lightning_send_state(payment_hash_obj).await?;
@@ -711,13 +712,13 @@ impl Wallet {
 
     /// Cheap "has this invoice ever been paid?" check, answered from the local
     /// `bark_paid_invoice` fact table without consulting the server.
-    pub async fn is_invoice_paid(&self, payment_hash: String) -> Result<bool, Error> {
+    pub async fn is_invoice_paid(&self, payment_hash: String) -> Result<bool, BarkError> {
         let payment_hash_obj =
             PaymentHash::from_str(&payment_hash).context("invalid payment hash")?;
         Ok(self.inner.is_invoice_paid(payment_hash_obj).await?)
     }
 
-    pub async fn pending_lightning_sends(&self) -> Result<Vec<types::LightningSend>, Error> {
+    pub async fn pending_lightning_sends(&self) -> Result<Vec<types::LightningSend>, BarkError> {
         Ok(self
             .inner
             .pending_lightning_sends()
@@ -730,7 +731,7 @@ impl Wallet {
     /// List failed lightning sends whose HTLC revocation also failed.
     pub async fn stuck_failed_lightning_sends(
         &self,
-    ) -> Result<Vec<types::LightningSend>, Error> {
+    ) -> Result<Vec<types::LightningSend>, BarkError> {
         Ok(self
             .inner
             .stuck_failed_lightning_sends()
@@ -745,7 +746,7 @@ impl Wallet {
     pub async fn allow_lightning_send_to_exit(
         &self,
         payment_hash: String,
-    ) -> Result<(), Error> {
+    ) -> Result<(), BarkError> {
         let payment_hash_obj =
             PaymentHash::from_str(&payment_hash).context("invalid payment hash")?;
         self.inner
@@ -763,9 +764,12 @@ impl Wallet {
         amount_sats: u64,
         description: Option<String>,
         token: Option<String>,
-    ) -> Result<types::LightningInvoice, Error> {
+    ) -> Result<types::LightningInvoice, BarkError> {
         let amount = bitcoin::Amount::from_sat(amount_sats);
-        let invoice = self.inner.bolt11_invoice(amount, description, token).await?;
+        let invoice = self
+            .inner
+            .bolt11_invoice(amount, description, token)
+            .await?;
         Ok(types::LightningInvoice {
             invoice: invoice.to_string(),
             payment_hash: invoice.payment_hash().to_string(),
@@ -794,10 +798,8 @@ impl Wallet {
         claim_destination: String,
         description: Option<String>,
         token: Option<String>,
-    ) -> Result<types::LightningInvoice, Error> {
-        let addr: ark::Address = claim_destination
-            .parse()
-            .context("invalid ark address")?;
+    ) -> Result<types::LightningInvoice, BarkError> {
+        let addr: ark::Address = claim_destination.parse().context("invalid ark address")?;
         let amount = bitcoin::Amount::from_sat(amount_sats);
         let invoice = self
             .inner
@@ -813,14 +815,14 @@ impl Wallet {
     pub async fn try_claim_all_lightning_receives(
         &self,
         wait: bool,
-    ) -> Result<Vec<types::LightningReceive>, Error> {
+    ) -> Result<Vec<types::LightningReceive>, BarkError> {
         let receives = self.inner.try_claim_all_lightning_receives(wait).await?;
         Ok(receives.into_iter().map(Into::into).collect())
     }
 
     pub async fn pending_lightning_receives(
         &self,
-    ) -> Result<Vec<types::LightningReceive>, Error> {
+    ) -> Result<Vec<types::LightningReceive>, BarkError> {
         Ok(self
             .inner
             .pending_lightning_receives()
@@ -830,7 +832,7 @@ impl Wallet {
             .collect())
     }
 
-    pub async fn claimable_lightning_receive_balance_sats(&self) -> Result<u64, Error> {
+    pub async fn claimable_lightning_receive_balance_sats(&self) -> Result<u64, BarkError> {
         Ok(self
             .inner
             .claimable_lightning_receive_balance()
@@ -843,7 +845,7 @@ impl Wallet {
     pub async fn lightning_receive_state(
         &self,
         payment_hash: String,
-    ) -> Result<types::LightningReceive, Error> {
+    ) -> Result<types::LightningReceive, BarkError> {
         let payment_hash_obj =
             PaymentHash::from_str(&payment_hash).context("invalid payment hash")?;
         Ok(self
@@ -857,7 +859,7 @@ impl Wallet {
         &self,
         payment_hash: String,
         wait: bool,
-    ) -> Result<types::LightningReceive, Error> {
+    ) -> Result<types::LightningReceive, BarkError> {
         let payment_hash_obj =
             PaymentHash::from_str(&payment_hash).context("invalid payment hash")?;
         let state = self
@@ -867,7 +869,7 @@ impl Wallet {
         Ok(state.into())
     }
 
-    pub async fn cancel_lightning_receive(&self, payment_hash: String) -> Result<(), Error> {
+    pub async fn cancel_lightning_receive(&self, payment_hash: String) -> Result<(), BarkError> {
         let payment_hash_obj =
             PaymentHash::from_str(&payment_hash).context("invalid payment hash")?;
         self.inner
@@ -880,7 +882,7 @@ impl Wallet {
     pub async fn attempt_lightning_receive_exit(
         &self,
         payment_hash: String,
-    ) -> Result<(), Error> {
+    ) -> Result<(), BarkError> {
         let payment_hash_obj =
             PaymentHash::from_str(&payment_hash).context("invalid payment hash")?;
         self.inner
@@ -902,7 +904,7 @@ impl Wallet {
         &self,
         ark_address: String,
         amount_sats: u64,
-    ) -> Result<(), Error> {
+    ) -> Result<(), BarkError> {
         let addr: ark::Address = ark_address.parse().context("invalid ark address")?;
         let amount = bitcoin::Amount::from_sat(amount_sats);
         self.inner.send_arkoor_payment(&addr, amount).await?;
@@ -917,7 +919,7 @@ impl Wallet {
     ///
     /// Errors only when `address` does not parse; a `false` means the parsed
     /// address fails one of the checks above. Requires a server connection.
-    pub async fn validate_arkoor_address(&self, address: String) -> Result<bool, Error> {
+    pub async fn validate_arkoor_address(&self, address: String) -> Result<bool, BarkError> {
         let addr: ark::Address = address.parse().context("invalid ark address")?;
         Ok(self.inner.validate_arkoor_address(&addr).await.is_ok())
     }
@@ -930,7 +932,7 @@ impl Wallet {
         &self,
         address: String,
         amount_sats: u64,
-    ) -> Result<String, Error> {
+    ) -> Result<String, BarkError> {
         let addr = parse_address(&address, self.inner.network().await?)?;
         let amount = bitcoin::Amount::from_sat(amount_sats);
         let txid = self.inner.send_onchain(addr, amount).await?;
@@ -941,7 +943,7 @@ impl Wallet {
     // History
     // ------------------------------------------------------------------------
 
-    pub async fn history(&self) -> Result<Vec<types::Movement>, Error> {
+    pub async fn history(&self) -> Result<Vec<types::Movement>, BarkError> {
         Ok(self
             .inner
             .history()
@@ -955,7 +957,7 @@ impl Wallet {
         &self,
         payment_method_type: String,
         payment_method_value: String,
-    ) -> Result<Vec<types::Movement>, Error> {
+    ) -> Result<Vec<types::Movement>, BarkError> {
         let payment_method = bark::movement::PaymentMethod::from_type_value(
             &payment_method_type,
             &payment_method_value,
@@ -975,18 +977,16 @@ impl Wallet {
     // Refresh
     // ------------------------------------------------------------------------
 
-    pub async fn refresh_vtxos(&self, vtxo_ids: Vec<String>) -> Result<Option<String>, Error> {
+    pub async fn refresh_vtxos(&self, vtxo_ids: Vec<String>) -> Result<Option<String>, BarkError> {
         let ids: Result<Vec<_>, _> = vtxo_ids
             .iter()
-            .map(|id| {
-                id.parse::<VtxoId>().context("invalid vtxo id")
-            })
+            .map(|id| id.parse::<VtxoId>().context("invalid vtxo id"))
             .collect();
         let result = self.inner.refresh_vtxos(ids?).await?;
         Ok(result.map(|s| format!("{:?}", s)))
     }
 
-    pub async fn maintenance_refresh(&self) -> Result<Option<String>, Error> {
+    pub async fn maintenance_refresh(&self) -> Result<Option<String>, BarkError> {
         let result = self.inner.maintenance_refresh().await?;
         Ok(result.map(|s| format!("{:?}", s)))
     }
@@ -994,14 +994,11 @@ impl Wallet {
     pub async fn refresh_vtxos_delegated(
         &self,
         vtxo_ids: Vec<String>,
-    ) -> Result<Option<types::RoundState>, Error> {
+    ) -> Result<Option<types::RoundState>, BarkError> {
         let ids: Result<Vec<_>, _> = vtxo_ids.iter().map(|s| s.parse::<VtxoId>()).collect();
         let ids = ids.context("invalid VTXO id")?;
 
-        let state = self
-            .inner
-            .refresh_vtxos_delegated(ids)
-            .await?;
+        let state = self.inner.refresh_vtxos_delegated(ids).await?;
         Ok(state.map(|s| s.into()))
     }
 
@@ -1016,7 +1013,7 @@ impl Wallet {
         &self,
         vtxo_ids: Vec<String>,
         scheduled_height: u32,
-    ) -> Result<Option<types::RoundState>, Error> {
+    ) -> Result<Option<types::RoundState>, BarkError> {
         let ids: Result<Vec<_>, _> = vtxo_ids.iter().map(|s| s.parse::<VtxoId>()).collect();
         let ids = ids.context("invalid VTXO id")?;
 
@@ -1045,7 +1042,7 @@ impl Wallet {
         &self,
         vtxo_ids: Vec<String>,
         gap_limit: Option<u32>,
-    ) -> Result<types::RecoveryReport, Error> {
+    ) -> Result<types::RecoveryReport, BarkError> {
         let ids: Result<Vec<_>, _> = vtxo_ids
             .iter()
             .map(|id| id.parse::<VtxoId>().context("invalid vtxo id"))
@@ -1059,7 +1056,7 @@ impl Wallet {
     // Info
     // ------------------------------------------------------------------------
 
-    pub async fn properties(&self) -> Result<types::WalletProperties, Error> {
+    pub async fn properties(&self) -> Result<types::WalletProperties, BarkError> {
         Ok(self.inner.properties().await?.into())
     }
 
@@ -1067,7 +1064,7 @@ impl Wallet {
         self.inner.fingerprint().to_string()
     }
 
-    pub async fn network(&self) -> Result<types::Network, Error> {
+    pub async fn network(&self) -> Result<types::Network, BarkError> {
         Ok(self.inner.network().await?.into())
     }
 
@@ -1082,7 +1079,9 @@ impl Wallet {
             server_access_token: None,
             esplora_address: cfg.esplora_address.clone(),
             bitcoind_address: cfg.bitcoind_address.clone(),
-            bitcoind_cookiefile: cfg.bitcoind_cookiefile.as_ref()
+            bitcoind_cookiefile: cfg
+                .bitcoind_cookiefile
+                .as_ref()
                 .map(|p| p.to_string_lossy().to_string()),
             bitcoind_user: cfg.bitcoind_user.clone(),
             bitcoind_pass: None,
@@ -1107,7 +1106,7 @@ impl Wallet {
         }
     }
 
-    pub async fn next_round_start_time(&self) -> Result<u64, Error> {
+    pub async fn next_round_start_time(&self) -> Result<u64, BarkError> {
         let system_time = self.inner.next_round_start_time().await?;
         Ok(system_time
             .duration_since(std::time::UNIX_EPOCH)
@@ -1119,10 +1118,7 @@ impl Wallet {
     // Boarding (requires onchain wallet)
     // ------------------------------------------------------------------------
 
-    pub async fn board_amount(
-        &self,
-        amount_sats: u64,
-    ) -> Result<types::PendingBoard, Error> {
+    pub async fn board_amount(&self, amount_sats: u64) -> Result<types::PendingBoard, BarkError> {
         let amount = bitcoin::Amount::from_sat(amount_sats);
         info!("[BOARD] Boarding {} sats into Ark...", amount_sats);
 
@@ -1136,21 +1132,16 @@ impl Wallet {
         let vtxo_id = pb.vtxos.first().map(|v| v.to_string()).unwrap_or_default();
         info!(
             "[BOARD] Board transaction created: {} (VTXO ID: {})",
-            txid,
-            vtxo_id
+            txid, vtxo_id
         );
 
         Ok(pb.into())
     }
 
-    pub async fn board_all(&self) -> Result<types::PendingBoard, Error> {
+    pub async fn board_all(&self) -> Result<types::PendingBoard, BarkError> {
         info!("[BOARD] Boarding ALL funds into Ark...");
 
-        let pb = self
-            .inner
-            .board_all()
-            .await
-            .context("Board all failed")?;
+        let pb = self.inner.board_all().await.context("Board all failed")?;
 
         let txid = pb.funding_tx.compute_txid();
         let vtxo_id = pb.vtxos.first().map(|v| v.to_string()).unwrap_or_default();
@@ -1164,7 +1155,7 @@ impl Wallet {
         Ok(pb.into())
     }
 
-    pub async fn board_funding_address(&self) -> Result<types::BoardFundingInfo, Error> {
+    pub async fn board_funding_address(&self) -> Result<types::BoardFundingInfo, BarkError> {
         let (keypair, keypair_index) = self
             .inner
             .derive_store_next_keypair()
@@ -1194,7 +1185,7 @@ impl Wallet {
         psbt_base64: String,
         keypair_index: u32,
         expiry_height: u32,
-    ) -> Result<types::PendingBoard, Error> {
+    ) -> Result<types::PendingBoard, BarkError> {
         use bitcoin::base64::prelude::*;
         use bitcoin::psbt::Psbt;
 
@@ -1232,7 +1223,7 @@ impl Wallet {
         Ok(pb.into())
     }
 
-    pub async fn sync_pending_boards(&self) -> Result<(), Error> {
+    pub async fn sync_pending_boards(&self) -> Result<(), BarkError> {
         info!("[BOARD] Syncing pending boards...");
         self.inner
             .sync_pending_boards()
@@ -1242,7 +1233,7 @@ impl Wallet {
         Ok(())
     }
 
-    pub async fn pending_boards(&self) -> Result<Vec<types::PendingBoard>, Error> {
+    pub async fn pending_boards(&self) -> Result<Vec<types::PendingBoard>, BarkError> {
         Ok(self
             .inner
             .pending_boards()
@@ -1252,7 +1243,7 @@ impl Wallet {
             .collect())
     }
 
-    pub async fn pending_board_vtxos(&self) -> Result<Vec<types::Vtxo>, Error> {
+    pub async fn pending_board_vtxos(&self) -> Result<Vec<types::Vtxo>, BarkError> {
         Ok(self
             .inner
             .pending_board_vtxos()
@@ -1262,7 +1253,7 @@ impl Wallet {
             .collect())
     }
 
-    pub async fn pending_round_input_vtxos(&self) -> Result<Vec<types::Vtxo>, Error> {
+    pub async fn pending_round_input_vtxos(&self) -> Result<Vec<types::Vtxo>, BarkError> {
         Ok(self
             .inner
             .pending_round_input_vtxos()
@@ -1272,7 +1263,7 @@ impl Wallet {
             .collect())
     }
 
-    pub async fn pending_lightning_send_vtxos(&self) -> Result<Vec<types::Vtxo>, Error> {
+    pub async fn pending_lightning_send_vtxos(&self) -> Result<Vec<types::Vtxo>, BarkError> {
         Ok(self
             .inner
             .pending_lightning_send_vtxos()
@@ -1286,7 +1277,7 @@ impl Wallet {
     // Unilateral Exits (requires onchain wallet)
     // ------------------------------------------------------------------------
 
-    pub async fn start_exit_for_entire_wallet(&self) -> Result<(), Error> {
+    pub async fn start_exit_for_entire_wallet(&self) -> Result<(), BarkError> {
         info!("[EXIT] Starting unilateral exit for entire wallet...");
         self.inner
             .exit_mgr()
@@ -1297,12 +1288,9 @@ impl Wallet {
         Ok(())
     }
 
-    pub async fn sync_exits(&self) -> Result<(), Error> {
+    pub async fn sync_exits(&self) -> Result<(), BarkError> {
         info!("[EXIT] Syncing exits...");
-        self.inner
-            .sync_exits()
-            .await
-            .context("Sync exits failed")?;
+        self.inner.sync_exits().await.context("Sync exits failed")?;
         info!("[EXIT] Exits synced");
         Ok(())
     }
@@ -1310,7 +1298,7 @@ impl Wallet {
     pub async fn progress_exits(
         &self,
         fee_rate_sat_per_vb: Option<u64>,
-    ) -> Result<Vec<types::ExitProgressStatus>, Error> {
+    ) -> Result<Vec<types::ExitProgressStatus>, BarkError> {
         info!("[EXIT] Progressing exits...");
 
         let fee_rate = fee_rate_sat_per_vb.and_then(bitcoin::FeeRate::from_sat_per_vb);
@@ -1337,7 +1325,7 @@ impl Wallet {
     async fn bare_vtxos_by_id(
         &self,
         vtxo_ids: &[String],
-    ) -> Result<Vec<ark::Vtxo<ark::vtxo::Bare>>, Error> {
+    ) -> Result<Vec<ark::Vtxo<ark::vtxo::Bare>>, BarkError> {
         let ids = parse_vtxo_ids(vtxo_ids)?;
 
         let mut vtxos = Vec::with_capacity(ids.len());
@@ -1353,7 +1341,7 @@ impl Wallet {
         Ok(vtxos)
     }
 
-    pub async fn start_exit_for_vtxos(&self, vtxo_ids: Vec<String>) -> Result<(), Error> {
+    pub async fn start_exit_for_vtxos(&self, vtxo_ids: Vec<String>) -> Result<(), BarkError> {
         info!("[EXIT] Starting exit for {} VTXOs...", vtxo_ids.len());
 
         let vtxos = self.bare_vtxos_by_id(&vtxo_ids).await?;
@@ -1377,7 +1365,7 @@ impl Wallet {
     pub async fn start_exit_for_vtxos_including_non_standard(
         &self,
         vtxo_ids: Vec<String>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), BarkError> {
         info!(
             "[EXIT] Starting exit (non-standard allowed) for {} VTXOs...",
             vtxo_ids.len(),
@@ -1410,10 +1398,7 @@ impl Wallet {
     /// broadcast) come back in the returned [`types::ExitCancelResult`] rather
     /// than as errors; `Err` is reserved for genuine faults such as a database
     /// failure or an unreachable chain source.
-    pub async fn cancel_exit(
-        &self,
-        vtxo_id: String,
-    ) -> Result<types::ExitCancelResult, Error> {
+    pub async fn cancel_exit(&self, vtxo_id: String) -> Result<types::ExitCancelResult, BarkError> {
         use bark::exit::ExitError;
 
         let id = vtxo_id.parse::<VtxoId>().context("invalid vtxo id")?;
@@ -1424,19 +1409,24 @@ impl Wallet {
             Ok(()) => {
                 info!("[EXIT] Exit cancelled for VTXO {}", id);
                 Ok(types::ExitCancelResult::canceled())
-            },
+            }
             Err(ExitError::NotExiting { .. }) => {
                 info!("[EXIT] VTXO {} has no exit to cancel", id);
                 Ok(types::ExitCancelResult::refused(
                     types::ExitCancelFailure::NotExiting,
                 ))
-            },
+            }
             Err(ExitError::CannotCancelExit { state, .. }) => {
-                info!("[EXIT] Exit for VTXO {} is past cancellation ({:?})", id, state);
+                info!(
+                    "[EXIT] Exit for VTXO {} is past cancellation ({:?})",
+                    id, state
+                );
                 Ok(types::ExitCancelResult::refused(
-                    types::ExitCancelFailure::TooLate { state: state.into() },
+                    types::ExitCancelFailure::TooLate {
+                        state: state.into(),
+                    },
                 ))
-            },
+            }
             Err(ExitError::ExitTxAlreadyBroadcast { txid, .. }) => {
                 info!("[EXIT] Exit tx {} for VTXO {} already broadcast", txid, id);
                 Ok(types::ExitCancelResult::refused(
@@ -1444,18 +1434,18 @@ impl Wallet {
                         txid: txid.to_string(),
                     },
                 ))
-            },
-            Err(e) => Err(Error::from(anyhow::Error::new(e))),
+            }
+            Err(e) => Err(BarkError::from(anyhow::Error::new(e))),
         }
     }
 
-    pub async fn list_claimable_exits(&self) -> Result<Vec<types::ExitVtxo>, Error> {
+    pub async fn list_claimable_exits(&self) -> Result<Vec<types::ExitVtxo>, BarkError> {
         let exit_guard = self.inner.exit_mgr();
         let claimable = exit_guard.list_claimable().await;
         Ok(claimable.iter().map(Into::into).collect())
     }
 
-    pub async fn get_exit_vtxos(&self) -> Result<Vec<types::ExitVtxo>, Error> {
+    pub async fn get_exit_vtxos(&self) -> Result<Vec<types::ExitVtxo>, BarkError> {
         let exit_guard = self.inner.exit_mgr();
         Ok(exit_guard
             .get_exit_vtxos()
@@ -1465,12 +1455,12 @@ impl Wallet {
             .collect())
     }
 
-    pub async fn has_pending_exits(&self) -> Result<bool, Error> {
+    pub async fn has_pending_exits(&self) -> Result<bool, BarkError> {
         let exit_guard = self.inner.exit_mgr();
         Ok(exit_guard.has_pending_exits().await)
     }
 
-    pub async fn pending_exits_total_sats(&self) -> Result<u64, Error> {
+    pub async fn pending_exits_total_sats(&self) -> Result<u64, BarkError> {
         let exit_guard = self.inner.exit_mgr();
         Ok(exit_guard
             .try_pending_total()
@@ -1478,7 +1468,7 @@ impl Wallet {
             .to_sat())
     }
 
-    pub async fn all_exits_claimable_at_height(&self) -> Result<Option<u32>, Error> {
+    pub async fn all_exits_claimable_at_height(&self) -> Result<Option<u32>, BarkError> {
         let exit_guard = self.inner.exit_mgr();
         Ok(exit_guard.all_claimable_at_height().await)
     }
@@ -1488,10 +1478,8 @@ impl Wallet {
         vtxo_id: String,
         include_history: bool,
         include_transactions: bool,
-    ) -> Result<Option<types::ExitTransactionStatus>, Error> {
-        let vtxo_id_parsed = vtxo_id
-            .parse::<VtxoId>()
-            .context("invalid vtxo id")?;
+    ) -> Result<Option<types::ExitTransactionStatus>, BarkError> {
+        let vtxo_id_parsed = vtxo_id.parse::<VtxoId>().context("invalid vtxo id")?;
 
         let exit_guard = self.inner.exit_mgr();
         let status = exit_guard
@@ -1513,7 +1501,7 @@ impl Wallet {
         drain_all: bool,
         address: String,
         fee_rate_sat_per_vb: Option<u64>,
-    ) -> Result<types::ExitClaimTransaction, Error> {
+    ) -> Result<types::ExitClaimTransaction, BarkError> {
         info!("[EXIT] Draining {} exits to {}...", vtxo_ids.len(), address);
 
         let addr = parse_address(&address, self.inner.network().await?)?;
@@ -1525,12 +1513,12 @@ impl Wallet {
 
         let to_drain: Vec<_> = match (drain_all, vtxo_ids.is_empty()) {
             (true, true) => claimable,
-            (true, false) => return Err(
-                "pass either drain_all or a list of vtxo ids, not both".into()
-            ),
-            (false, true) => return Err(
-                "no vtxo ids given; pass drain_all to claim every exit".into()
-            ),
+            (true, false) => {
+                return Err("pass either drain_all or a list of vtxo ids, not both".into())
+            }
+            (false, true) => {
+                return Err("no vtxo ids given; pass drain_all to claim every exit".into())
+            }
             (false, false) => {
                 // All-or-nothing: a malformed id used to be dropped silently.
                 let requested_ids: std::collections::HashSet<_> =
@@ -1539,7 +1527,7 @@ impl Wallet {
                     .into_iter()
                     .filter(|ev| requested_ids.contains(&ev.id()))
                     .collect()
-            },
+            }
         };
 
         if to_drain.is_empty() {
@@ -1568,7 +1556,7 @@ impl Wallet {
         })
     }
 
-    pub async fn sign_exit_claim_inputs(&self, psbt_base64: String) -> Result<String, Error> {
+    pub async fn sign_exit_claim_inputs(&self, psbt_base64: String) -> Result<String, BarkError> {
         use bitcoin::base64::prelude::*;
         use bitcoin::psbt::Psbt;
 
@@ -1591,7 +1579,7 @@ impl Wallet {
     // Round Management
     // ------------------------------------------------------------------------
 
-    pub async fn pending_round_states(&self) -> Result<Vec<types::RoundState>, Error> {
+    pub async fn pending_round_states(&self) -> Result<Vec<types::RoundState>, BarkError> {
         Ok(self
             .inner
             .pending_round_states()
@@ -1601,7 +1589,7 @@ impl Wallet {
             .collect())
     }
 
-    pub async fn cancel_pending_round(&self, round_id: u32) -> Result<(), Error> {
+    pub async fn cancel_pending_round(&self, round_id: u32) -> Result<(), BarkError> {
         use bark::persist::models::RoundStateId;
         self.inner
             .cancel_pending_round(RoundStateId(round_id))
@@ -1609,12 +1597,12 @@ impl Wallet {
         Ok(())
     }
 
-    pub async fn cancel_all_pending_rounds(&self) -> Result<(), Error> {
+    pub async fn cancel_all_pending_rounds(&self) -> Result<(), BarkError> {
         self.inner.cancel_all_pending_rounds().await?;
         Ok(())
     }
 
-    pub async fn progress_pending_rounds(&self) -> Result<(), Error> {
+    pub async fn progress_pending_rounds(&self) -> Result<(), BarkError> {
         self.inner.progress_pending_rounds(None).await?;
         Ok(())
     }
@@ -1623,7 +1611,7 @@ impl Wallet {
     // Server
     // ------------------------------------------------------------------------
 
-    pub async fn refresh_server(&self) -> Result<(), Error> {
+    pub async fn refresh_server(&self) -> Result<(), BarkError> {
         self.inner.refresh_server().await?;
         Ok(())
     }
@@ -1632,11 +1620,11 @@ impl Wallet {
     // VTXO Expiry & Refresh Scheduling
     // ------------------------------------------------------------------------
 
-    pub async fn get_first_expiring_vtxo_blockheight(&self) -> Result<Option<u32>, Error> {
+    pub async fn get_first_expiring_vtxo_blockheight(&self) -> Result<Option<u32>, BarkError> {
         Ok(self.inner.get_first_expiring_vtxo_blockheight().await?)
     }
 
-    pub async fn get_next_required_refresh_blockheight(&self) -> Result<Option<u32>, Error> {
+    pub async fn get_next_required_refresh_blockheight(&self) -> Result<Option<u32>, BarkError> {
         Ok(self.inner.get_next_required_refresh_blockheight().await?)
     }
 
@@ -1644,12 +1632,11 @@ impl Wallet {
     // Broadcasting
     // ------------------------------------------------------------------------
 
-    pub async fn broadcast_tx(&self, tx_hex: String) -> Result<String, Error> {
+    pub async fn broadcast_tx(&self, tx_hex: String) -> Result<String, BarkError> {
         use bitcoin::consensus::encode::deserialize_hex;
         use bitcoin::Transaction;
 
-        let tx: Transaction =
-            deserialize_hex(&tx_hex).context("invalid transaction")?;
+        let tx: Transaction = deserialize_hex(&tx_hex).context("invalid transaction")?;
 
         let txid = tx.compute_txid();
         info!("[BROADCAST] Broadcasting transaction: {}", txid);
@@ -1668,14 +1655,16 @@ impl Wallet {
     // Mailbox identifiers (sync, no run_async)
     // ------------------------------------------------------------------------
 
-    pub fn mailbox_identifier(&self) -> Result<String, Error> {
+    pub fn mailbox_identifier(&self) -> Result<String, BarkError> {
         let identifier = self.inner.mailbox_identifier();
         Ok(hex::encode(identifier.serialize()))
     }
 
     /// Hex-encoded authorization to read this wallet's mailbox.
-    pub fn mailbox_authorization(&self, expiry_secs: u32) -> Result<String, Error> {
-        let auth = self.inner.mailbox_authorization(mailbox_auth_expiry(expiry_secs)?);
+    pub fn mailbox_authorization(&self, expiry_secs: u32) -> Result<String, BarkError> {
+        let auth = self
+            .inner
+            .mailbox_authorization(mailbox_auth_expiry(expiry_secs)?);
         Ok(hex::encode(auth.serialize()))
     }
 
@@ -1694,7 +1683,7 @@ impl Wallet {
         &self,
         encoded_vtxo: String,
         args: Option<types::ImportVtxoArgs>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), BarkError> {
         let vtxo = parse_vtxo(&encoded_vtxo)?;
 
         self.inner
@@ -1718,7 +1707,7 @@ impl Wallet {
         &self,
         encoded_vtxos: Vec<String>,
         args: Option<types::ImportVtxoArgs>,
-    ) -> Result<Vec<String>, Error> {
+    ) -> Result<Vec<String>, BarkError> {
         let vtxos = encoded_vtxos
             .iter()
             .map(|encoded| parse_vtxo(encoded))
@@ -1737,7 +1726,7 @@ impl Wallet {
     /// Hex-encoded serialization of the full VTXO (genesis chain included),
     /// re-importable via [`Wallet::import_vtxo`]. Mirrors bark-rest
     /// `GET /vtxos/{id}/encoded`.
-    pub async fn vtxo_encoded(&self, vtxo_id: String) -> Result<String, Error> {
+    pub async fn vtxo_encoded(&self, vtxo_id: String) -> Result<String, BarkError> {
         let id: VtxoId = vtxo_id.parse().context("invalid vtxo id")?;
 
         let vtxo = self
@@ -1756,12 +1745,9 @@ impl Wallet {
     pub async fn estimate_board_fee(
         &self,
         amount_sats: u64,
-    ) -> Result<types::FeeEstimate, Error> {
+    ) -> Result<types::FeeEstimate, BarkError> {
         let amount = bitcoin::Amount::from_sat(amount_sats);
-        let estimate = self
-            .inner
-            .estimate_board_offchain_fee(amount)
-            .await?;
+        let estimate = self.inner.estimate_board_offchain_fee(amount).await?;
         Ok(estimate.into())
     }
 
@@ -1769,14 +1755,12 @@ impl Wallet {
         &self,
         address: String,
         vtxo_ids: Vec<String>,
-    ) -> Result<types::FeeEstimate, Error> {
+    ) -> Result<types::FeeEstimate, BarkError> {
         let btc_addr = parse_address(&address, self.inner.network().await?)?;
 
         let ids: Result<Vec<_>, _> = vtxo_ids
             .iter()
-            .map(|id| {
-                id.parse::<VtxoId>().context("invalid vtxo id")
-            })
+            .map(|id| id.parse::<VtxoId>().context("invalid vtxo id"))
             .collect();
         let ids = ids?;
 
@@ -1790,22 +1774,17 @@ impl Wallet {
             vtxos.push(vtxo);
         }
 
-        let estimate = self
-            .inner
-            .estimate_offboard(&btc_addr, &vtxos)
-            .await?;
+        let estimate = self.inner.estimate_offboard(&btc_addr, &vtxos).await?;
         Ok(estimate.into())
     }
 
     pub async fn estimate_refresh_fee(
         &self,
         vtxo_ids: Vec<String>,
-    ) -> Result<types::FeeEstimate, Error> {
+    ) -> Result<types::FeeEstimate, BarkError> {
         let ids: Result<Vec<_>, _> = vtxo_ids
             .iter()
-            .map(|id| {
-                id.parse::<VtxoId>().context("invalid vtxo id")
-            })
+            .map(|id| id.parse::<VtxoId>().context("invalid vtxo id"))
             .collect();
         let ids = ids?;
 
@@ -1819,59 +1798,44 @@ impl Wallet {
             vtxos.push(vtxo);
         }
 
-        let estimate = self
-            .inner
-            .estimate_refresh_fee(&vtxos)
-            .await?;
+        let estimate = self.inner.estimate_refresh_fee(&vtxos).await?;
         Ok(estimate.into())
     }
 
     pub async fn estimate_lightning_send_fee(
         &self,
         amount_sats: u64,
-    ) -> Result<types::FeeEstimate, Error> {
+    ) -> Result<types::FeeEstimate, BarkError> {
         let amount = bitcoin::Amount::from_sat(amount_sats);
-        let estimate = self
-            .inner
-            .estimate_lightning_send_fee(amount)
-            .await?;
+        let estimate = self.inner.estimate_lightning_send_fee(amount).await?;
         Ok(estimate.into())
     }
 
     pub async fn estimate_lightning_receive_fee(
         &self,
         amount_sats: u64,
-    ) -> Result<types::FeeEstimate, Error> {
+    ) -> Result<types::FeeEstimate, BarkError> {
         let amount = bitcoin::Amount::from_sat(amount_sats);
-        let estimate = self
-            .inner
-            .estimate_lightning_receive_fee(amount)
-            .await?;
+        let estimate = self.inner.estimate_lightning_receive_fee(amount).await?;
         Ok(estimate.into())
     }
 
     pub async fn estimate_arkoor_payment_fee(
         &self,
         amount_sats: u64,
-    ) -> Result<types::FeeEstimate, Error> {
+    ) -> Result<types::FeeEstimate, BarkError> {
         let amount = bitcoin::Amount::from_sat(amount_sats);
-        let estimate = self
-            .inner
-            .estimate_arkoor_payment_fee(amount)
-            .await?;
+        let estimate = self.inner.estimate_arkoor_payment_fee(amount).await?;
         Ok(estimate.into())
     }
 
     pub async fn estimate_offboard_all_fee(
         &self,
         address: String,
-    ) -> Result<types::FeeEstimate, Error> {
+    ) -> Result<types::FeeEstimate, BarkError> {
         let btc_addr = parse_address(&address, self.inner.network().await?)?;
 
-        let estimate = self
-            .inner
-            .estimate_offboard_all(&btc_addr)
-            .await?;
+        let estimate = self.inner.estimate_offboard_all(&btc_addr).await?;
         Ok(estimate.into())
     }
 
@@ -1879,14 +1843,11 @@ impl Wallet {
         &self,
         address: String,
         amount_sats: u64,
-    ) -> Result<types::FeeEstimate, Error> {
+    ) -> Result<types::FeeEstimate, BarkError> {
         let btc_addr = parse_address(&address, self.inner.network().await?)?;
 
         let amount = bitcoin::Amount::from_sat(amount_sats);
-        let estimate = self
-            .inner
-            .estimate_send_onchain(&btc_addr, amount)
-            .await?;
+        let estimate = self.inner.estimate_send_onchain(&btc_addr, amount).await?;
         Ok(estimate.into())
     }
 
@@ -1910,7 +1871,7 @@ impl Wallet {
         vtxo_ids: Vec<String>,
         fee_rate_sat_per_vb: Option<u64>,
         destination: Option<String>,
-    ) -> Result<types::EmergencyExitFeeEstimate, Error> {
+    ) -> Result<types::EmergencyExitFeeEstimate, BarkError> {
         let ids = if vtxo_ids.is_empty() {
             self.inner
                 .spendable_vtxos()
@@ -1950,18 +1911,18 @@ impl Wallet {
 }
 
 /// Absolute expiry `expiry_secs` from now.
-fn mailbox_auth_expiry(expiry_secs: u32) -> Result<DateTime<Local>, Error> {
+fn mailbox_auth_expiry(expiry_secs: u32) -> Result<DateTime<Local>, BarkError> {
     Local::now()
         .checked_add_signed(Duration::seconds(expiry_secs as i64))
         .context("mailbox authorization expiry out of range")
-        .map_err(Error::from)
+        .map_err(BarkError::from)
 }
 
 /// Parse a VTXO from its serialized form.
 ///
 /// Hex is the canonical encoding ([`Wallet::vtxo_encoded`] and bark-rest use
 /// it); base64 is also accepted since `import_vtxo` historically took it.
-fn parse_vtxo(encoded: &str) -> Result<ark::Vtxo, Error> {
+fn parse_vtxo(encoded: &str) -> Result<ark::Vtxo, BarkError> {
     let encoded = encoded.trim();
 
     if let Ok(vtxo) = ark::Vtxo::deserialize_hex(encoded) {
@@ -2077,15 +2038,20 @@ mod tests {
     #[test]
     fn a_mnemonic_parses_whatever_whitespace_separates_the_words() {
         const WORDS: [&str; 12] = [
-            "abandon", "abandon", "abandon", "abandon", "abandon", "abandon",
-            "abandon", "abandon", "abandon", "abandon", "abandon", "about",
+            "abandon", "abandon", "abandon", "abandon", "abandon", "abandon", "abandon", "abandon",
+            "abandon", "abandon", "abandon", "about",
         ];
         let canonical = seed_from_str(bitcoin::Network::Regtest, &WORDS.join(" ")).unwrap();
 
         for sep in ["\n", "\t", "  ", " \n "] {
             let seed = seed_from_str(bitcoin::Network::Regtest, &WORDS.join(sep))
                 .unwrap_or_else(|e| panic!("{:?}-separated phrase rejected: {}", sep, e.message()));
-            assert_eq!(seed.fingerprint(), canonical.fingerprint(), "separator {:?}", sep);
+            assert_eq!(
+                seed.fingerprint(),
+                canonical.fingerprint(),
+                "separator {:?}",
+                sep
+            );
         }
     }
 
@@ -2104,7 +2070,10 @@ mod tests {
         let mut config = minimal_config();
         config.bitcoind_pass = Some("hunter2".to_owned());
         let cfg = config.into_bark(bitcoin::Network::Regtest).unwrap();
-        assert_eq!(cfg.bitcoind_pass.map(|p| p.leak_ref().clone()).as_deref(), Some("hunter2"));
+        assert_eq!(
+            cfg.bitcoind_pass.map(|p| p.leak_ref().clone()).as_deref(),
+            Some("hunter2")
+        );
     }
 
     /// bark wraps the password in a Secret so it stays out of logs; the FFI
@@ -2124,7 +2093,10 @@ mod tests {
         let good = parse_vtxo(BOARD_VTXO_HEX).unwrap().id().to_string();
 
         assert_eq!(parse_vtxo_ids(&[]).unwrap().len(), 0);
-        assert_eq!(parse_vtxo_ids(std::slice::from_ref(&good)).unwrap().len(), 1);
+        assert_eq!(
+            parse_vtxo_ids(std::slice::from_ref(&good)).unwrap().len(),
+            1
+        );
 
         // One bad id fails the batch, so no partial lock/unlock can be issued.
         let err = parse_vtxo_ids(&[good, "nonsense".to_owned()]).unwrap_err();
@@ -2144,7 +2116,9 @@ mod tests {
         );
         assert_eq!(
             describe_state(&VtxoState::Locked {
-                holder: Some(VtxoLockHolder::Action { id: "ln-pay:xyz".into() }),
+                holder: Some(VtxoLockHolder::Action {
+                    id: "ln-pay:xyz".into()
+                }),
             }),
             "locked by action ln-pay:xyz",
         );

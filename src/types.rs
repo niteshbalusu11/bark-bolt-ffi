@@ -10,11 +10,7 @@ use serde::{Deserialize, Serialize};
 // ============================================================================
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[boltffi::data]
 pub enum Network {
     Bitcoin,
     Testnet,
@@ -55,11 +51,7 @@ impl From<BtcNetwork> for Network {
 /// Severity of a log record.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[boltffi::data]
 pub enum LogLevel {
     Error,
     Warn,
@@ -110,12 +102,7 @@ impl From<LogLevel> for log::LevelFilter {
 // ============================================================================
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct WalletProperties {
     pub network: Network,
     pub fingerprint: String,
@@ -134,13 +121,8 @@ impl From<BarkWalletProperties> for WalletProperties {
 // Balance
 // ============================================================================
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+#[boltffi::data]
 pub struct Balance {
     pub spendable_sats: u64,
     pub pending_in_round_sats: u64,
@@ -179,13 +161,7 @@ impl From<BarkBalance> for Balance {
 /// Serde/TS tags match upstream's serialization: `"action"` / `"movement"`.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "kebab-case")]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    // Both directions: read back off `Vtxo.state`, and passed in when
-    // locking or unlocking.
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[boltffi::data]
 pub enum VtxoLockHolder {
     /// A wallet action checkpoint. `id` is upstream's `WalletActionId`
     /// (an opaque string).
@@ -220,11 +196,7 @@ impl From<VtxoLockHolder> for bark::vtxo::VtxoLockHolder {
 /// `"spendable"` | `"locked"` | `"spent"` | `"exited"`.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "kebab-case")]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[boltffi::data]
 pub enum VtxoState {
     /// Available; can be spent in a future round.
     Spendable,
@@ -253,12 +225,7 @@ impl From<&bark::vtxo::VtxoState> for VtxoState {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct Vtxo {
     pub id: String,
     pub amount_sats: u64,
@@ -298,12 +265,7 @@ impl From<BarkWalletVtxo> for Vtxo {
 // ============================================================================
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct LightningInvoice {
     pub invoice: String,
     pub payment_hash: String,
@@ -315,12 +277,7 @@ pub struct LightningInvoice {
 // ============================================================================
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct OffboardResult {
     pub txid: String,
 }
@@ -330,12 +287,7 @@ pub struct OffboardResult {
 // ============================================================================
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct AddressWithIndex {
     pub address: String,
     pub index: u32,
@@ -346,12 +298,7 @@ pub struct AddressWithIndex {
 // ============================================================================
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct LightningReceive {
     pub payment_hash: String,
     pub invoice: String,
@@ -426,12 +373,7 @@ impl From<bark::actions::lightning::receive::LightningReceiveState> for Lightnin
 // ============================================================================
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct LightningSend {
     pub invoice: String,
     /// Amount being paid, in sats (`payment_amount`).
@@ -467,12 +409,7 @@ impl From<bark::actions::lightning::pay::LightningSend> for LightningSend {
 /// `check_lightning_payment` now return this so callers can drive the
 /// crash-safe send flow themselves (initiate with `wait = false`, then poll).
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(tag = "type", rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[boltffi::data]
 pub enum LightningSendStatus {
     /// No record of this payment (never started, or already pruned).
     Unknown,
@@ -504,12 +441,7 @@ impl From<bark::actions::lightning::pay::LightningSendState> for LightningSendSt
 // ============================================================================
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct Movement {
     pub id: u32,
     pub status: String,
@@ -582,12 +514,7 @@ impl From<bark::movement::Movement> for Movement {
 // ============================================================================
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct FeeEstimate {
     pub gross_amount_sats: u64,
     pub fee_sats: u64,
@@ -618,12 +545,7 @@ impl From<bark::FeeEstimate> for FeeEstimate {
 /// `claim_fee_sats` is deducted later from the recovered value when the
 /// matured outputs are drained.
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct EmergencyExitFeeEstimate {
     /// CPFP fees to broadcast every not-yet-confirmed exit transaction. Paid
     /// now from confirmed onchain funds; this is the minimum onchain balance
@@ -665,13 +587,8 @@ impl From<bark::exit::ExitFeeEstimate> for EmergencyExitFeeEstimate {
 // OnchainBalance
 // ============================================================================
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+#[boltffi::data]
 pub struct OnchainBalance {
     pub confirmed_sats: u64,
     pub pending_sats: u64,
@@ -696,13 +613,9 @@ impl From<bark::onchain::bdk_wallet::Balance> for OnchainBalance {
 ///
 /// Rates are in sat/kwu (satoshis per 1000 weight units) — divide by 250 for
 /// sat/vB.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct FeeRates {
     pub fast_sat_per_kwu: u64,
     pub regular_sat_per_kwu: u64,
@@ -722,12 +635,7 @@ impl From<bark::chain::FeeRates> for FeeRates {
 /// Summary of one onchain wallet transaction, mirroring
 /// `bark::onchain::WalletTxInfo`.
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct WalletTransaction {
     pub txid: String,
     /// The raw transaction, consensus-serialized as hex.
@@ -761,12 +669,12 @@ impl From<&bark::onchain::WalletTxInfo> for WalletTransaction {
 
 /// An onchain UTXO known to the wallet, mirroring `bark::onchain::Utxo`.
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "kebab-case", rename_all_fields = "camelCase")]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
+#[serde(
+    tag = "type",
+    rename_all = "kebab-case",
+    rename_all_fields = "camelCase"
 )]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[boltffi::data]
 pub enum OnchainUtxo {
     /// A standard wallet UTXO.
     Local {
@@ -809,12 +717,7 @@ impl From<&bark::onchain::Utxo> for OnchainUtxo {
 // ============================================================================
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct PendingBoard {
     pub vtxo_id: String,
     pub amount_sats: u64,
@@ -842,12 +745,7 @@ impl From<BarkPendingBoard> for PendingBoard {
 /// `board_psbt` once the funding PSBT is available — including on retries
 /// after the sender changes the transaction.
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct BoardFundingInfo {
     pub address: String,
     pub expiry_height: u32,
@@ -865,11 +763,7 @@ pub struct BoardFundingInfo {
 /// actual expiry distance. Tables are sorted ascending by threshold.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct PpmExpiryFeeEntry {
     pub expiry_blocks_threshold: u32,
     /// Parts-per-million fee rate applied for this expiry period.
@@ -877,13 +771,9 @@ pub struct PpmExpiryFeeEntry {
 }
 
 /// Fees for boarding onchain funds into the Ark.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct BoardFees {
     pub min_fee_sats: u64,
     pub base_fee_sats: u64,
@@ -894,11 +784,7 @@ pub struct BoardFees {
 /// Fees for offboarding VTXOs to an onchain address.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct OffboardFees {
     pub base_fee_sats: u64,
     /// Fixed number of virtual bytes charged on top of the output size.
@@ -909,24 +795,16 @@ pub struct OffboardFees {
 /// Fees for refreshing VTXOs in a round.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct RefreshFees {
     pub base_fee_sats: u64,
     pub ppm_expiry_table: Vec<PpmExpiryFeeEntry>,
 }
 
 /// Fees for receiving over lightning.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct LightningReceiveFees {
     pub base_fee_sats: u64,
     /// Parts-per-million fee rate on the received amount.
@@ -936,11 +814,7 @@ pub struct LightningReceiveFees {
 /// Fees for sending over lightning.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct LightningSendFees {
     pub min_fee_sats: u64,
     pub base_fee_sats: u64,
@@ -950,11 +824,7 @@ pub struct LightningSendFees {
 /// The Ark server's complete fee schedule, mirroring `ark::fees::FeeSchedule`.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct FeeSchedule {
     pub board: BoardFees,
     pub offboard: OffboardFees,
@@ -1006,12 +876,7 @@ impl From<&ark::fees::FeeSchedule> for FeeSchedule {
 // ============================================================================
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct ArkInfo {
     pub network: Network,
     pub server_pubkey: String,
@@ -1080,12 +945,12 @@ use bark::exit::ExitVtxo as BarkExitVtxo;
 
 /// Where an exit transaction was first seen, mirroring `bark::exit::ExitTxOrigin`.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(tag = "type", rename_all = "kebab-case", rename_all_fields = "camelCase")]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
+#[serde(
+    tag = "type",
+    rename_all = "kebab-case",
+    rename_all_fields = "camelCase"
 )]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[boltffi::data]
 pub enum ExitTxOrigin {
     /// Broadcast by this wallet.
     Wallet { confirmed_in: Option<BlockRef> },
@@ -1113,12 +978,12 @@ impl From<&bark::exit::ExitTxOrigin> for ExitTxOrigin {
 /// Broadcast/confirmation status of one transaction in an exit chain,
 /// mirroring `bark::exit::ExitTxStatus`.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(tag = "type", rename_all = "kebab-case", rename_all_fields = "camelCase")]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
+#[serde(
+    tag = "type",
+    rename_all = "kebab-case",
+    rename_all_fields = "camelCase"
 )]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[boltffi::data]
 pub enum ExitTxStatus {
     /// Inputs are still being verified.
     VerifyInputs,
@@ -1155,7 +1020,11 @@ impl From<&bark::exit::ExitTxStatus> for ExitTxStatus {
                 child_txid: child_txid.to_string(),
                 origin: origin.into(),
             },
-            B::Confirmed { child_txid, block, origin } => Self::Confirmed {
+            B::Confirmed {
+                child_txid,
+                block,
+                origin,
+            } => Self::Confirmed {
                 child_txid: child_txid.to_string(),
                 block: block.into(),
                 origin: origin.into(),
@@ -1167,11 +1036,7 @@ impl From<&bark::exit::ExitTxStatus> for ExitTxStatus {
 /// One transaction in an exit's unilateral broadcast chain.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct ExitTx {
     pub txid: String,
     pub status: ExitTxStatus,
@@ -1192,12 +1057,12 @@ impl From<&bark::exit::ExitTx> for ExitTx {
 /// `"processing"`, `"awaiting-delta"`, `"claimable"`, `"claim-in-progress"`,
 /// `"claimed"`, `"vtxo-already-spent"`, `"canceled"`), with camelCase fields.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(tag = "type", rename_all = "kebab-case", rename_all_fields = "camelCase")]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
+#[serde(
+    tag = "type",
+    rename_all = "kebab-case",
+    rename_all_fields = "camelCase"
 )]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[boltffi::data]
 pub enum ExitState {
     /// The exit was requested at the given tip.
     Start { tip_height: u32 },
@@ -1242,7 +1107,9 @@ impl From<&bark::exit::ExitState> for ExitState {
     fn from(s: &bark::exit::ExitState) -> Self {
         use bark::exit::ExitState as B;
         match s {
-            B::Start(v) => Self::Start { tip_height: v.tip_height },
+            B::Start(v) => Self::Start {
+                tip_height: v.tip_height,
+            },
             B::Processing(v) => Self::Processing {
                 tip_height: v.tip_height,
                 transactions: v.transactions.iter().map(Into::into).collect(),
@@ -1267,8 +1134,12 @@ impl From<&bark::exit::ExitState> for ExitState {
                 txid: v.txid.to_string(),
                 block: (&v.block).into(),
             },
-            B::VtxoAlreadySpent(v) => Self::VtxoAlreadySpent { tip_height: v.tip_height },
-            B::Canceled(v) => Self::Canceled { tip_height: v.tip_height },
+            B::VtxoAlreadySpent(v) => Self::VtxoAlreadySpent {
+                tip_height: v.tip_height,
+            },
+            B::Canceled(v) => Self::Canceled {
+                tip_height: v.tip_height,
+            },
         }
     }
 }
@@ -1281,11 +1152,7 @@ impl From<&bark::exit::ExitState> for ExitState {
 /// kebab-case serialization.
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[boltffi::data]
 pub enum ExitStateKind {
     Start,
     Processing,
@@ -1321,11 +1188,7 @@ impl From<bark::exit::ExitStateKind> for ExitStateKind {
 /// (database, chain source unreachable) still surface as `Err`.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "kebab-case")]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[boltffi::data]
 pub enum ExitCancelFailure {
     /// No exit was ever started for this VTXO.
     NotExiting,
@@ -1343,12 +1206,7 @@ pub enum ExitCancelFailure {
 /// already canceled by an earlier call, since cancellation is idempotent.
 /// When `false`, `reason` says why.
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct ExitCancelResult {
     pub canceled: bool,
     /// Present exactly when `canceled` is `false`.
@@ -1358,23 +1216,24 @@ pub struct ExitCancelResult {
 impl ExitCancelResult {
     /// The exit is canceled.
     pub(crate) fn canceled() -> Self {
-        Self { canceled: true, reason: None }
+        Self {
+            canceled: true,
+            reason: None,
+        }
     }
 
     /// The exit was left as-is, for the given reason.
     pub(crate) fn refused(reason: ExitCancelFailure) -> Self {
-        Self { canceled: false, reason: Some(reason) }
+        Self {
+            canceled: false,
+            reason: Some(reason),
+        }
     }
 }
 
 /// A VTXO that is being unilaterally exited
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct ExitVtxo {
     pub vtxo_id: String,
     pub amount_sats: u64,
@@ -1395,12 +1254,7 @@ impl From<&BarkExitVtxo> for ExitVtxo {
 
 /// Status of an exit progression
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct ExitProgressStatus {
     pub vtxo_id: String,
     pub state: ExitState,
@@ -1419,12 +1273,7 @@ impl From<BarkExitProgressStatus> for ExitProgressStatus {
 
 /// Claim transaction for exited funds
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct ExitClaimTransaction {
     pub psbt_base64: String,
     pub fee_sats: u64,
@@ -1432,12 +1281,7 @@ pub struct ExitClaimTransaction {
 
 /// Detailed status of an exit transaction
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct ExitTransactionStatus {
     pub vtxo_id: String,
     pub state: ExitState,
@@ -1450,9 +1294,7 @@ impl From<bark::exit::ExitTransactionStatus> for ExitTransactionStatus {
         Self {
             vtxo_id: ets.vtxo_id.to_string(),
             state: (&ets.state).into(),
-            history: ets
-                .history
-                .map(|h| h.iter().map(Into::into).collect()),
+            history: ets.history.map(|h| h.iter().map(Into::into).collect()),
             transaction_count: ets.transactions.len() as u32,
         }
     }
@@ -1473,11 +1315,7 @@ use bark::round::RoundFlowKind as BarkRoundFlowKind;
 /// `"canceled"`.
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[boltffi::data]
 pub enum RoundFlowKind {
     /// Delegated participation waiting for its scheduled round. See
     /// [`RoundState::scheduled_height`].
@@ -1509,12 +1347,7 @@ impl From<BarkRoundFlowKind> for RoundFlowKind {
 
 /// A pending round state
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct RoundState {
     pub id: u32,
     /// Whether the interactive part of the round is ongoing. Equivalent to
@@ -1524,7 +1357,6 @@ pub struct RoundState {
     pub state: RoundFlowKind,
     /// Block height a delegated participation waits for, if it asked the
     /// server to schedule one. Only set while `state` is `DelegatedPending`.
-    #[cfg_attr(feature = "wasm-web", tsify(optional))]
     pub scheduled_height: Option<u32>,
 }
 
@@ -1549,12 +1381,7 @@ impl From<StoredRoundState<Unlocked>> for RoundState {
 /// under-count `failed`, where a VTXO may have failed before being fetched.
 /// `vtxo_ids` is sorted, since upstream buckets them unordered.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct RecoveryBucket {
     pub vtxo_ids: Vec<String>,
     pub total_sats: u64,
@@ -1565,19 +1392,14 @@ pub struct RecoveryBucket {
 ///
 /// Every field has a default, so callers only set what they need.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct ImportVtxoArgs {
     /// Gap limit for the key scan that decides whether we own the VTXOs,
     /// overriding `Config.vtxo_key_gap_limit` for this call.
     ///
     /// Default: none (use the wallet's configured limit)
-    #[cfg_attr(feature = "wasm-web", tsify(optional))]
-    #[cfg_attr(feature = "uniffi", uniffi(default = None))]
+
+    #[boltffi::default(None)]
     #[serde(default)]
     pub gap_limit: Option<u32>,
 
@@ -1586,8 +1408,8 @@ pub struct ImportVtxoArgs {
     /// VTXOs marked spendable, which then fail when selected as inputs.
     ///
     /// Default: false
-    #[cfg_attr(feature = "wasm-web", tsify(optional))]
-    #[cfg_attr(feature = "uniffi", uniffi(default = false))]
+
+    #[boltffi::default(false)]
     #[serde(default)]
     pub skip_status_check: bool,
 
@@ -1595,8 +1417,8 @@ pub struct ImportVtxoArgs {
     /// batch fails; the returned ids are the ones that were kept.
     ///
     /// Default: false, so a single failure discards the whole batch.
-    #[cfg_attr(feature = "wasm-web", tsify(optional))]
-    #[cfg_attr(feature = "uniffi", uniffi(default = false))]
+
+    #[boltffi::default(false)]
     #[serde(default)]
     pub allow_partial: bool,
 }
@@ -1620,12 +1442,7 @@ impl From<ImportVtxoArgs> for bark::ImportVtxoArgs {
 /// may still be missing. `failed` is retryable via `recover_vtxos`; a `foreign`
 /// id instead sits beyond the key-derivation gap limit and needs a wider scan.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct RecoveryReport {
     /// Spendable VTXOs that were successfully re-imported.
     pub recovered: RecoveryBucket,
@@ -1653,7 +1470,10 @@ impl From<&bark::RecoveryReportEntry> for RecoveryBucket {
         // Upstream keeps entries in a HashMap, so sort for a stable order.
         let mut vtxo_ids = e.ids().map(|id| id.to_string()).collect::<Vec<_>>();
         vtxo_ids.sort_unstable();
-        Self { vtxo_ids, total_sats: e.total_amount().to_sat() }
+        Self {
+            vtxo_ids,
+            total_sats: e.total_amount().to_sat(),
+        }
     }
 }
 
@@ -1682,11 +1502,7 @@ impl From<&bark::RecoveryReport> for RecoveryReport {
 /// Serde/TS tags: `"not-run"` | `"failed"` | `"completed"`.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "kebab-case")]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[boltffi::data]
 pub enum RecoveryStatus {
     /// No scan was attempted.
     NotRun,
@@ -1711,8 +1527,12 @@ impl From<bark::RecoveryStatus> for RecoveryStatus {
         match s {
             bark::RecoveryStatus::NotRun => Self::NotRun,
             // Alternate form joins the anyhow cause chain on one line.
-            bark::RecoveryStatus::Failed(e) => Self::Failed { message: format!("{:#}", e) },
-            bark::RecoveryStatus::Completed(r) => Self::Completed { report: (&r).into() },
+            bark::RecoveryStatus::Failed(e) => Self::Failed {
+                message: format!("{:#}", e),
+            },
+            bark::RecoveryStatus::Completed(r) => Self::Completed {
+                report: (&r).into(),
+            },
         }
     }
 }
@@ -1723,12 +1543,7 @@ impl From<bark::RecoveryStatus> for RecoveryStatus {
 
 /// A Bitcoin transaction output destination
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct Destination {
     pub address: String,
     pub amount_sats: u64,
@@ -1736,12 +1551,7 @@ pub struct Destination {
 
 /// A Bitcoin transaction outpoint (reference to a previous output)
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct OutPoint {
     pub txid: String,
     pub vout: u32,
@@ -1749,12 +1559,7 @@ pub struct OutPoint {
 
 /// Reference to a block in the blockchain
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct BlockRef {
     pub height: u32,
     pub hash: String,
@@ -1771,12 +1576,7 @@ impl From<&bark_bitcoin_ext::BlockRef> for BlockRef {
 
 /// Parameters for creating a CPFP (Child Pays For Parent) transaction
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct CpfpParams {
     pub tx_hex: String,
     pub fees_type: String,
@@ -1790,12 +1590,7 @@ pub struct CpfpParams {
 
 /// A notification event from the wallet
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(tag = "type")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
+#[boltffi::data]
 pub enum WalletNotification {
     /// A new movement was created
     MovementCreated { movement: Movement },
@@ -1841,7 +1636,8 @@ mod tests {
             gap_limit: Some(1_000),
             skip_status_check: true,
             allow_partial: true,
-        }.into();
+        }
+        .into();
         assert_eq!(args.gap_limit, Some(1_000));
         assert!(args.skip_status_check);
         assert!(args.allow_partial);
@@ -1877,15 +1673,23 @@ mod tests {
                 VtxoState::Locked { holder: None },
             ),
             (
-                BS::Locked { holder: Some(B::Movement { id: MovementId(7) }) },
+                BS::Locked {
+                    holder: Some(B::Movement { id: MovementId(7) }),
+                },
                 VtxoState::Locked {
                     holder: Some(VtxoLockHolder::Movement { id: 7 }),
                 },
             ),
             (
-                BS::Locked { holder: Some(B::Action { id: "ln-pay:abc".into() }) },
+                BS::Locked {
+                    holder: Some(B::Action {
+                        id: "ln-pay:abc".into(),
+                    }),
+                },
                 VtxoState::Locked {
-                    holder: Some(VtxoLockHolder::Action { id: "ln-pay:abc".into() }),
+                    holder: Some(VtxoLockHolder::Action {
+                        id: "ln-pay:abc".into(),
+                    }),
                 },
             ),
         ];
@@ -1900,7 +1704,9 @@ mod tests {
         // in against one read back from the database, so the two directions
         // must agree exactly or a caller could never release its own lock.
         let cases = vec![
-            VtxoLockHolder::Action { id: "exit:abc123".into() },
+            VtxoLockHolder::Action {
+                id: "exit:abc123".into(),
+            },
             VtxoLockHolder::Movement { id: 42 },
         ];
         for holder in cases {
@@ -1978,7 +1784,10 @@ mod tests {
             ExitState::Claimed {
                 tip_height: 900,
                 txid: hex::encode([0xaa; 32]),
-                block: BlockRef { height: 890, hash: hex::encode([0xbb; 32]) },
+                block: BlockRef {
+                    height: 890,
+                    hash: hex::encode([0xbb; 32])
+                },
             }
         );
 
@@ -1992,7 +1801,10 @@ mod tests {
             awaiting,
             ExitState::AwaitingDelta {
                 tip_height: 100,
-                confirmed_block: BlockRef { height: 95, hash: hex::encode([0xcc; 32]) },
+                confirmed_block: BlockRef {
+                    height: 95,
+                    hash: hex::encode([0xcc; 32])
+                },
                 claimable_height: 107,
             }
         );
@@ -2031,7 +1843,10 @@ mod tests {
         // camelCase fields (same shape barkd serves). Guard the contract.
         let state = ExitState::ClaimInProgress {
             tip_height: 12,
-            claimable_since: BlockRef { height: 10, hash: "ab".into() },
+            claimable_since: BlockRef {
+                height: 10,
+                hash: "ab".into(),
+            },
             claim_txid: "deadbeef".into(),
         };
         assert_eq!(
@@ -2143,7 +1958,10 @@ mod tests {
         // Field naming contract for the wasm surface.
         let json = serde_json::to_value(&ffi).unwrap();
         assert_eq!(json["board"]["minFeeSats"], 100);
-        assert_eq!(json["refresh"]["ppmExpiryTable"][0]["expiryBlocksThreshold"], 144);
+        assert_eq!(
+            json["refresh"]["ppmExpiryTable"][0]["expiryBlocksThreshold"],
+            144
+        );
         assert_eq!(json["lightningReceive"]["ppm"], 600);
         assert_eq!(json["lightningSend"]["baseFeeSats"], 5);
     }
@@ -2192,7 +2010,10 @@ mod tests {
     #[test]
     fn onchain_utxo_local_conversion_and_tags() {
         let upstream = bark::onchain::Utxo::Local(bark::onchain::LocalUtxo {
-            outpoint: bitcoin::OutPoint { txid: txid(0x33), vout: 1 },
+            outpoint: bitcoin::OutPoint {
+                txid: txid(0x33),
+                vout: 1,
+            },
             amount: bitcoin::Amount::from_sat(5000),
             confirmation_height: None,
         });
@@ -2220,7 +2041,10 @@ mod tests {
             (B::DelegatedPending, RoundFlowKind::DelegatedPending),
             (B::Pending, RoundFlowKind::Pending),
             (B::Ongoing, RoundFlowKind::Ongoing),
-            (B::AwaitingConfirmations, RoundFlowKind::AwaitingConfirmations),
+            (
+                B::AwaitingConfirmations,
+                RoundFlowKind::AwaitingConfirmations,
+            ),
             (B::Failed, RoundFlowKind::Failed),
             (B::Canceled, RoundFlowKind::Canceled),
         ];
@@ -2264,7 +2088,9 @@ mod tests {
 
     #[test]
     fn recovery_status_completed_exposes_report() {
-        let status = RecoveryStatus::Completed { report: RecoveryReport::default() };
+        let status = RecoveryStatus::Completed {
+            report: RecoveryReport::default(),
+        };
         assert!(status.report().is_some());
         let json = serde_json::to_value(&status).unwrap();
         assert_eq!(json["type"], serde_json::json!("completed"));
@@ -2281,7 +2107,10 @@ mod tests {
     #[test]
     fn log_level_maps_to_the_same_log_filter() {
         for level in log::Level::iter() {
-            assert_eq!(log::LevelFilter::from(LogLevel::from(level)), level.to_level_filter());
+            assert_eq!(
+                log::LevelFilter::from(LogLevel::from(level)),
+                level.to_level_filter()
+            );
         }
     }
 }

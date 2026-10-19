@@ -1,45 +1,56 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(
-    feature = "wasm-web",
-    derive(tsify::Tsify),
-    serde(rename_all = "camelCase")
-)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
+#[boltffi::data]
 pub struct Config {
     pub server_address: String,
-    #[cfg_attr(feature = "wasm-web", tsify(optional))]
+
+    #[boltffi::default(None)]
     pub server_access_token: Option<String>,
-    #[cfg_attr(feature = "wasm-web", tsify(optional))]
+
+    #[boltffi::default(None)]
     pub esplora_address: Option<String>,
-    #[cfg_attr(feature = "wasm-web", tsify(optional))]
+
+    #[boltffi::default(None)]
     pub bitcoind_address: Option<String>,
-    #[cfg_attr(feature = "wasm-web", tsify(optional))]
+
+    #[boltffi::default(None)]
     pub bitcoind_cookiefile: Option<String>,
-    #[cfg_attr(feature = "wasm-web", tsify(optional))]
+
+    #[boltffi::default(None)]
     pub bitcoind_user: Option<String>,
-    #[cfg_attr(feature = "wasm-web", tsify(optional))]
+
+    #[boltffi::default(None)]
     pub bitcoind_pass: Option<String>,
-    #[cfg_attr(feature = "wasm-web", tsify(optional))]
+
+    #[boltffi::default(None)]
     pub vtxo_refresh_expiry_threshold: Option<u16>,
-    #[cfg_attr(feature = "wasm-web", tsify(optional))]
+
+    #[boltffi::default(None)]
     pub vtxo_exit_margin: Option<u16>,
-    #[cfg_attr(feature = "wasm-web", tsify(optional))]
+
+    #[boltffi::default(None)]
     pub htlc_recv_claim_delta: Option<u16>,
-    #[cfg_attr(feature = "wasm-web", tsify(optional))]
+
+    #[boltffi::default(None)]
     pub fallback_fee_rate: Option<u64>,
-    #[cfg_attr(feature = "wasm-web", tsify(optional))]
+
+    #[boltffi::default(None)]
     pub round_tx_required_confirmations: Option<u32>,
-    #[cfg_attr(feature = "wasm-web", tsify(optional))]
+
+    #[boltffi::default(None)]
     pub daemon_sync_interval_secs: Option<u64>,
-    #[cfg_attr(feature = "wasm-web", tsify(optional))]
+
+    #[boltffi::default(None)]
     pub offboard_required_confirmations: Option<u32>,
-    #[cfg_attr(feature = "wasm-web", tsify(optional))]
+
+    #[boltffi::default(None)]
     pub daemon_manual_sync: Option<bool>,
-    #[cfg_attr(feature = "wasm-web", tsify(optional))]
+
+    #[boltffi::default(None)]
     pub lightning_receive_claim_retries: Option<u8>,
-    #[cfg_attr(feature = "wasm-web", tsify(optional))]
+
+    #[boltffi::default(None)]
     pub user_agent: Option<String>,
     /// How many consecutive unused seed-derived VTXO key indices a scan
     /// crosses before concluding a VTXO isn't ours.
@@ -52,7 +63,7 @@ pub struct Config {
     ///
     /// Default: 250. Capped at 100_000; a higher value is rejected when the
     /// wallet is opened or created.
-    #[cfg_attr(feature = "wasm-web", tsify(optional))]
+    #[boltffi::default(None)]
     pub vtxo_key_gap_limit: Option<u32>,
 }
 
@@ -70,9 +81,9 @@ impl Config {
     pub(crate) fn into_bark(
         self,
         network: bitcoin::Network,
-    ) -> Result<bark::Config, crate::error::Error> {
+    ) -> Result<bark::Config, crate::error::BarkError> {
         let mut ret = bark::Config::network_default(network);
-        
+
         ret.server_address = self.server_address;
         // upstream deprecated this field; the FFI keeps exposing it until it's removed
         #[allow(deprecated)]
@@ -120,8 +131,10 @@ impl Config {
             if limit > bark::MAX_VTXO_KEY_GAP_LIMIT {
                 return Err(format!(
                     "vtxo_key_gap_limit {} is above the maximum of {}",
-                    limit, bark::MAX_VTXO_KEY_GAP_LIMIT,
-                ).into());
+                    limit,
+                    bark::MAX_VTXO_KEY_GAP_LIMIT,
+                )
+                .into());
             }
             ret.vtxo_key_gap_limit = limit;
         }
@@ -179,8 +192,13 @@ mod tests {
     fn gap_limit_above_the_maximum_is_refused() {
         let mut config = minimal();
         config.vtxo_key_gap_limit = Some(bark::MAX_VTXO_KEY_GAP_LIMIT + 1);
-        let err = config.into_bark(bitcoin::Network::Regtest)
+        let err = config
+            .into_bark(bitcoin::Network::Regtest)
             .expect_err("a gap limit above the maximum should be refused");
-        assert!(err.message().contains("above the maximum"), "{}", err.message());
+        assert!(
+            err.message().contains("above the maximum"),
+            "{}",
+            err.message()
+        );
     }
 }

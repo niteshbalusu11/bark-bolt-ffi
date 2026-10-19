@@ -1,57 +1,48 @@
-
 use std::fmt;
 
-/// The single error type surfaced across the Bark FFI.
-///
-/// It is a thin, single-variant wrapper around [`anyhow::Error`]. uniffi error
-/// types must be enums (callback interfaces require `ConvertError`, which
-/// objects cannot provide), and `flat_error` tells uniffi to carry only the
-/// `Display` string across the boundary — so the rich anyhow context collapses
-/// to a single message on the foreign side.
-#[derive(Debug)]
-#[cfg_attr(feature = "uniffi", derive(uniffi::Error))]
-#[cfg_attr(feature = "uniffi", uniffi(flat_error))]
-pub enum Error {
-    Inner(anyhow::Error),
+/// Error message including the complete underlying cause chain.
+#[boltffi::error]
+#[derive(Clone, Debug)]
+pub struct BarkError {
+    pub message: String,
 }
 
-impl Error {
-    /// Wrap any error (or [`anyhow::Error`]) into a [`Error`].
-    pub fn new(err: impl Into<anyhow::Error>) -> Self {
-        Error::Inner(err.into())
+impl BarkError {
+    pub fn new(error: impl Into<anyhow::Error>) -> Self {
+        Self::from(error.into())
     }
 
-    /// The flattened error message (full anyhow cause chain, single line).
     pub fn message(&self) -> String {
-        self.to_string()
+        self.message.clone()
     }
 }
 
-impl fmt::Display for Error {
+impl fmt::Display for BarkError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let Error::Inner(e) = self;
-        // Alternate form joins the whole anyhow cause chain on one line.
-        write!(f, "{:#}", e)
+        f.write_str(&self.message)
     }
 }
-
-impl std::error::Error for Error {}
-
-impl From<anyhow::Error> for Error {
-    fn from(e: anyhow::Error) -> Self {
-        Error::Inner(e)
+impl std::error::Error for BarkError {}
+impl From<anyhow::Error> for BarkError {
+    fn from(error: anyhow::Error) -> Self {
+        Self {
+            message: format!("{error:#}"),
+        }
     }
 }
-
-impl From<&str> for Error {
-    fn from(s: &str) -> Self {
-        Error::Inner(anyhow::Error::msg(s.to_owned()))
+impl From<String> for BarkError {
+    fn from(message: String) -> Self {
+        Self { message }
     }
 }
-
-impl From<String> for Error {
-    fn from(s: String) -> Self {
-        Error::Inner(anyhow::Error::msg(s))
+impl From<&str> for BarkError {
+    fn from(message: &str) -> Self {
+        Self::from(message.to_owned())
+    }
+}
+impl From<boltffi::UnexpectedFfiCallbackError> for BarkError {
+    fn from(error: boltffi::UnexpectedFfiCallbackError) -> Self {
+        Self::from(error.to_string())
     }
 }
 
@@ -61,14 +52,14 @@ mod tests {
 
     #[test]
     fn preserves_message() {
-        let err = Error::from(anyhow::anyhow!("something broke"));
+        let err = BarkError::from(anyhow::anyhow!("something broke"));
         assert_eq!(err.message(), "something broke");
     }
 
     #[test]
     fn shows_full_cause_chain() {
         // Display uses the alternate `{:#}` form, which joins the anyhow chain.
-        let err = Error::from(anyhow::anyhow!("root cause").context("outer context"));
+        let err = BarkError::from(anyhow::anyhow!("root cause").context("outer context"));
         let msg = err.message();
         assert!(msg.contains("outer context"), "{msg}");
         assert!(msg.contains("root cause"), "{msg}");

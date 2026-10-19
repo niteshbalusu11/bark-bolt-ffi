@@ -1,0 +1,44 @@
+name: Cross-platform RegTest acceptance
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: macos-regtest
+  cancel-in-progress: false
+jobs:
+  native-regtest:
+    runs-on: [self-hosted, macOS, ARM64, bark-bolt-regtest]
+    timeout-minutes: 120
+    env:
+      COMPOSE_PROJECT_NAME: bark-bolt-ffi-ci-${{ github.run_id }}
+      BITCOIN_PORT: 19543
+      ARK_PORT: 3735
+      CARGO_PROFILE_DEV_DEBUG: 0
+      CARGO_BUILD_JOBS: 2
+      RUSTUP_TOOLCHAIN: 1.90.0
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - run: scripts/install-boltffi.sh
+      - run: BOLTFFI="$PWD/target/tools/boltffi" scripts/build-sdk.sh apple --overlay boltffi.local.toml
+      - run: BOLTFFI="$PWD/target/tools/boltffi" scripts/build-sdk.sh android --overlay boltffi.local.toml
+      - run: swift test --package-path tests/swift && ./gradlew :sdk:jvm:test :examples:android:assembleDebug
+      - run: xcodegen generate --spec examples/ios/project.yml
+      - name: Build and install both apps
+        run: |
+          xcodebuild -project examples/ios/BarkExample.xcodeproj -scheme BarkExample -sdk iphonesimulator -destination "platform=iOS Simulator,id=$IOS_DEVICE" -derivedDataPath build/ios build
+          xcrun simctl install "$IOS_DEVICE" build/ios/Build/Products/Debug-iphonesimulator/BarkExample.app
+          adb -s "$ANDROID_SERIAL" install -r examples/android/build/outputs/apk/debug/android-debug.apk
+      - run: python3 scripts/app-regtest.py --extended | tee app-regtest-results.jsonl
+      - if: always()
+        run: docker compose -f regtest/compose.yaml logs --tail=200 > regtest.log
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cross-platform-regtest-evidence
+          retention-days: 3
+          path: |
+            app-regtest-results.jsonl
+            regtest.log
+      - if: always()
+        run: docker compose -f regtest/compose.yaml stop

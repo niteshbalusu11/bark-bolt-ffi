@@ -1,0 +1,37 @@
+[package]
+name = "bark_bolt_ffi"
+
+[cargo]
+global_args = ["--locked"]
+
+[targets.apple]
+enabled = true
+include_macos = true
+deployment_target = "16.0"
+ios_architectures = ["arm64"]
+simulator_architectures = ["arm64", "x86_64"]
+macos_architectures = ["arm64", "x86_64"]
+
+[targets.apple.swift]
+module_name = "BarkBoltFFI"
+output = "dist/swift"
+
+[targets.android]
+enabled = true
+architectures = ["arm64", "armv7", "x86_64"]
+min_sdk = 24
+
+[targets.android.kotlin]
+module_name = "BarkBoltFFI"
+package = "io.github.niteshbalusu11.bark"
+output = "dist/kotlin"
+factory_style = "companion_methods"
+
+[targets.android.kotlin.desktop_pack]
+enabled = true
+
+[targets.java.jvm]
+host_targets = ["current"]
+
+[targets.wasm]
+enabled = false
