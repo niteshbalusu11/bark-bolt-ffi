@@ -22,4 +22,4 @@ let package = Package(name: "ReleaseConsumer", platforms: [.macOS(.v13)],
         .product(name: "BarkBoltFFI", package: "bark-bolt-ffi")], path: "Tests")])
 ''' % options.revision)
     shutil.copytree(ROOT / 'tests/swift/Tests', consumer / 'Tests')
-    subprocess.run(['swift', 'test', '--package-path', str(consumer)], check=True, timeout=600)
+    subprocess.run(['swift', 'test', '--disable-keychain', '--disable-netrc', '--package-path', str(consumer)], check=True, timeout=600)

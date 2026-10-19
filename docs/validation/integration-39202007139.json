@@ -1,0 +1,142 @@
+{
+  "workflow": "https://github.com/smolcars/bark-bolt-ffi/actions/runs/39202007139",
+  "source_commit": "6dae2dbba4319f8e974302185e4da34869737e3e",
+  "native_profile": "debug (release-native local acceptance recorded separately)",
+  "raw_results_sha256": "095c2f3a6899f46524ca3460d0b82792f633085e95b8c9fa9d03259d98f00eee",
+  "result": {
+    "passed": true,
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "extended": true,
+    "run_id": "integration-1792385907"
+  },
+  "ci_fixture_volumes_removed": true,
+  "platforms": {
+    "ios": {
+      "actions": [
+        "board",
+        "cancel",
+        "claim",
+        "drainExit",
+        "estimate",
+        "invoice",
+        "offboard",
+        "open",
+        "progressExit",
+        "refresh",
+        "restore",
+        "send",
+        "startExit",
+        "sync"
+      ],
+      "transactions": [
+        {
+          "action": "board",
+          "txid": "397f867bf4cfe5e5eebf29d12a3df04622cb7409a09db499c51164d0db5cdcf5"
+        },
+        {
+          "action": "refresh",
+          "txid": "Unconfirmed { funding_txid: e5400a3ec497c183ddf7317cd44f6b51382a544a914ba5fb5c69cb74bdd82bfc }"
+        },
+        {
+          "action": "offboard",
+          "txid": "4790451daae32966c971f545ab316be292059cad33941da516c834d982fd1972"
+        },
+        {
+          "action": "board",
+          "txid": "1cf11d9b86627b9ddbf1da99db0235c447e7f9f74445a286b9dd7d0347e3a5a0"
+        },
+        {
+          "action": "drainExit",
+          "txid": "7e8b22683675ea1c1b37b9334f710e3549cfb46d2c305d91ec16edea7437fb6b"
+        }
+      ],
+      "notification_counts": [
+        2,
+        2
+      ],
+      "exit_fee_estimates": [
+        {
+          "totalFee": 462,
+          "broadcastFee": 333,
+          "claimFee": 129
+        }
+      ],
+      "restore_balances": [
+        {
+          "ark": 1990572,
+          "onchain": 7999845
+        },
+        {
+          "ark": 1990572,
+          "onchain": 7499795
+        }
+      ],
+      "unavailable_server_error_verified": true
+    },
+    "android": {
+      "actions": [
+        "board",
+        "cancel",
+        "claim",
+        "drainExit",
+        "estimate",
+        "invoice",
+        "offboard",
+        "open",
+        "progressExit",
+        "refresh",
+        "restore",
+        "send",
+        "startExit",
+        "sync"
+      ],
+      "transactions": [
+        {
+          "action": "board",
+          "txid": "e1f5c3015488c755dcb9bbf46ebc4efdd1543650550ad60cad3272d6bdb1d210"
+        },
+        {
+          "action": "refresh",
+          "txid": "Unconfirmed { funding_txid: 8e23db37603f82b04d315c7ce2d7b70c9e60979d3c99bec10b66e69fed2dfc01 }"
+        },
+        {
+          "action": "offboard",
+          "txid": "63e101693253aa6fdee034a2d670f45aa4c1d6bd472f929852f0338b0508cc43"
+        },
+        {
+          "action": "board",
+          "txid": "e292b025c34a49f3b7a54ef12aea0409be0d66f532dbcb2221367e6feb2bdc24"
+        },
+        {
+          "action": "drainExit",
+          "txid": "75bc368905aa76a09c66dd6f4141706e37605ba4583af2267d53d1066e3b1fb9"
+        }
+      ],
+      "notification_counts": [
+        2,
+        2
+      ],
+      "exit_fee_estimates": [
+        {
+          "totalFee": 462,
+          "broadcastFee": 333,
+          "claimFee": 129
+        }
+      ],
+      "restore_balances": [
+        {
+          "ark": 1990572,
+          "onchain": 7999845
+        },
+        {
+          "ark": 1990572,
+          "onchain": 7499795
+        }
+      ],
+      "unavailable_server_error_verified": true
+    }
+  }
+}

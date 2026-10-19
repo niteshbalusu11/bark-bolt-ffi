@@ -1,7 +1,7 @@
 # Installing and migrating
 
 This SDK exposes Bark master `bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c`
-(0.7.1-dev,2026-10-16) through BoltFFI0.31.1. Swift and Kotlin are the
+(0.7.1-dev,2026-10-16) through BoltFFI 0.31.1. Swift and Kotlin are the
 supported consumer languages. The Rust core remains in this repository.
 
 ## Swift
@@ -38,7 +38,12 @@ coroutines dependency. The Android AAR embeds all three JNI ABIs and consumer
 R8 rules. JVM JARs contain the native library for the build host; choose a JAR
 matching the deployment OS/architecture. Linux CI builds on Ubuntu24.04; rebuild
 locally when targeting an older libc. Maven Central publication is separate.
-GitHub Actions also uploads the built AAR/JAR and example APKs.
+Versioned AAR/JAR/POM files are attached to the
+[v0.1.0 release](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.1.0);
+verify them against its SHA256SUMS. GitHub Actions also uploads artifacts and
+example APKs. To use a downloaded AAR or JVM JAR directly, include it as a local
+file dependency and declare `org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2`
+explicitly; local file dependencies do not resolve the attached Maven POM.
 
 ## Breaking API and ownership changes
 
@@ -51,14 +56,14 @@ GitHub Actions also uploads the built AAR/JAR and example APKs.
 | Open arguments | `WalletOpenArgs` contains values only. Pass the onchain object separately to `openWithOnchain`; `open` supports wallets without one. |
 | Defaults | Optional config fields use nil/null defaults. Check generated declarations for unsigned integer and enum spellings. |
 | Kotlin resources | Object wrappers implement `close()`. Keep them alive while needed and close notification/onchain/wallet wrappers during teardown. In-flight native work retains its own references. Calling a closed wrapper fails. |
-| Swift resources | ARC releases native handles. The separate concurrency adapter marks synchronized native object wrappers Sendable for Swift6 actor crossing. |
+| Swift resources | ARC releases native handles. The separate concurrency adapter marks synchronized native object wrappers Sendable for Swift 6 actor crossing. |
 | Callbacks | Implement all methods of `CustomOnchainWalletCallbacks` or `BarkLogger`. Native workers can call them off the UI thread; synchronize mutable state. Native ownership retains callbacks until their owner/logger registration is released. |
 | Notifications | One pending receive per holder. Explicit cancellation or host-task cancellation releases that wait; reuse is supported. Concurrent waits return an error. |
 | Recovery outcome | `open` mirrors upstream best-effort recovery. Inspect `recoveryStatus()` and the completed report's `isComplete` before declaring seed recovery successful. |
 | Cancellation | Cancelling a foreign await does not roll back a submitted wallet operation. Tokio work already submitted may finish; sync/reconcile the wallet before retrying a payment. |
 | Daemon | Stop with `stopDaemonWait()` before replacing a wallet. Dropping the last native wallet also stops its daemon. |
 
-All128 original callable exports,40 records,14 enums and both callback traits
+All128 original callable exports, 40 records, 14 enums and both callback traits
 are tracked in `api-baseline.json` and checked against strict host generation.
 Generated files are never patched; the Swift concurrency adapter is handwritten
 in `sdk/swift-support`. There is no UniFFI runtime, JNA or browser product.
@@ -76,8 +81,8 @@ height0. See each `WalletModel` for the actual open/shutdown/recovery sequence.
 | --- | --- | --- | --- |
 | iOS | 16 | device arm64; simulator arm64/x86_64 | iOS27 ARM64 simulator |
 | macOS | 13 | arm64/x86_64 | macOS ARM64 Swift contracts |
-| Android | API24 | arm64-v8a/armeabi-v7a/x86_64 | API35 ARM64 locally; x86_64 CI gate |
-| Kotlin/JVM | Java17 | build-host native JAR | macOS ARM64 contracts; Linux CI gate |
+| Android | API 24 | arm64-v8a/armeabi-v7a/x86_64 | API 35 ARM64 locally and x86_64 in CI |
+| Kotlin/JVM | Java17 | build-host native JAR | macOS ARM64 and Linux x86_64 contracts |
 
 Minimum OS versions and the other packaged ABIs are compile targets; this does
 not claim physical-device or every-OS runtime testing. The example apps are
@@ -89,7 +94,7 @@ notifications, refresh, offboarding, unilateral exits/claims, restart and funded
 seed recovery. LNURL/LNAddress and BOLT12 exports remain available and retain
 upstream validation, but no external provider acceptance fixture was run.
 See `validation/2026-10-19-master.md` for current-master results and CI links;
-`validation/2026-10-18.md` retains prior release0.7.1 evidence.
+`validation/2026-10-18.md` retains prior release 0.7.1 evidence.
 
 ## Current-master changes
 
@@ -107,7 +112,7 @@ this project's isolated storage and ports. It uses the user's multi-architecture
 `niteshbalusu/captaind:nightly-2026-10-19` (same master commit), each pinned by digest.
 The server requires Bitcoin31, which the stack pins. Both images are pinned to the exact master revision; the older captaind tag
 lacks required recovery RPCs. The dates are registry UTC
-build dates; the Bark image was published on October18 in America/New_York.
+build dates; the Bark image was published on October 18 in America/New_York.
 
 Android consumers should restrict `defaultConfig.ndk.abiFilters` to
 `arm64-v8a`, `armeabi-v7a`, and `x86_64`, as the example does. This prevents a

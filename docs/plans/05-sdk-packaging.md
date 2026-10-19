@@ -7,13 +7,13 @@ no hand-edits to generated Swift/Kotlin or JNI.
 
 Build iOS arm64, simulator arm64/x86_64, macOS arm64/x86_64; Android
 arm64/armv7/x86_64 API24; JVM desktop natives on each CI host. Mac and Linux JVM
-artifacts are distinct classifiers until release assembly merges resource paths.
+artifacts use separate host-specific Maven coordinates.
 Pin the CLI exactly to crate 0.31.1 and toolchains. Use release artifacts for
 published SDKs; local verification can use debug artifacts first. Set module
 BarkBoltFFI and package io.github.niteshbalusu11.bark explicitly.
 
-SwiftPM's root source target uses a local generated XCFramework for local builds;
-a release manifest points to a checksummed GitHub asset. Gradle packages generated
+Local SwiftPM builds use dist/apple and its generated XCFramework; the root
+release manifest points to a checksummed GitHub asset. Gradle packages generated
 Kotlin plus JNI resources into the Android library and desktop JAR. Apps use the
 project SDK modules. Tests use the real generated full API and check seed/error,
 callback success/failure, full-range values, persistence and notification reuse.

@@ -1,9 +1,10 @@
 # Production migration checklist
 
-Status: the full migration and0.7.1 cross-platform Actions acceptance passed.
-The user then requested current-master alignment and cleanup (task14). The core
-now pins bfbe6b7c and57 Rust tests pass; updated SDK/app/CI acceptance is required
-before releasing. Unchecked gates below remain outstanding.
+Status: all tasks 00–14 complete. Bark master, BoltFFI Swift/Kotlin SDKs, native
+apps, RegTest acceptance, GitHub Actions, cleanup and published release consumers
+pass. [Current evidence](validation/2026-10-19-master.md) records exact sources,
+runs, artifacts and scope limits. [Release v0.1.0](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.1.0)
+is published.
 
 ## Agreed decisions
 
@@ -16,8 +17,8 @@ before releasing. Unchecked gates below remain outstanding.
   Breaking API changes are allowed; no Nitro/React Native schema compatibility.
 - Targets: iOS 16+, macOS 13+, Android API 24+, JVM 17. Retain the existing
   native ABI matrix unless a documented platform decision changes it.
-- Start with Bark 0.7.1 and BoltFFI 0.31.1 and reproducible dependency pins.
-  Confirm server compatibility before considering a separate Bark upgrade.
+- Pin Bark master bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c and BoltFFI 0.31.1.
+  Matching October 19 Bark/captaind user images are verified and digest-pinned.
 - Preserve the complete API: callbacks, logging, notifications, Lightning,
   recovery, boarding, refresh, offboarding, exits and onchain operations.
 - Actually run both apps on simulator/emulator against RegTest, and create
@@ -44,7 +45,7 @@ Remaining limits:
 Compilation, simulator execution, RegTest success and hosted CI success are
 different claims. Record them separately; do not mark one from evidence of another.
 
-## Reference inputs and known setup gaps
+## Reference inputs
 
 - Core source: ark-bitcoin/bark-ffi at
   d3c0f38f29cca1e79f6c81492725acece1f5b8ef. Upstream history and MIT license
@@ -63,8 +64,8 @@ different claims. Record them separately; do not mark one from evidence of anoth
   Compose references a missing captaind.toml. Its bootstrap resets a fixed
   scripts_bark volume. Supply compatible configuration, pin versions, and use
   isolated project names/ports/volumes instead of that reset path.
-- Docker/OrbStack is available. An iOS simulator is available. Android SDK/NDK
-  exists, but its emulator package and a system image still need installation.
+- Docker/OrbStack, Xcode, Android SDK/NDK and both booted phone runtimes are
+  installed. The API 35 ARM64 emulator was provisioned during task09.
 - The feasibility prototype was superseded by real SDK contracts/apps and removed
   during final cleanup. Its history remains in earlier commits.
 
@@ -81,7 +82,7 @@ upstream; document the migration's current incomplete state.
 **Implement:** add README, this checklist and AGENTS.md; commit/push the baseline
 and verify the remote commit. Keep original source/Nitro checkouts unchanged.
 
-**Done when:** the private GitHub repo contains the baseline, license and plan,
+**Done when:** the GitHub repo contains the baseline, license and plan,
 and local/remote commit IDs agree.
 
 ### 01 — Establish the baseline and complete API inventory
@@ -103,7 +104,7 @@ validation strategy; baseline failures are separated from migration regressions.
 - [x] Boot compatible, isolated Bitcoin/Ark/Lightning services.
 
 **Engineering plan:** adapt Nitro's setup into regtest/ and lifecycle scripts.
-Choose server/CLI versions compatible with Bark 0.7.1, supply missing config and
+Choose server/CLI versions compatible with the pinned Bark revision, supply config and
 pin images or source revisions. Define readiness probes, funding, mining,
 Lightning liquidity, endpoint configuration and cleanup before coding.
 
@@ -120,13 +121,13 @@ does not touch existing Nitro or unrelated wallet/database volumes.
 
 - [x] Replace production UniFFI exports with BoltFFI across the complete API.
 
-**Engineering plan:** retain the core/native adapter seam and Bark revision.
+**Engineering plan:** retain the core/native adapter seam and pin Bark as task14 specifies.
 Specify concrete object returns, separate onchain factory arguments, message
 errors, callback error conversion, data/default attributes and required Copy
 derives before changing src/ and the manifest.
 
 **Implement:** migrate all DTOs/enums, free functions, Wallet/OnchainWallet APIs,
-all ten custom-wallet callbacks, logging and notifications. Preserve SQLite,
+all original custom-wallet callbacks plus master signPsbt, logging and notifications. Preserve SQLite,
 TLS/BDK, datadir/locking and transaction/PSBT/network validation. Pin crate/CLI
 versions and Cargo.lock.
 
@@ -153,7 +154,7 @@ including in-flight release and failures; no persistence is silently reset.
 
 ### 05 — Package usable Swift and Kotlin SDKs
 
-- [ ] Produce SwiftPM/XCFramework, Android AAR and Kotlin/JVM artifacts.
+- [x] Produce SwiftPM/XCFramework, Android AAR and Kotlin/JVM artifacts.
 
 **Engineering plan:** settle layout, package names, deployment targets, ABI matrix,
 JNI loading and debug/release artifact flow. Root SwiftPM metadata must work from
@@ -248,7 +249,7 @@ logs. Resolve or explicitly document uncovered scenarios before claiming parity.
 
 ### 11 — Add GitHub Actions for Rust and SDK builds
 
-- [ ] Build and test Rust plus generated SDK artifacts on GitHub.
+- [x] Build and test Rust plus generated SDK artifacts on GitHub.
 
 **Engineering plan:** define PR/push triggers, pinned toolchains, Linux/macOS
 matrices, caches, API/generation checks and artifact provenance from the same
@@ -262,7 +263,7 @@ from the migrated commit. YAML validation alone is insufficient.
 
 ### 12 — Add GitHub Actions for the apps and runtime tests
 
-- [ ] Build both apps and execute automated simulator/emulator tests in CI.
+- [x] Build both apps and execute automated simulator/emulator tests in CI.
 
 **Engineering plan:** use macOS/Xcode for iOS and Linux with accelerated Android
 emulation. Define RegTest startup and networking explicitly: hosted macOS cannot
@@ -280,7 +281,7 @@ need no App Store signing credentials.
 
 ### 13 — Validate release outputs and finish documentation
 
-- [ ] Deliver reproducible SDKs, apps, RegTest setup, CI and migration guidance.
+- [x] Deliver reproducible SDKs, apps, RegTest setup, CI and migration guidance.
 
 **Engineering plan:** review parity, platform/test matrices, packaged contents,
 API changes, install/build commands and artifact version/checksum metadata.
@@ -296,7 +297,7 @@ packaged consumers work and remaining limitations are accurately recorded.
 
 ### 14 — Align current master, user Docker images and cleanup
 
-- [ ] Revalidate the final migration against current Bark master and dated user images.
+- [x] Revalidate the final migration against current Bark master and dated user images.
 
 **Engineering plan:** docs/plans/14-master-and-cleanup.md records source/image
 revision inspection, ownership/PSBT/typed-height adaptations, cleanup and checks.
@@ -307,7 +308,7 @@ prototype/unused dependencies/assets. Preserve prior wallet volumes.
 
 **Done when:** strict generation/parity,57 Rust tests/Clippy/audit, full release
 SDKs, clean package consumers, both rebuilt apps, extended RegTest and actual
-hosted Actions pass for the updated implementation. Prior0.7.1 evidence remains
+hosted Actions pass for the updated implementation. Prior 0.7.1 evidence remains
 historical and is not substituted for this acceptance.
 
 ## Dependency order
@@ -316,131 +317,82 @@ historical and is not substituted for this acceptance.
 CI scaffolding and device setup may start earlier after their engineering plans
 are written; dependencies and completion evidence still apply.
 
-## Current evidence
+## Completion records and evidence
 
-The GitHub repository preserves upstream history/license. All54 Rust tests,
-Swift/JVM contracts and full local RegTest acceptance pass. Runtime evidence
-is in docs/validation/2026-10-18.md; actual hosted and release gates are recorded
-separately. The superseded feasibility experiment has been deleted.
+### 00–01: repository and baseline
 
-## Completion record — task 00
+Plan/paths: task00 above, [baseline plan](plans/01-baseline-and-api.md), root
+metadata and [API inventory](api-baseline.json). Preserved upstream history/MIT
+license, created the requested repository and mapped128 exports, 40 records,
+14 enums and 2 callback protocols. All52 original Rust tests and baseline Clippy
+passed. The repo is now public under smolcars after an external transfer.
+The original Bark/Nitro reference checkouts remain unchanged.
 
-**Engineering plan and affected paths:** preserve the upstream checkout/history,
-then create the requested private GitHub repository and add README.md, AGENTS.md,
-this checklist and the existing compatibility evidence.
+### 02–04 and06: backend, port, lifecycle and removal
 
-**Implemented:** created niteshbalusu11/bark-bolt-ffi, configured origin/upstream,
-established main and registered the local project in T3. Original reference
-checkouts were not changed.
+Plan/paths: [RegTest](plans/02-regtest.md), [native port](plans/03-native-port.md)
+and [master adaptation](plans/14-master-and-cleanup.md); Cargo/src, regtest and
+scripts. All original names are accounted for by strict generation/API parity;
+master adds signPsbt, VtxoSwept and fee margin.57 Rust tests, warnings-denied
+Clippy and audit with no ignored advisories pass. Tests cover unsigned PSBT
+immutability, delta bounds, callbacks, cancellation/reuse and persistence.
+The reproduced Kotlin reentrant cancellation deadlock was fixed in shared Rust.
 
-**Validation:** confirmed 14 engineering plans, 14 implementation sections and
-14 acceptance criteria; checked local documentation links and staged whitespace;
-verified local HEAD and the remote main ref both equal
-78768e0a71c6eae15e2f91e2e1d7acb435906a50. GitHub reports PRIVATE visibility and
-main as the default branch.
+The six-service isolated backend bootstraps idempotently, boards real sats and
+provides Lightning liquidity. Matched master images recover funded seeds; the
+older server's missing recovery RPCs were proved with a red/green upstream CLI
+probe. Existing wallet volumes were preserved. UniFFI/WASM source, GitLab CI,
+prototype, obsolete stubs, unused dependencies/helper and image were deleted.
+Required Rust/build/test helpers remain. Evidence: [master validation](validation/2026-10-19-master.md).
 
-**Artifacts:** https://github.com/niteshbalusu11/bark-bolt-ffi/commit/78768e0a71c6eae15e2f91e2e1d7acb435906a50
+### 07–10: apps, devices and complete local transaction acceptance
 
-**Remaining limits:** all production implementation tasks remain unchecked.
-This bootstrap does not claim a working production migration or passing app CI.
+Plan/paths: [native apps](plans/07-08-native-apps.md); examples, SDK contracts,
+app-regtest.py, wait-devices.py, PRODUCT and DESIGN. Implemented native workflows,
+protected seed storage, persistent SQLite, async lifecycle/errors/accessibility
+and debug-only test transport. Both apps build/install/run; local UI tests,
+Android lint/minified build and independent Maven consumers pass. Device setup
+uses real iOS27 ARM64 simulator/API 35 ARM64 emulator processes.
 
-## Completion record — task 01
+The optimized native SDK app run passes on both platforms: actual notifications,
+two-way Ark transfers, settled BOLT11 send/receive, funded seed recovery,
+refresh/offboard, fee estimation, exit progress and confirmed claims, reopen,
+invalid input and unavailable-server retry. Evidence: [release-native summary](validation/master-release-20261019-r1.json),
+[native UI review](validation/native-ui-review.md) and twelve retained screenshots.
+Physical/minimum-OS devices and external LNURL/LNAddress/BOLT12 providers were not run.
 
-Engineering plan: docs/plans/01-baseline-and-api.md.
-Implemented: docs/api-baseline.json records all 128 exports, 40 records, 14 enums
-and two callback traits with original names/signatures.
-Validation: all 52 original native tests passed; native Clippy with warnings
-denied passed under Rust 1.90 after adding installed Homebrew tools to PATH.
-The first attempt failed only because protoc was outside PATH.
-Remaining limits: migrated signatures and host parity are validated in task 03/05.
+### 05 and11–14: final packaging, Actions, release and master gates
 
-## Implementation checkpoint — tasks 02–06
+Plan/paths: [SDK packaging](plans/05-sdk-packaging.md), [Actions](plans/11-12-actions.md),
+[release artifacts](plans/13-release-artifacts.md), [master cleanup](plans/14-master-and-cleanup.md).
+Full optimized Apple five-pair and Android three-ABI builds pass. Swift contracts
+pass from a clean ZIP consumer without newer-macOS linker warnings. The deployment
+gate reproduced and corrected a macOS 27 native-object minimum to macOS 13.
+Kotlin AAR/JAR content checks, three regular and three actual-JAR contracts,
+MavenLocal publication and independent minified Android/JVM consumers pass.
 
-Plans: docs/plans/02-regtest.md, 03-native-port.md and 05-sdk-packaging.md.
-The port preserves all 128 callable names, 40 records, 14 enums and both callbacks;
-Wallet.open_with_onchain is the added factory for the removed record object field.
-All 54 Rust tests and warnings-denied Clippy pass. Strict generation omits no API.
-Swift and Kotlin native contract tests pass, including full u64 and callback
-errors. Both native apps compile and create actual RegTest wallets.
+Paired master [integration 39201337865](https://github.com/smolcars/bark-bolt-ffi/actions/runs/39201337865)
+passed. Its post-job volume check exposed a profile-excluded CLI fixture volume;
+the corrected teardown removes it. Full integration 39202007139 passed with
+the correction; post-job checks find no fixture volumes or registered runner.
+SDK source is unchanged by teardown/documentation edits.
 
-A fresh isolated Compose project also bootstrapped successfully and boarded
-998,900 sats. Repeating bootstrap preserves its wallet. The reference CLI/server
-are official 0.7.1 images; Bitcoin31 is required by that server.
+Hosted [run39201332568](https://github.com/smolcars/bark-bolt-ffi/actions/runs/39201332568)
+passed Rust, Android and Apple jobs, including UI/SDK contracts and deployment
+gates. [Release v0.1.0](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.1.0)
+is published at 6dae2db with ten checksum-verified assets. The clean public Git-URL
+Swift consumer downloads the actual archive, links and passes all 3 contracts.
+Its harness disables ambient Keychain/netrc credentials; SDK source and published
+asset checksums are unchanged by that isolation setting.
 
-Real Android cancellation found and reproduced a reentrant mutex deadlock:
-Kotlin Unconfined timed out at 15s before the fix. Taking the cancel sender out
-of the lock before waking it makes the JVM regression and Android reuse command
-pass. iOS cancellation also passes. No generated binding file was patched.
-Full transaction acceptance and hosted CI remain in progress.
+Final commands: `python3 scripts/swift-artifact.py`, `python3 scripts/check-api.py`,
+packaged contract/artifact checks, documented live acceptance commands and actual
+Actions runs all pass. Documentation relative links and `git diff --check` pass.
+The final follow-up contains documentation, retained Nitro attribution and the
+release-check credential isolation only; the tested SDK source is unchanged.
 
-## Completion record — task 02
-
-Engineering plan and paths: docs/plans/02-regtest.md; regtest/ and scripts/regtest.py.
-Implemented: digest-pinned Bitcoin31, Postgres, CLN/hold plugin, LND and exact
-Bark/server0.7.1; bounded bootstrap, funding/mining, channel setup and lifecycle.
-Validation: fresh project bootstrap/reference boarding succeeds; repeated setup
-preserves wallet; real apps paid/received Lightning through the funded channel.
-Artifacts: docs/validation/2026-10-18.md records actual transaction identifiers.
-Remaining limits: real external LNURL/BOLT12 providers are separate fixtures.
-
-## Completion record — task 03
-
-Engineering plan and paths: docs/plans/03-native-port.md; Cargo files and src/.
-Implemented: the full API uses BoltFFI, concrete factories, value records,
-message errors and foreign callbacks; onchain validation/datadir logic retained.
-Validation: 54 tests and strict Clippy pass; strict Swift/Kotlin generation and
-scripts/check-api.py account for every original export/type/callback.
-Artifacts: docs/api-baseline.json and docs/validation/2026-10-18.md.
-Remaining limits: packaging and hosted CI have their own acceptance tasks.
-
-## Completion record — task 06
-
-Engineering plan and paths: docs/plans/03-native-port.md and 05-sdk-packaging.md.
-Implemented: removed browser source/features, UniFFI scaffolding/dependency and
-GitLab CI; current products are Swift/Kotlin with native Rust implementation.
-Validation: native test/Clippy, strict generation, both SDK/app builds and live
-wallet transactions succeed after deletion. No old binary satisfies these apps.
-Artifacts: src/ffi/, boltffi.toml, Gradle modules and GitHub Actions workflows.
-Remaining limits: the historical compatibility proof remains until release cleanup.
-
-## Completion record — task 09
-
-Engineering plan and paths: docs/plans/07-08-native-apps.md; scripts/wait-devices.py,
-docs/devices.md and CI device setup.
-Implemented: installed API35 arm64 emulator/tools; created/booted BarkRegtest;
-opened both devices through T3, with bounded readiness and endpoint forwarding.
-Validation: wait-devices.py passes for both; installed apps create real wallets,
-complete transactions, and local XCTest/Compose instrumentation tests pass.
-Artifacts: docs/validation/2026-10-18.md and local device/test reports.
-Remaining limits: CI device execution is verified under tasks11–12, not inferred.
-
-## Completion record — tasks 04 and 10
-
-Engineering plan and paths: docs/plans/03-native-port.md, 05-sdk-packaging.md,
-07-08-native-apps.md; src/ffi, SDK contracts and scripts/app-regtest.py.
-Implemented: native runtime/RAII cancellation cleanup, callback release and
-in-flight handle retention, logger replacement, SQLite reopen, full cross-app
-transaction driver with node/LND assertions and funded seed recovery.
-Validation: all54 Rust tests,3 Swift contracts,3 real-wallet JVM contracts and
-3 contracts through the actual packaged JVM JAR pass locally. Both local r5
-and Actions39195200829 report passed=true, extended=true for iOS and Android.
-Artifacts: docs/validation/2026-10-18.md and integration-39195200829.json; Actions
-retains full JSONL and sanitized backend logs for3 days.
-Remaining limits: LNURL/LNAddress and BOLT12 external fixtures were not run;
-minimum-OS and physical-device execution are not claimed.
-
-## Completion record — tasks 07 and 08
-
-Engineering plan and paths: docs/plans/07-08-native-apps.md; examples/ios,
-examples/android, PRODUCT.md and DESIGN.md.
-Implemented: native SwiftUI/Compose wallets, protected seed storage, persistent
-SQLite, loading/errors/pinned feedback, real SDK operations and debug-only test
-transport. Explicit iOS labels and accessible error details passed native review.
-Validation: both apps build/install/run; XCTest/Compose UI tests pass. Full
-master release-native RegTest passes on both devices, including new fee records,
-funded recovery and exit claims. Android minified release/lint and an external
-Maven AAR consumer build pass with the supported three-ABI filter.
-Artifacts: docs/validation/master-release-20261019-r1.json, native-ui-review.md
-and twelve actual screenshots.
-Remaining limits: physical devices/minimum OS runtimes were not executed.
-These are RegTest SDK examples; store distribution is outside the migration.
+Remaining limits: physical/minimum-OS execution and external LNURL/LNAddress/BOLT12
+providers are untested. App stores and Maven Central publication are outside scope.
+The separate [master validation record](validation/2026-10-19-master.md) contains
+the commands, transaction summaries, source/CI/release links and exact checksum. Prior 0.7.1
+run39195200829 is retained as historical evidence, not master acceptance.

@@ -80,3 +80,10 @@ External Maven consumer testing exposed transitive Compose x86 natives making
 the APK advertise unsupported x86. Limit the example app's ABI filters to the
 SDK's arm64-v8a/armeabi-v7a/x86_64 matrix, document the consumer requirement and
 rebuild the external minified APK. This changes app packaging only.
+
+Final documentation cleanup: retain Nitro's MIT notice for adapted RegTest
+infrastructure under regtest/LICENSE, link it from README, and preserve the
+original root license. Consolidate stale progress notes into actual task
+completion records; retain historical validation separately. Verify Markdown
+relative links, generated provenance, git whitespace and clean remote agreement.
+Documentation-only completion records do not require another native rebuild.

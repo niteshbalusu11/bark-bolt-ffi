@@ -1,5 +1,8 @@
 # Tasks 03–06 engineering plan: production native adapter
 
+Initial release0.7.1 implementation plan. The validated current-master revision
+and dated images are specified by [task14](14-master-and-cleanup.md).
+
 Paths: Cargo.toml/lock, src/lib.rs, src/types.rs, src/config.rs, src/error.rs,
 src/core/{wallet,notification}.rs and src/muniffi (rename to src/ffi).
 

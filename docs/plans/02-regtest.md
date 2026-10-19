@@ -1,5 +1,8 @@
 # Task 02 engineering plan
 
+Initial release0.7.1 implementation plan. The validated current-master revision
+and dated images are specified by [task14](14-master-and-cleanup.md).
+
 Use a separate Compose project `bark-bolt-ffi` with its own named volumes and
 loopback host ports (Bitcoin RPC 19443 and Ark gRPC 3635). Start Bitcoin 31,
 Postgres 16, CLN with the hold plugin, LND, and the official Second Ark server

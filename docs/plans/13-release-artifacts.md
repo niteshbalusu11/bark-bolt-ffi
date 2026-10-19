@@ -1,69 +1,56 @@
-# Task 13: reproducible SwiftPM and release artifacts
+# Release artifacts and clean consumers
 
-After the final Rust code/dependency checks pass, produce optimized full ABI
-SDKs. For this private repository, make root SwiftPM consumption self-contained:
-copy the generated release XCFramework, FFI headers and Swift source to
-sdk/swift and put portable paths in root Package.swift. Each static slice must
-remain below GitHub's file size limit. No Git LFS or authenticated release asset
-redirect should be required to resolve the package from the Git URL.
+Paths: root Package.swift, sdk/swift, scripts/swift-artifact.py,
+scripts/test-swift-release.py, SDK Gradle publications, artifact checks, CI,
+README and migration/validation documentation.
 
-Record SHA256 checksums, BoltFFI/Bark/toolchain versions and a hash of Rust
-sources plus Cargo.lock/manifest/config in sdk/swift/provenance.json. Add a
-verification script so source or generated contract drift fails CI. Run a clean
-Swift consumer from the root package, including a separate Git clone, and verify
-Android AAR/JVM JAR contain the same crate/API with JNI natives for all promised
-ABIs. The app debug test bridge stays disabled in release builds.
+Produce optimized full-matrix SDKs after Rust/API validation. The repository is
+public at smolcars/bark-bolt-ffi. Root SwiftPM uses a versioned public GitHub
+release XCFramework ZIP and SHA256; commit only generated Swift/C source and
+provenance. Static archives exceed GitHub's normal Git file limit. Local app
+builds continue using dist/apple independently of release availability.
 
-Document Swift/Kotlin breaking factory/error/default/ownership changes, precise
-CI/device evidence, commands and any uncovered external service protocols.
-Do not publish to App Store, Play Store or Maven Central as part of validation.
+Before staging, verify all five Apple platform/architecture pairs against their
+Cargo release archives. Check Mach-O minimum deployment commands for every
+native object: iOS16 and macOS13. Set MACOSX_DEPLOYMENT_TARGET=13.0 on Darwin,
+including the JVM JNI build, so native C dependencies inherit the minimum.
+Record source/config/build-script, generated files, manifest and archive hashes.
+CI checks committed provenance and newly built Apple deployment targets.
 
-The first optimized XCFramework is 550MB because Rust static archives retain
-symbol/debug sections. Verify every original thin slice against Cargo release
-output before copying; remove only debug symbols from the staged copies using
-`xcrun strip -S`, preserving public symbols and leaving Cargo output untouched.
-Check each resulting universal archive stays below GitHub's 100MiB file limit,
-record the stripped artifact hashes, and link/run a fresh Swift consumer to
-validate the packaged symbols. This is packaging only, with no Rust/API change.
+The deployment gate first reproduced zstd objects targeting macOS27, then the
+explicit macOS13 build setting corrected the archive. Require a fresh ZIP
+consumer to link without newer-macOS warnings and pass existing Swift contracts.
+After publication, run test-swift-release.py against the full pushed Git SHA;
+this exercises real Git resolution, public download/checksum, linkage, callback
+conversion and handle release. This is a manual release gate. Normal push/PR CI
+uses fresh local SDKs and must support commits before a release exists.
 
-Repository state changed externally during execution: GitHub now resolves it as
-public `smolcars/bark-bolt-ffi`. Use that canonical URL in origin/docs/runner.
-The universal archives still exceed100MiB after debug stripping. Since release
-assets are now publicly downloadable, use the standard SwiftPM URL/checksum
-binary target and publish the full optimized XCFramework ZIP as a GitHub release
-asset. Commit generated Swift/C sources and source/artifact provenance, not large
-static archives. Verify checksum/metadata in CI, and resolve/run a clean consumer
-from the Git URL after publishing v0.1.0. Keep local dist/apple build workflows
-independent of release download availability.
+For Kotlin, inspect AAR public classes and ELF machine IDs for the three Android
+ABIs. Run existing contracts through the actual JVM JAR, removing main output
+directories from its runtime classpath. Publish both modules to MavenLocal and
+run independent JVM/Android consumers, including a minified APK with exactly the
+three supported ABIs. Collect Linux JVM output from the final successful hosted
+run and the local macOS JVM artifact. Upload versioned AAR/JAR assets, provenance
+and checksums alongside the Swift archive.
 
-Consumer validation will run the existing Swift contract suite from a clean
-external temporary package with a Git revision dependency on this repository.
-This exercises public release download/checksum, module linkage, generated
-error/callback conversions and release callbacks, rather than merely parsing the
-manifest. Add its invocation after Apple local SDK tests in hosted CI once the
-release asset is published. Rust CI verifies committed source/provenance hashes.
-Keep Maven artifacts as workflow outputs and support local Maven publication;
-external Maven Central credentials/publication are outside this migration.
+Publish v0.1.0 at the validated implementation SHA only after hosted SDK/app and
+full cross-platform RegTest checks pass. Then run the clean Git consumer before
+final completion. Preserve release asset checksums after publication. Store
+publishing and Maven Central publication are outside this migration.
 
-Kotlin package checks will inspect AAR entries and ELF architecture for all three
-Android ABIs plus the compiled public API. Run existing JVM contracts through
-the built JAR (remove main class directories from the runtime classpath) to prove
-that the packaged desktop loader/natives work. Include these in hosted checks,
-and compile the minified Android release example to validate consumer keep rules.
+Finish the checklist with actual commands, source/CI/release links and remaining
+runtime limits. Remove superseded progress prose, keep engineering plans and
+durable evidence, and check relative links/whitespace. Required build/RegTest
+helpers and generated SDK contracts remain. No wallet logic changes in this task.
 
-Keep the clean Git-URL consumer as an actual release check after asset publication,
-not a push/PR CI step: normal CI builds and tests fresh local SDK artifacts, and
-must not depend on a public binary release existing for an unreleased commit.
-Rust CI verifies committed source/provenance; hosted Apple runs the same contract
-suite against the newly generated SDK. Run test-swift-release.py manually against
-the pushed release revision and record its result before final completion.
+Public-consumer isolation: the first public SwiftPM consumer consults two local
+GitHub Keychain entries and stalls at artifact download, while an anonymous HTTP
+request returns200 with the correct content length. Disable Keychain/netrc lookup
+only for the clean release-check process, without changing local credentials.
+Rerun the actual Git/download/link/contracts check and record its result. This
+changes the validation harness, not SDK source or published binary checksums.
 
-Deployment gate finding: the clean ZIP consumer's linker warns that zstd C
-objects were built for macOS27 while the package advertises13. Set
-MACOSX_DEPLOYMENT_TARGET=13.0 for Darwin SDK builds (including JVM desktop JNI),
-so native C dependencies inherit the declared minimum. Record build-sdk.sh in
-the source provenance hash and gate every Apple archive's Mach-O deployment load
-commands against iOS16/macOS13 before staging. First run the gate on the existing
-archive to capture failure, then rebuild/restage and require no newer-OS linker
-warnings in a fresh consumer. This is a binary compatibility fix, not a wallet
-logic change. Re-run packaged contracts after rebuilding affected natives.
+Outcome: all hosted SDK/app jobs and paired native RegTest passed. Release0.1.0
+is published with checksum-verified assets. The anonymous Git-URL consumer
+downloads the real XCFramework, compiles/links and passes all three contracts.
+Record detailed evidence in validation/2026-10-19-master.md and close all tasks.
