@@ -36,9 +36,12 @@
 Implemented both interfaces and all Rust/Swift/Kotlin contracts. Final rebuilt
 SDKs passed 84 Rust, 12 Swift and 11 compiled/executed Kotlin contracts, plus
 11 packaged-JAR contracts. Both Fable 5.1 high review rounds completed and all
-findings are repaired. Hosted CI and publication are in progress. [Execution evidence](../validation/2026-10-19-v030.md) records actual
-commands, artifact checks and remaining release gates. Task 18 stays open until
-those gates pass.
+findings are repaired. Full hosted source CI passed on the exact tagged commit.
+v0.3.0 is published with eleven assets; fresh downloads match SHA256SUMS and a
+clean public Git consumer passed all 12 live Swift contracts. Noah received and
+acknowledged the migration notice. [Execution evidence](../validation/2026-10-19-v030.md)
+records commands, hashes, CI links and the separate automatic tag rerun's state.
+Task 18's acceptance gates are complete.
 
 ## Compatibility refinement before final publication
 

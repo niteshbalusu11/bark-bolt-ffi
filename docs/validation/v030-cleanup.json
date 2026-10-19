@@ -1,0 +1,31 @@
+{
+  "removed_container_count": 20,
+  "removed_volume_count": 25,
+  "removed_image_ids": [
+    "sha256:ff0e45bc4f8bfbd2b809eff7264aa4f31de413aaf3c2b8d45dd12b9a4e7e33e2"
+  ],
+  "removed_build_paths": [
+    "target",
+    "dist",
+    "build",
+    "tests/swift/.build",
+    "sdk/android/build",
+    "sdk/jvm/build",
+    "examples/android/build",
+    ".gradle"
+  ],
+  "removed_build_bytes": 53547536384,
+  "android_avd_removed": "BarkRegtest",
+  "ios_device_shutdown": "0AA67A95-92DB-4C1A-82AE-6C6CF7770EAD",
+  "ios_bark_apps_uninstalled": true,
+  "shared_ios_noah_nitro_apps_preserved": true,
+  "noah_ios_states": {
+    "Noah Native iPhone": "Booted",
+    "Noah Native iPhone 2": "Booted",
+    "Noah Native SE": "Booted"
+  },
+  "other_docker_container_ids_preserved": true,
+  "free_bytes_before": 35303010304,
+  "free_bytes_after": 88259915776,
+  "free_bytes_increase": 52956905472
+}

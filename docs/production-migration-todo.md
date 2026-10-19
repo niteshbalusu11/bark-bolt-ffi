@@ -1,10 +1,11 @@
 # Production migration checklist
 
-Status: all tasks 00–17 complete. Bark master, BoltFFI Swift/Kotlin SDKs, native
-apps, Noah API parity, RegTest acceptance, GitHub Actions and published release
-consumers pass. [Current evidence](validation/2026-10-19-noah.md) records exact
-sources, runs, artifacts and scope limits. [Release v0.2.0](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.2.0)
-is published; the earlier master release remains documented separately.
+Status: tasks 00–19 complete. Bark master, full balances, validated existing
+opens, Swift/Kotlin SDKs, native apps and RegTest acceptance passed. Exact tagged
+source passed all three hosted CI jobs. [v0.3.0](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.3.0)
+is published, fresh downloads and the public consumer are verified, and Noah
+received the migration notice. [Current evidence](validation/2026-10-19-v030.md)
+records source, CI, artifact hashes, scope limits and requested disk cleanup.
 
 ## Agreed decisions
 
@@ -14,7 +15,7 @@ is published; the earlier master release remains documented separately.
 - One repository for the Rust FFI core, Swift SDK, Kotlin Android/JVM SDKs,
   native example apps, RegTest infrastructure and GitHub Actions.
 - Consumer languages: Swift and Kotlin only. Use SwiftUI and Jetpack Compose.
-  Breaking API changes are allowed; no Nitro/React Native schema compatibility.
+  Breaking SDK API changes are allowed; preserve existing wallet persistence compatibility.
 - Targets: iOS 16+, macOS 13+, Android API 24+, JVM 17. Retain the existing
   native ABI matrix unless a documented platform decision changes it.
 - Pin Bark master bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c and BoltFFI 0.31.1.
@@ -71,18 +72,29 @@ different claims. Record them separately; do not mark one from evidence of anoth
 
 ## Tasks
 
+### 19 — Post-release resource cleanup
+
+- [x] Close Bark devices and remove the dedicated Android AVD/test app data.
+- [x] Remove owned Docker containers, volumes and networks; preserve Noah/Nitro.
+- [x] Remove disposable build output and measure recovered disk space.
+
+Engineering plan: [cleanup](plans/19-release-cleanup.md). Recovered 52.96 GB;
+[ownership and validation results](validation/v030-cleanup.json).
+
 ### 18 — v0.3.0 full balance and no-write existing-wallet open
 
 - [x] Expose all nine balance buckets and Bark-computed pending/total.
 - [x] Validate existing-wallet identity before SQLite migrations or BDK writes.
 - [x] Pass Rust, compiled Swift/Kotlin and live RegTest regression contracts.
 - [x] Fable 5.1 high reviews all changes; verify, plan and fix confirmed findings.
-- [ ] Publish v0.3.0 XCFramework, AAR, SHA256SUMS and SPM manifest; verify CI/consumers.
-- [ ] Notify the active Noah native rewrite thread after publication.
+- [x] Publish v0.3.0 XCFramework, AAR, SHA256SUMS and SPM manifest; verify CI/consumers.
+- [x] Notify the active Noah native rewrite thread after publication.
 
 Engineering plan and affected paths: [balance and existing open](plans/18-balance-and-existing-open.md).
-Final local contracts and review passed; hosted CI/publication and consumer handoff
-remain pending. [Execution evidence](validation/2026-10-19-v030.md).
+Local contracts, Fable review, hosted source CI, publication, fresh checksums,
+clean public consumer and Noah handoff passed.
+[Execution evidence](validation/2026-10-19-v030.md),
+[release hashes](validation/v030-release.json).
 
 ### 17 — Noah native API parity
 

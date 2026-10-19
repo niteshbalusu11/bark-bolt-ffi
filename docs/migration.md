@@ -95,7 +95,8 @@ Live acceptance covers boarding, two-way Ark transfers, BOLT11 send/receive,
 notifications, refresh, offboarding, unilateral exits/claims, restart and funded
 seed recovery. LNURL/LNAddress and BOLT12 exports remain available and retain
 upstream validation, but no external provider acceptance fixture was run.
-See `validation/2026-10-19-noah.md` for Noah parity results and CI links,
+See [v0.3.0 validation](validation/2026-10-19-v030.md) for full-balance/opening contracts and release hashes,
+`validation/2026-10-19-noah.md` for previous Noah parity results and CI links,
 and `validation/2026-10-19-master.md` for the previous master release;
 `validation/2026-10-18.md` retains prior release 0.7.1 evidence.
 

@@ -1,0 +1,101 @@
+{
+  "version": "0.3.0",
+  "release_url": "https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.3.0",
+  "release_commit": "14200155be061ef064b2dee3254f3b67e952ca6f",
+  "source_sha256": "5f4bc72f7e80ccd67a7a380839c06fe72e55c97edf8015512976dc6944c4c5ec",
+  "hosted_ci": {
+    "source": {
+      "run": 39323300557,
+      "rust": "success",
+      "apple": "success",
+      "android": "success"
+    },
+    "tag": {
+      "run": 39326124245,
+      "status": "in_progress"
+    }
+  },
+  "local_contracts": {
+    "rust_live": 84,
+    "swift_live": 12,
+    "kotlin_live": 11,
+    "kotlin_packaged_live": 11,
+    "failures": 0,
+    "skipped": 0
+  },
+  "public_consumer": {
+    "revision": "14200155be061ef064b2dee3254f3b67e952ca6f",
+    "swift_live_tests": 12,
+    "failures": 0,
+    "skipped": 0,
+    "seconds": 19.579,
+    "binary_download_requires_authentication": false,
+    "fresh_checksums_match": true
+  },
+  "artifact_count_including_checksums": 11,
+  "assets": {
+    "BUILD-INFO.json": {
+      "sha256": "c02231d2ed81da74eb01b57ae07f9297a273e9f2282bef9db5d4b25c6d89075e",
+      "size_bytes": 1688
+    },
+    "BarkBoltFFI.xcframework.zip": {
+      "sha256": "ae6a1216c6f884eba79a4b041cbda463d14ac2b8f6ad113e9aaee38c4a8a0cbd",
+      "size_bytes": 189025237
+    },
+    "Package.swift": {
+      "sha256": "c71acf9d6d7114a0f3fd5cd1e41291f41ad4ae71b39728eff9e9062ab82bde82",
+      "size_bytes": 918
+    },
+    "bark-bolt-ffi-android-0.3.0.aar": {
+      "sha256": "108ebe9701ba9a55d67a7de6a79a3d34dd7a2a5fb62eb667fb977d1b6c05f2f3",
+      "size_bytes": 58812628
+    },
+    "bark-bolt-ffi-android-0.3.0.pom": {
+      "sha256": "67f82c3ff8c6109f5cff12a68a9bce725ebf0ff3190896d014a754aaa34ccb83",
+      "size_bytes": 1225
+    },
+    "bark-bolt-ffi-jvm-darwin-arm64-0.3.0.jar": {
+      "sha256": "e6af669107ab1d4ec99805c2bb6fd791f5e5a39fdc4872ffa268be68af6dfe09",
+      "size_bytes": 22117517
+    },
+    "bark-bolt-ffi-jvm-darwin-arm64-0.3.0.pom": {
+      "sha256": "746ff7cb808eea4acbbf0c8d79ee752a1863882a9e23b953269f145df5c8cbea",
+      "size_bytes": 1205
+    },
+    "bark-bolt-ffi-jvm-linux-x86_64-0.3.0.jar": {
+      "sha256": "d2d04c7f0820a7ab871ac1f5c2cbf9e2dc158ef06e52ca7b6f610d90c7b6352e",
+      "size_bytes": 24105804
+    },
+    "bark-bolt-ffi-jvm-linux-x86_64-0.3.0.pom": {
+      "sha256": "ef3a9f3976f41c51ed357bc0d4a553a0135b13e640aa2070401790af75ae4986",
+      "size_bytes": 1205
+    },
+    "swift-provenance.json": {
+      "sha256": "94159f7230e93732515b266e78b1f84290711f2e9e5c6552729d5a45cafbc560",
+      "size_bytes": 1128
+    }
+  },
+  "review": {
+    "provider": "claudeAgent",
+    "model": "claude-fable-5-1",
+    "effort": "high",
+    "rounds": 2,
+    "verdict": "approve; no blocker remains",
+    "request_ids": [
+      "v030-fable51-high-full-review-r1-20261019",
+      "v030-fable51-high-full-review-r2-20261019"
+    ]
+  },
+  "noah_notice": {
+    "thread_id": "4ff9b718-306c-496c-831f-8edfa1484899",
+    "message_id": "message:mcp:96e4e279-e38e-44ee-a103-f2d5ae135413:thread-send:bark-bolt-v030-published-notice-noah-20261019",
+    "delivery": "steered",
+    "consumer_acknowledged_and_adopting": true
+  },
+  "limits": [
+    "Physical-device and every-minimum-OS runtime execution not performed",
+    "Hot SQLite journals require recovery before read-only validation",
+    "Serialize wallet opening against foreign database writers and replacement",
+    "Maven Central and app store publication outside scope"
+  ]
+}
