@@ -3,3 +3,4 @@
 extension Wallet: @unchecked Sendable {}
 extension OnchainWallet: @unchecked Sendable {}
 extension NotificationHolder: @unchecked Sendable {}
+extension StateChangeSubscription: @unchecked Sendable {}

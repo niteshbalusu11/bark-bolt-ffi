@@ -6,6 +6,7 @@ pub mod runtime;
 pub mod wallet;
 
 pub use crate::core::notification::NotificationHolder;
+pub use crate::core::state_changes::{StateChangeEvent, StateChangeSubscription};
 pub use custom_onchain_wallet::CustomOnchainWalletCallbacks;
 pub use logger::{clear_logger, set_logger, BarkLogger};
 pub use onchain::OnchainWallet;

@@ -171,8 +171,10 @@ dependencies = [
  "hex",
  "log",
  "once_cell",
+ "rusqlite",
  "serde",
  "serde_json",
+ "tempfile",
  "tokio",
 ]
 
