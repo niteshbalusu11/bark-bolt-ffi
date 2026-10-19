@@ -29,3 +29,9 @@ advisories; 0.22.2 supports Rust1.88+ and is pinned instead. The current databas
 reports seven advisories across quinn-proto0.11.17 and rustls0.23.45. Update only
 to patched compatible versions (0.11.18 and 0.23.46), retain Bark0.7.1, run audit
 without ignoring advisories, then rebuild/test affected SDKs.
+
+Second hosted Android setup finding: setup-android v3 defaults to the removed
+SDK package `tools`; SDK CLI12 rejects it. Set the action's `packages` input to
+only `platform-tools`, then install pinned NDK/platform/build-tools explicitly.
+Re-run the actual Android job; no project compile or emulator result is inferred
+from successful SDK installation.
