@@ -1,10 +1,10 @@
 # Production migration checklist
 
-Status: all tasks 00–16 complete. Bark master, BoltFFI Swift/Kotlin SDKs, native
-apps, RegTest acceptance, GitHub Actions, cleanup and published release consumers
-pass. [Current evidence](validation/2026-10-19-master.md) records exact sources,
-runs, artifacts and scope limits. [Release v0.1.0](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.1.0)
-is published.
+Status: all tasks 00–17 complete. Bark master, BoltFFI Swift/Kotlin SDKs, native
+apps, Noah API parity, RegTest acceptance, GitHub Actions and published release
+consumers pass. [Current evidence](validation/2026-10-19-noah.md) records exact
+sources, runs, artifacts and scope limits. [Release v0.2.0](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.2.0)
+is published; the earlier master release remains documented separately.
 
 ## Agreed decisions
 
@@ -75,12 +75,16 @@ different claims. Record them separately; do not mark one from evidence of anoth
 
 - [x] P0 keys/signatures, v2 snapshots and committed-state subscriptions.
 - [x] P1 feature parity, structured amounts and transaction details.
-- [ ] Fresh tagged release with verified SDK artifacts and consumer contracts.
+- [x] Fresh tagged release with verified SDK artifacts and consumer contracts.
 
 Engineering plan and affected paths: [Noah native parity](plans/17-noah-native-parity.md).
 Nitro v0.0.144 compatibility is required for existing Noah app updates; this
 supersedes the earlier decision that Nitro schema compatibility was unnecessary.
 P2 remains deferred. Acceptance and evidence must be recorded per priority group.
+P0/P1 PRs passed all three hosted checks and are merged. v0.2.0 is published at
+b8ca615c6bd0faf45ef9b9ea8661fa9f5a99eb45 with eleven assets. Fresh downloads
+match SHA256SUMS; a clean public Git consumer passes all nine live Swift
+contracts. [Release verification](validation/noah-release-v0.2.0.json).
 
 ### 00 — Bootstrap the new project
 

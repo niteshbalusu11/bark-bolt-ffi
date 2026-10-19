@@ -197,3 +197,29 @@ normally and 8/8 from the actual JAR, including the ownership correction.
 AAR/JAR ABI/class checks and the 149-export API inventory pass. Both Maven
 POMs are generated, iOS rebuild passes, and Android debug/release APKs build
 successfully. Hosted CI/merge/publication/download acceptance remain pending.
+
+Post-publication consumer validation plan: verify fresh downloaded checksums and
+run the live Swift contracts through a clean public Git consumer. The first run
+compiled and passed offline vectors/SQLite parsing, but the owned RegTest stack
+had stopped during CI waiting (RPC connection refused). Restart only project
+bark-bolt-ffi with its existing volumes; never stop/reset the separate scripts
+stack. Its CLN then reported stored height 980 ahead of Bitcoin at 681. Confirmed
+both are on bark-bolt-ffi_default with project-specific volumes and CLN RPC
+bitcoind:18443. Advance only this isolated test chain to 981, restart its existing
+services and re-run the same consumer. Do not delete databases or volumes.
+
+Final completion outcomes (2026-10-19): both P0/P1 PRs pass every hosted
+Rust/Apple/Android job and are merged. The merged main tree b8ca615 exactly
+matches candidate 8428f35; Swift check-source passes. Published immutable tag
+v0.2.0 at b8ca615 with eleven assets, including full XCFramework/AAR/JAR/POM,
+manifest, provenance/build info and checksums. All ten checksummed files match
+fresh release downloads. A clean public Git consumer passes all nine live Swift
+contracts through the published binary. The initial live check failed solely
+with RPC connection refused after the owned backend stopped; its persisted
+captaind index was 1010, so the isolated chain was advanced to 1011 and services
+restarted without database/volume resets. The identical consumer passed after
+recovery. Both this stack and the separate scripts-* stack remain running.
+Tag Rust/provenance checks pass; extra tag platform rebuilds were still running
+at record time, while the complete equivalent-source PR CI matrix is green.
+Task 17 acceptance is complete; physical/minimum-OS runtime and an actual
+end-user backup archive remain the previously stated limits, with P2 deferred.

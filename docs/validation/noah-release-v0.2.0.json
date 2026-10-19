@@ -1,0 +1,103 @@
+{
+  "version": "0.2.0",
+  "release_url": "https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.2.0",
+  "release_commit": "b8ca615c6bd0faf45ef9b9ea8661fa9f5a99eb45",
+  "candidate_commit": "8428f35cbabc8222438b227ac5e172d224f93b95",
+  "merged_tree_matches_candidate": true,
+  "source_sha256": "37a901c0916c0f7ca28017db960fe3bbae2dab50238a12a30a3abbe78ee91162",
+  "hosted_ci": {
+    "p0": {
+      "run": 39300973860,
+      "rust": "success",
+      "apple": "success",
+      "android": "success"
+    },
+    "p1": {
+      "run": 39303175512,
+      "rust": "success",
+      "apple": "success",
+      "android": "success"
+    },
+    "tag": {
+      "run": 39309317249,
+      "rust": "success",
+      "apple": "in_progress_at_record_time",
+      "android": "in_progress_at_record_time"
+    }
+  },
+  "local_contracts": {
+    "rust_live": 74,
+    "swift_live": 9,
+    "kotlin_live": 8,
+    "kotlin_packaged_live": 8
+  },
+  "public_consumer": {
+    "revision": "b8ca615c6bd0faf45ef9b9ea8661fa9f5a99eb45",
+    "swift_live_tests": 9,
+    "failures": 0,
+    "binary_download_requires_authentication": false,
+    "fresh_checksums_match": true
+  },
+  "artifact_count_including_checksums": 11,
+  "assets": {
+    "BUILD-INFO.json": {
+      "sha256": "b27c0161646dc08f2c395d55be470e8b9ac7ddcbcaa9b00eb79dda80f854cde4",
+      "size_bytes": 1899
+    },
+    "BarkBoltFFI.xcframework.zip": {
+      "sha256": "5af841a1003ba137ac6bd33ca82df387a367f2f78234f28fc078ad4b1b385beb",
+      "size_bytes": 188920584
+    },
+    "Package.swift": {
+      "sha256": "bbe506aea75bf59cee191bfb54bcb447de1fee4304f08766fb34161c58eaa559",
+      "size_bytes": 918
+    },
+    "bark-bolt-ffi-android-0.2.0.aar": {
+      "sha256": "726bc3271c7057090064d191b6070b62ef6d01a1ffd632c3b68d34be59489932",
+      "size_bytes": 58756318
+    },
+    "bark-bolt-ffi-android-0.2.0.pom": {
+      "sha256": "3d418a8b6bdfb123985d9c8421910b4cb053b062ab13d835e88b41fcf7aaa720",
+      "size_bytes": 1225
+    },
+    "bark-bolt-ffi-jvm-darwin-arm64-0.2.0.jar": {
+      "sha256": "597455560c8d90453ea22665e6b3e5ed88c67d7534b5408eda5676776bf76cf3",
+      "size_bytes": 22112176
+    },
+    "bark-bolt-ffi-jvm-darwin-arm64-0.2.0.pom": {
+      "sha256": "00aca320b22221ba5f999922e59519e1094c9ab02cc5dc327fb6d619be7ed35a",
+      "size_bytes": 1205
+    },
+    "bark-bolt-ffi-jvm-linux-x86_64-0.2.0.jar": {
+      "sha256": "6443d4b365d2b956702e611ae08a7b95c83be678d887e0ec40bda9d0da9f3db2",
+      "size_bytes": 24082683
+    },
+    "bark-bolt-ffi-jvm-linux-x86_64-0.2.0.pom": {
+      "sha256": "50c0028b614a51dbd3bb96359c5d6f23432f359da353a22d0b1c6a312f2998e5",
+      "size_bytes": 1205
+    },
+    "swift-provenance.json": {
+      "sha256": "5230faa0b37f1def155afb3ee66a334a5d6daaca3103381916358529d4fe6732",
+      "size_bytes": 1128
+    }
+  },
+  "review": {
+    "model": "Fable 5.1",
+    "effort": "High",
+    "rounds": 3,
+    "report": "noah-review-20261019.md"
+  },
+  "backend": {
+    "project": "bark-bolt-ffi",
+    "existing_volumes_preserved": true,
+    "other_scripts_stack_stopped_or_reset": false,
+    "both_stacks_left_running": true,
+    "initial_consumer_failure": "owned backend was stopped; RPC connection refused",
+    "recovery": "restarted existing services, advanced isolated Bitcoin chain to persisted index height+1 (1011), then identical consumer passed"
+  },
+  "limits": [
+    "No physical-device or every-minimum-OS runtime test",
+    "No actual end-user .noahbackup archive supplied",
+    "P2 deferred"
+  ]
+}
