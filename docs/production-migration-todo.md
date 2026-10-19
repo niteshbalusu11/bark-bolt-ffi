@@ -73,7 +73,7 @@ different claims. Record them separately; do not mark one from evidence of anoth
 
 ### 17 — Noah native API parity
 
-- [ ] P0 keys/signatures, v2 snapshots and committed-state subscriptions.
+- [x] P0 keys/signatures, v2 snapshots and committed-state subscriptions.
 - [ ] P1 feature parity, structured amounts and transaction details.
 - [ ] Fresh tagged release with verified SDK artifacts and consumer contracts.
 

@@ -58,4 +58,23 @@ actual hosted CI results separately from local results. Never overwrite v0.1.0.
 
 ## Actual outcomes and remaining limits
 
-Implementation and acceptance pending.
+P0 implemented: wallet and offline public-key/signature exports; safe SQLite
+snapshot export/validation and schema42 fixture; 750ms committed-state observer
+with foreign/explicit cancellation, stop and reuse; existing-wallet missing-file
+preflight. API checker includes the new exports, records and field names.
+
+P0 validation (2026-10-19): `BARK_REGTEST=1 cargo test --locked` passes 66
+Rust tests including actual wallet operations against the existing isolated
+RegTest backend (ports 3635/19443). `cargo clippy --locked --all-targets -- -D
+warnings` and formatting pass. Fresh Apple/Android local-overlay SDK builds use
+strict generation. `BARK_REGTEST=1 swift test --package-path tests/swift` passes
+6 tests. `BARK_REGTEST=1 ./gradlew :sdk:jvm:test :sdk:jvm:jar
+:sdk:jvm:testPackaged` compiles Kotlin and passes 6 tests in each mode. Golden
+vectors cover all four exposed networks and hardened boundaries. API parity
+passes 141 exports, 44 records, 14 enums and 2 callbacks. No generated files were
+patched. Full ABI/release/hosted CI acceptance belongs to the release task.
+
+Remaining P0 limits: no actual end-user `.noahbackup` archive was supplied;
+validation covers a matching schema42 plaintext fixture and real newly exported
+wallet snapshots. No physical devices were used for these contract tests.
+P1 and release acceptance are pending.
