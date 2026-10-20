@@ -1,13 +1,38 @@
 use std::fmt;
 
+/// Stable error categories; messages retain the underlying diagnostic.
+#[boltffi::data]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BarkErrorCode {
+    Other,
+    InvalidAddress,
+    InvalidAmount,
+    InvalidFeeRate,
+    InsufficientFunds,
+    Dust,
+    PreparedTransactionNotFound,
+    PreparedInputsUnavailable,
+    UnsupportedOperation,
+    Persistence,
+}
+
 /// Error message including the complete underlying cause chain.
 #[boltffi::error]
 #[derive(Clone, Debug)]
 pub struct BarkError {
     pub message: String,
+    #[boltffi::default(BarkErrorCode::Other)]
+    pub code: BarkErrorCode,
 }
 
 impl BarkError {
+    pub(crate) fn typed(code: BarkErrorCode, message: impl Into<String>) -> Self {
+        Self {
+            message: message.into(),
+            code,
+        }
+    }
+
     pub fn new(error: impl Into<anyhow::Error>) -> Self {
         Self::from(error.into())
     }
@@ -27,12 +52,31 @@ impl From<anyhow::Error> for BarkError {
     fn from(error: anyhow::Error) -> Self {
         Self {
             message: format!("{error:#}"),
+            code: error
+                .downcast_ref::<bark::onchain::bdk_wallet::error::CreateTxError>()
+                .map_or(BarkErrorCode::Other, construction_error_code),
         }
     }
 }
 impl From<String> for BarkError {
     fn from(message: String) -> Self {
-        Self { message }
+        Self {
+            message,
+            code: BarkErrorCode::Other,
+        }
+    }
+}
+
+pub(crate) fn construction_error_code(
+    error: &bark::onchain::bdk_wallet::error::CreateTxError,
+) -> BarkErrorCode {
+    use bark::onchain::bdk_wallet::error::CreateTxError;
+    match error {
+        CreateTxError::CoinSelection(_) | CreateTxError::NoUtxosSelected => {
+            BarkErrorCode::InsufficientFunds
+        }
+        CreateTxError::OutputBelowDustLimit(_) => BarkErrorCode::Dust,
+        _ => BarkErrorCode::Other,
     }
 }
 impl From<&str> for BarkError {

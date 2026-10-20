@@ -1642,6 +1642,41 @@ pub struct OutPoint {
     pub vout: u32,
 }
 
+/// A fixed recipient amount, or all eligible wallet funds minus the exact fee.
+#[derive(Clone, Debug)]
+#[boltffi::data]
+pub enum OnchainSendAmount {
+    Amount { amount_sats: u64 },
+    DrainAll,
+}
+
+/// A signed, process-local transaction. It has not been recorded or broadcast.
+#[derive(Clone, Debug)]
+#[boltffi::data]
+pub struct PreparedTransaction {
+    pub id: String,
+    pub txid: String,
+    pub amount_sats: u64,
+    pub fee_sats: u64,
+    pub vsize: u64,
+    pub inputs: Vec<OutPoint>,
+}
+
+#[derive(Clone, Debug)]
+#[boltffi::data]
+pub enum BroadcastOutcome {
+    Accepted,
+    Failed { reason: String },
+    NotAttempted { reason: String },
+}
+
+#[derive(Clone, Debug)]
+#[boltffi::data]
+pub struct BroadcastResult {
+    pub txid: String,
+    pub broadcast: BroadcastOutcome,
+}
+
 impl From<bitcoin::OutPoint> for OutPoint {
     fn from(point: bitcoin::OutPoint) -> Self {
         Self {

@@ -1,4 +1,6 @@
-use std::sync::Arc;
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::sync::{Arc, LazyLock, Weak};
 use tokio::sync::RwLock;
 
 use bark::chain::{ChainSource, ChainSourceSpec};
@@ -11,7 +13,8 @@ use log::info;
 
 use crate::config::Config;
 use crate::core::parse_address;
-use crate::error::BarkError;
+use crate::core::prepared_onchain::WalletState;
+use crate::error::{BarkError, BarkErrorCode};
 use crate::types::{self, OnchainBalance};
 use crate::Network;
 
@@ -20,12 +23,15 @@ use crate::Network;
 /// Core implementation for the BDK backend. Callback-backed wallets are layered
 /// on top of the core inner `bark::Wallet`.
 pub struct OnchainWallet {
-    wallet: Arc<RwLock<BarkOnchainWallet>>,
+    wallet: Arc<RwLock<WalletState>>,
     chain: Arc<ChainSource>,
     /// For [`Self::send`]; neither the bdk wallet nor the trait exposes one.
     network: bitcoin::Network,
-    pub(crate) db_path_registration: Option<Arc<std::path::PathBuf>>,
 }
+
+type LiveWallets = HashMap<PathBuf, Weak<RwLock<WalletState>>>;
+static LIVE_WALLETS: LazyLock<tokio::sync::Mutex<LiveWallets>> =
+    LazyLock::new(|| tokio::sync::Mutex::new(HashMap::new()));
 
 impl OnchainWallet {
     pub async fn default(
@@ -33,6 +39,7 @@ impl OnchainWallet {
         mnemonic: String,
         config: Config,
         db: Arc<dyn BarkPersister>,
+        registration: Arc<PathBuf>,
     ) -> Result<Self, BarkError> {
         let mnemonic = Mnemonic::parse(mnemonic.trim()).context("invalid mnemonic")?;
 
@@ -44,7 +51,36 @@ impl OnchainWallet {
             network
         );
 
-        let onchain = BarkOnchainWallet::load_or_create(network, seed, db.clone()).await?;
+        let identity = bitcoin::bip32::Xpub::from_priv(
+            &bitcoin::secp256k1::Secp256k1::new(),
+            &bitcoin::bip32::Xpriv::new_master(network, &seed).context("invalid wallet seed")?,
+        );
+        let mut live = LIVE_WALLETS.lock().await;
+        live.retain(|_, wallet| wallet.strong_count() > 0);
+        let wallet = if let Some(wallet) = live.get(registration.as_ref()).and_then(Weak::upgrade) {
+            let existing = wallet.read().await;
+            if existing.identity != identity || existing.wallet.network() != network {
+                return Err(
+                    "onchain wallet is already open with a different network or mnemonic".into(),
+                );
+            }
+            drop(existing);
+            wallet
+        } else {
+            let onchain = BarkOnchainWallet::load_or_create(network, seed, db.clone()).await?;
+            let wallet = Arc::new(RwLock::new(WalletState {
+                wallet: onchain,
+                prepared: HashMap::new(),
+                identity,
+                db,
+                board_databases: Vec::new(),
+                operation_gate: Arc::new(tokio::sync::Mutex::new(())),
+                _registration: registration.clone(),
+            }));
+            live.insert(registration.as_ref().clone(), Arc::downgrade(&wallet));
+            wallet
+        };
+        drop(live);
 
         let chain_spec = if let Some(url) = config.bitcoind_address.as_ref() {
             use bark_bitcoin_ext::rpc::Auth;
@@ -81,17 +117,135 @@ impl OnchainWallet {
         );
 
         Ok(Self {
-            wallet: Arc::new(RwLock::new(onchain)),
+            wallet,
             chain,
             network,
-            db_path_registration: None,
         })
+    }
+
+    /// Sign and reserve inputs without inserting a transaction into BDK or SQLite.
+    pub async fn prepare_send(
+        &self,
+        address: String,
+        amount: types::OnchainSendAmount,
+        fee_rate_sat_per_vb: u64,
+        confirmed_only: bool,
+    ) -> Result<types::PreparedTransaction, BarkError> {
+        let address = parse_address(&address, self.network)
+            .map_err(|error| BarkError::typed(BarkErrorCode::InvalidAddress, error.message))?;
+        let fee_rate = bitcoin::FeeRate::from_sat_per_vb(fee_rate_sat_per_vb)
+            .filter(|rate| {
+                fee_rate_sat_per_vb > 0
+                    && rate.fee_wu(bitcoin::Weight::from_wu(4_000_000)).is_some()
+            })
+            .ok_or_else(|| {
+                BarkError::typed(
+                    BarkErrorCode::InvalidFeeRate,
+                    "fee rate must be positive sat/vB without overflow",
+                )
+            })?;
+        let gate = self.wallet.read().await.operation_gate.clone();
+        let _operation = gate.lock().await;
+        let mut state = self.wallet.write().await;
+        let unavailable = state.pending_board_inputs().await?;
+        state.prepare(address, amount, fee_rate, confirmed_only, &unavailable)
+    }
+
+    /// Persist and submit the exact signed transaction; never rebuild or select coins.
+    pub async fn broadcast_prepared(
+        &self,
+        id: String,
+    ) -> Result<types::BroadcastResult, BarkError> {
+        use types::BroadcastOutcome;
+        let gate = self.wallet.read().await.operation_gate.clone();
+        let _operation = gate.lock().await;
+        let mut state = self.wallet.write().await;
+        let prepared = state.prepared.get(&id).ok_or_else(|| {
+            BarkError::typed(
+                BarkErrorCode::PreparedTransactionNotFound,
+                "unknown prepared transaction id",
+            )
+        })?;
+        let transaction = prepared.transaction.clone();
+        let was_recorded = prepared.recorded;
+        let txid = transaction.compute_txid().to_string();
+        let reserved_elsewhere = transaction
+            .input
+            .iter()
+            .any(|input| state.wallet.is_outpoint_locked(input.previous_output) && was_recorded);
+        let pending_board_inputs = state.pending_board_inputs().await?;
+        if reserved_elsewhere
+            || transaction
+                .input
+                .iter()
+                .any(|input| pending_board_inputs.contains(&input.previous_output))
+        {
+            return Err(BarkError::typed(
+                BarkErrorCode::PreparedInputsUnavailable,
+                "prepared inputs are now reserved by another transaction",
+            ));
+        }
+        let is_canonical = state.wallet.get_tx(transaction.compute_txid()).is_some();
+        if !is_canonical {
+            let available: std::collections::HashSet<_> = state
+                .wallet
+                .list_unspent()
+                .into_iter()
+                .map(|output| output.outpoint)
+                .collect();
+            if transaction
+                .input
+                .iter()
+                .any(|input| !available.contains(&input.previous_output))
+            {
+                return Err(BarkError::typed(
+                    BarkErrorCode::PreparedInputsUnavailable,
+                    "prepared inputs are no longer unspent; discard and prepare again",
+                ));
+            }
+            if let Err(error) = state.record_prepared(&transaction).await {
+                return Ok(types::BroadcastResult {
+                    txid,
+                    broadcast: BroadcastOutcome::NotAttempted {
+                        reason: format!("failed to persist transaction: {error:#}"),
+                    },
+                });
+            }
+            state
+                .prepared
+                .get_mut(&id)
+                .expect("prepared id held under lock")
+                .recorded = true;
+            state.release_inputs(&transaction);
+        }
+        let broadcast = match self.chain.broadcast_tx(&transaction).await {
+            Ok(()) => BroadcastOutcome::Accepted,
+            Err(error) => BroadcastOutcome::Failed {
+                reason: format!("{error:#}"),
+            },
+        };
+        Ok(types::BroadcastResult { txid, broadcast })
+    }
+
+    /// Before broadcast this releases inputs. After recording it only forgets the id.
+    pub async fn discard_prepared(&self, id: String) -> Result<(), BarkError> {
+        let mut state = self.wallet.write().await;
+        let prepared = state.prepared.remove(&id).ok_or_else(|| {
+            BarkError::typed(
+                BarkErrorCode::PreparedTransactionNotFound,
+                "unknown prepared transaction id",
+            )
+        })?;
+        if !prepared.recorded {
+            state.release_inputs(&prepared.transaction);
+        }
+        Ok(())
     }
 
     pub async fn sync(&self) -> Result<u64, BarkError> {
         let mut w = self.wallet.write().await;
         w.sync(&self.chain).await.context("Sync failed")?;
-        let balance = w.balance();
+        let balance = w.wallet.balance();
         Ok(balance.total().to_sat())
     }
 
@@ -114,7 +268,7 @@ impl OnchainWallet {
 
     pub async fn balance(&self) -> Result<OnchainBalance, BarkError> {
         let w = self.wallet.write().await;
-        Ok(w.balance().into())
+        Ok(w.wallet.balance().into())
     }
 
     pub async fn new_address(&self) -> Result<String, BarkError> {
@@ -220,7 +374,7 @@ impl OnchainWallet {
         Ok(w.utxos().iter().map(Into::into).collect())
     }
 
-    pub(crate) fn inner(&self) -> Arc<RwLock<BarkOnchainWallet>> {
+    pub(crate) fn inner(&self) -> Arc<RwLock<dyn OnchainWalletTrait>> {
         self.wallet.clone()
     }
 }

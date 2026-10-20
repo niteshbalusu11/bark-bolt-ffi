@@ -295,3 +295,45 @@ Noah P1 API changes:
 
 P2 trusted/untrusted pending balances and BOLT11 payment-secret exposure remain
 subject to a product decision.
+
+
+## Prepared onchain sends (v0.4.0)
+
+Call `OnchainWallet.prepareSend(address, amount, feeRateSatPerVb, confirmedOnly)`
+with `OnchainSendAmount.Amount(amountSats)` or `DrainAll` (use the generated
+Swift/Kotlin case spelling). Show the returned `amountSats`, `feeSats`, `vsize`
+and `inputs` for review. The fee comes from the signed transaction's actual
+selected inputs. Preparation does not persist or broadcast a transaction.
+
+`broadcastPrepared(id)` records and submits those exact signed bytes, returning
+`BroadcastResult { txid, broadcast }`. `accepted` means the chain source accepted
+submission; `failed(reason)` means submission returned an error and the stored
+transaction remains eligible for sync retry. A failed RPC may have reached the
+node before its response was lost. `notAttempted(reason)` means persistence
+failed before submission; no transaction was inserted into the live graph.
+Retry uses the same bytes and checks for competing spends/reservations again.
+
+`discardPrepared(id)` releases an unbroadcast preparation. After a broadcast
+attempt it only forgets the handle; it cannot cancel the stored spend or its
+future sync retries. IDs/reservations are process-local and survive while any
+SDK handle or attached daemon retains the shared onchain wallet; prepare again
+after restart. Cancelled preparation waits discard an unclaimed result.
+Broadcast waits retain the existing submitted-payment cancellation semantics.
+Callback-backed onchain wallets return `unsupportedOperation` for this API.
+
+Reservations exclude inputs from legacy sends, drains, boarding and exit CPFP.
+Whole boarding calls serialize with preparation; pending board checkpoints from
+all attached Ark databases exclude their funding inputs. Opening another SDK
+handle for the same canonical SQLite path shares reservations and validates
+network/mnemonic identity. Confirmed-only selection also applies to drains.
+
+`BarkError.code` exposes typed invalid-address/amount/fee-rate, dust,
+insufficient-funds, unavailable-input and unknown-preparation failures. The
+message retains the complete cause. Unclassified upstream errors use `other`;
+existing message-only constructors default to that code.
+
+`Wallet.pendingLightningSends()` already supplies each checkpoint's
+`paymentHash`, `amountSats`, `feeSats`, invoice and HTLC details. Before resuming
+with `checkLightningPayment`, match by payment hash and compare `amountSats`
+(and the fee presented) with the reviewed payment. A matching hash alone does
+not establish that an amountless invoice checkpoint has the reviewed amount.
