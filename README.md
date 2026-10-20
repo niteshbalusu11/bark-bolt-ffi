@@ -34,7 +34,9 @@ just build-android --overlay boltffi.local.toml
 ```
 
 The local overlay selects Apple silicon/Android arm64. Omit it for the full ABI
-matrix and add `--release` for optimized SDKs. Generated bindings are never
+matrix and add `--release` for optimized SDKs. PR CI uses `BARK_PR_BUILD=1` to
+select Android arm64/x86_64 and ARM64 Apple slices via `boltffi.pr.toml`.
+Main/tag builds retain all supported architectures. Generated bindings are never
 patched. SwiftPM package: `dist/apple`; Android AAR: `sdk/android/build/outputs/aar`;
 JVM JAR: `sdk/jvm/build/libs`. Compile Kotlin artifacts with:
 
@@ -90,7 +92,7 @@ backend setup/funding/mining/RPC operation goes through the same Bash script.
 ## CI
 
 [SDK and native apps](.github/workflows/ci.yml) builds Rust, SwiftPM/XCFramework,
-Android AAR/JVM JAR and both apps on GitHub-hosted Linux/macOS runners. It executes
+Android AAR/JVM JAR and both apps on Blacksmith Linux/macOS runners. It executes
 SDK contracts, iOS UI tests and Android UI/RegTest tests.
 
 [Full cross-platform acceptance](.github/workflows/integration.yml) is manually

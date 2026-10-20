@@ -1,0 +1,7 @@
+# Lean PR builds; main/tag builds use the full matrix in boltffi.toml.
+[targets.apple]
+simulator_architectures = ["arm64"]
+macos_architectures = ["arm64"]
+
+[targets.android]
+architectures = ["arm64", "x86_64"]

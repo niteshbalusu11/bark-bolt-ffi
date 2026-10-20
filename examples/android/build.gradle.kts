@@ -11,7 +11,10 @@ android {
     defaultConfig {
         applicationId = "io.github.niteshbalusu11.bark.example"
         minSdk = 24; targetSdk = 35; versionCode = 1; versionName = project.version.toString()
-        ndk { abiFilters += setOf("arm64-v8a", "armeabi-v7a", "x86_64") }
+        ndk {
+            abiFilters += setOf("arm64-v8a", "x86_64")
+            if (System.getenv("BARK_PR_BUILD") != "1") abiFilters += "armeabi-v7a"
+        }
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true; buildConfig = true }
