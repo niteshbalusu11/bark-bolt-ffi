@@ -7,10 +7,10 @@ supported consumer languages. The Rust core remains in this repository.
 ## Swift
 
 Add `https://github.com/smolcars/bark-bolt-ffi` in Xcode's package dependencies,
-select version 0.3.1, and link the `BarkBoltFFI` product. In a package manifest:
+select version 0.4.0, and link the `BarkBoltFFI` product. In a package manifest:
 
 ```swift
-.package(url: "https://github.com/smolcars/bark-bolt-ffi.git", exact: "0.3.1")
+.package(url: "https://github.com/smolcars/bark-bolt-ffi.git", exact: "0.4.0")
 // Target dependency:
 .product(name: "BarkBoltFFI", package: "bark-bolt-ffi")
 ```
@@ -31,7 +31,7 @@ BOLTFFI="$PWD/target/tools/boltffi" scripts/build-sdk.sh android --release
 ./gradlew :sdk:android:publishToMavenLocal :sdk:jvm:publishToMavenLocal
 ```
 
-Use `mavenLocal()` with `io.github.niteshbalusu11:bark-bolt-ffi-android:0.3.1`,
+Use `mavenLocal()` with `io.github.niteshbalusu11:bark-bolt-ffi-android:0.4.0`,
 or the host-specific `bark-bolt-ffi-jvm-darwin-arm64` / `bark-bolt-ffi-jvm-linux-x86_64`
 artifact. Import `io.github.niteshbalusu11.bark.*`. The Maven POM supplies the
 coroutines dependency. The Android AAR embeds all three JNI ABIs and consumer
@@ -39,8 +39,10 @@ R8 rules. JVM JARs contain the native library for the build host; choose a JAR
 matching the deployment OS/architecture. Linux CI builds on Ubuntu24.04; rebuild
 locally when targeting an older libc. Maven Central publication is separate.
 Versioned AAR/JAR/POM files are attached to the
-[v0.3.1 release](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.3.1);
-verify them against its SHA256SUMS. GitHub Actions also uploads artifacts and
+[v0.4.0 release](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.4.0);
+verify them against its SHA256SUMS. v0.4.0 attaches the Linux x86_64 JVM JAR;
+build the Darwin JVM JAR from source. Use matching v0.4.0 bindings/native binaries,
+including on Swift, because the typed error record changes the ABI. GitHub Actions also uploads artifacts and
 example APKs. To use a downloaded AAR or JVM JAR directly, include it as a local
 file dependency and declare `org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2`
 explicitly; local file dependencies do not resolve the attached Maven POM.
@@ -51,7 +53,7 @@ explicitly; local file dependencies do not resolve the attached Maven POM.
 | --- | --- |
 | Swift module | `BarkBoltFFI` |
 | Kotlin namespace | `io.github.niteshbalusu11.bark` |
-| Errors | `BarkError.message` contains the complete Rust error chain; update catches that matched the old UniFFI enum. Unexpected callback exceptions are converted to this error. |
+| Errors | `BarkError.code` classifies supported failures and `message` retains the complete Rust error chain; update catches that matched the old UniFFI enum. Unexpected callback exceptions are converted to this error. |
 | Factories | BoltFFI uses concrete object factories. Swift `Wallet.openWithOnchain(...)`, Kotlin `Wallet.openWithOnchain(...)` construct a wallet with an existing onchain handle. |
 | Open arguments | `WalletOpenArgs` contains values only. Pass the onchain object separately to `openWithOnchain`; `open` supports wallets without one. |
 | User agent | Set `Config.userAgent` explicitly to send a custom value. BoltFFI does not infer a Swift/Kotlin user-agent from build-time language variables. |

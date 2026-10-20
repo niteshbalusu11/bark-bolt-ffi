@@ -231,17 +231,20 @@ public struct StateChangeEvent: Hashable, Equatable, Sendable {
 /// Error message including the complete underlying cause chain.
 public struct BarkError: Hashable, Equatable, Sendable, Error {
     public var message: String
+    public var code: BarkErrorCode
 
-    public init(message: String) {
+    public init(message: String, code: BarkErrorCode = BarkErrorCode.other) {
         self.message = message
+        self.code = code
     }
 
     @inlinable static func decode(from reader: inout WireReader) -> BarkError {
-        BarkError(message: reader.readString())
+        BarkError(message: reader.readString(), code: BarkErrorCode(rawValue: reader.readI32())!)
     }
 
     @inlinable func encode(to writer: inout WireWriter) {
         writer.writeString(self.message)
+        writer.writeI32(self.code.rawValue)
     }
 }
 
@@ -1706,6 +1709,71 @@ public struct OutPoint: Hashable, Equatable, Sendable {
     }
 }
 
+/// A signed, process-local transaction. It has not been recorded or broadcast.
+public struct PreparedTransaction: Hashable, Equatable, Sendable {
+    public var id: String
+    public var txid: String
+    public var amountSats: UInt64
+    public var feeSats: UInt64
+    public var vsize: UInt64
+    public var inputs: [OutPoint]
+
+    public init(
+        id: String,
+        txid: String,
+        amountSats: UInt64,
+        feeSats: UInt64,
+        vsize: UInt64,
+        inputs: [OutPoint]
+    ) {
+        self.id = id
+        self.txid = txid
+        self.amountSats = amountSats
+        self.feeSats = feeSats
+        self.vsize = vsize
+        self.inputs = inputs
+    }
+
+    @inlinable static func decode(from reader: inout WireReader) -> PreparedTransaction {
+        PreparedTransaction(
+            id: reader.readString(),
+            txid: reader.readString(),
+            amountSats: reader.readU64(),
+            feeSats: reader.readU64(),
+            vsize: reader.readU64(),
+            inputs: reader.readArray { reader in OutPoint.decode(from: &reader) }
+        )
+    }
+
+    @inlinable func encode(to writer: inout WireWriter) {
+        writer.writeString(self.id)
+        writer.writeString(self.txid)
+        writer.writeU64(self.amountSats)
+        writer.writeU64(self.feeSats)
+        writer.writeU64(self.vsize)
+        writer.writeArray(self.inputs) { writer, boltffiValue0 in boltffiValue0.encode(to: &writer) }
+    }
+}
+
+public struct BroadcastResult: Hashable, Equatable, Sendable {
+    public var txid: String
+    public var broadcast: BroadcastOutcome
+
+    public init(txid: String, broadcast: BroadcastOutcome) {
+        self.txid = txid
+        self.broadcast = broadcast
+    }
+
+    @inlinable static func decode(from reader: inout WireReader) -> BroadcastResult {
+        BroadcastResult(txid: reader.readString(), broadcast: BroadcastOutcome.decode(from: &reader))
+    }
+
+    @inlinable func encode(to writer: inout WireWriter) {
+        writer.writeString(self.txid)
+        self.broadcast.encode(to: &writer)
+    }
+}
+
 /// Reference to a block in the blockchain
 public struct BlockRef: Hashable, Equatable, Sendable {
     public var height: UInt32
@@ -1958,6 +2026,28 @@ public struct ExitTransactionPackage: Hashable, Equatable, Sendable {
         writer.writeOptional(self.childTxHex) { writer, boltffiValue0 in writer.writeString(boltffiValue0) }
         writer.writeOptional(self.childOrigin) { writer, boltffiValue0 in boltffiValue0.encode(to: &writer) }
         writer.writeOptional(self.status) { writer, boltffiValue0 in boltffiValue0.encode(to: &writer) }
+    }
+}
+
+/// Stable error categories; messages retain the underlying diagnostic.
+public enum BarkErrorCode: Int32, Hashable, Sendable, CaseIterable {
+    case other = 0
+    case invalidAddress = 1
+    case invalidAmount = 2
+    case invalidFeeRate = 3
+    case insufficientFunds = 4
+    case dust = 5
+    case preparedTransactionNotFound = 6
+    case preparedInputsUnavailable = 7
+    case unsupportedOperation = 8
+    case persistence = 9
+
+    @usableFromInline init(fromC c: Int32) {
+        self = BarkErrorCode(rawValue: c)!
+    }
+
+    @usableFromInline var cValue: Int32 {
+        rawValue
     }
 }
 
@@ -2497,6 +2587,67 @@ public enum RecoveryStatus: Hashable, Equatable, Sendable {
     }
 }
 
+/// A fixed recipient amount, or all eligible wallet funds minus the exact fee.
+public enum OnchainSendAmount: Hashable, Equatable, Sendable {
+    case amount(amountSats: UInt64)
+    case drainAll
+
+    @inlinable static func decode(from reader: inout WireReader) -> OnchainSendAmount {
+        let tag = reader.readU32()
+        switch tag {
+        case 0:
+            return .amount(amountSats: reader.readU64())
+        case 1:
+            return .drainAll
+        default:
+            fatalError("Invalid OnchainSendAmount tag: \(tag)")
+        }
+    }
+
+    @inlinable func encode(to writer: inout WireWriter) {
+        switch self {
+        case let .amount(amountSats):
+            writer.writeU32(0)
+            writer.writeU64(amountSats)
+        case .drainAll:
+            writer.writeU32(1)
+        }
+    }
+}
+
+public enum BroadcastOutcome: Hashable, Equatable, Sendable {
+    case accepted
+    case failed(reason: String)
+    case notAttempted(reason: String)
+
+    @inlinable static func decode(from reader: inout WireReader) -> BroadcastOutcome {
+        let tag = reader.readU32()
+        switch tag {
+        case 0:
+            return .accepted
+        case 1:
+            return .failed(reason: reader.readString())
+        case 2:
+            return .notAttempted(reason: reader.readString())
+        default:
+            fatalError("Invalid BroadcastOutcome tag: \(tag)")
+        }
+    }
+
+    @inlinable func encode(to writer: inout WireWriter) {
+        switch self {
+        case .accepted:
+            writer.writeU32(0)
+        case let .failed(reason):
+            writer.writeU32(1)
+            writer.writeString(reason)
+        case let .notAttempted(reason):
+            writer.writeU32(2)
+            writer.writeString(reason)
+        }
+    }
+}
+
 /// A notification event from the wallet
 public enum WalletNotification: Hashable, Equatable, Sendable {
     /// A new movement was created
@@ -2928,6 +3079,101 @@ public final class OnchainWallet {
             }
             defer { boltffi_free_buf(boltffiResult) }
             return boltffiDecodeOwnedBuf(boltffiResult.ptr, Int(boltffiResult.len)) { boltffiReader in boltffiReader.readString() }
+        }
+    }
+
+    /// Build and sign, returning the exact fee and reserving inputs across handles/daemon sync.
+    /// The id lasts until discard or all onchain/daemon handles are dropped; it is not backed up.
+    public func prepareSend(
+        address: String,
+        amount: OnchainSendAmount,
+        feeRateSatPerVb: UInt64,
+        confirmedOnly: Bool
+    ) async throws -> PreparedTransaction {
+        let boltffiAddressBytes = boltffiEncode { boltffiAddressWriter in boltffiAddressWriter.writeString(address) }
+        let boltffiFuture = boltffiAddressBytes.withUnsafeBufferPointer { boltffiAddressBuffer in
+            let boltffiAmountBytes = boltffiEncode { boltffiAmountWriter in amount.encode(to: &boltffiAmountWriter) }
+            return boltffiAmountBytes.withUnsafeBufferPointer { boltffiAmountBuffer in
+                return boltffi_method_class_bark_bolt_ffi_ffi_onchain_onchain_wallet_prepare_send(
+                    self.handle,
+                    boltffiAddressBuffer.baseAddress!,
+                    UInt(boltffiAddressBuffer.count),
+                    boltffiAmountBuffer.baseAddress!,
+                    UInt(boltffiAmountBuffer.count),
+                    feeRateSatPerVb,
+                    confirmedOnly
+                )
+            }
+        }
+        return try await boltffiAsyncCall(
+            futureHandle: boltffiFuture,
+            poll: boltffi_async_method_class_bark_bolt_ffi_ffi_onchain_onchain_wallet_prepare_send_poll,
+            cancel: boltffi_async_method_class_bark_bolt_ffi_ffi_onchain_onchain_wallet_prepare_send_cancel,
+            free: boltffi_async_method_class_bark_bolt_ffi_ffi_onchain_onchain_wallet_prepare_send_free
+        ) { boltffiFuture, boltffiStatus in
+            var boltffiResult: FfiBuf_u8 = FfiBuf_u8()
+            let boltffiError = boltffi_async_method_class_bark_bolt_ffi_ffi_onchain_onchain_wallet_prepare_send_complete(boltffiFuture, boltffiStatus, &boltffiResult)
+            if boltffiError.ptr != nil || Int(boltffiError.len) != 0 {
+                defer { boltffi_free_buf(boltffiError) }
+                throw boltffiDecodeOwnedBuf(boltffiError.ptr, Int(boltffiError.len)) { boltffiErrorReader in BarkError.decode(from: &boltffiErrorReader) }
+            }
+            let boltffiStatusCode = boltffiStatus!.pointee.code
+            guard boltffiStatusCode == 0 else {
+                throw FfiError(message: "FFI failed in async completion with code \(boltffiStatusCode)")
+            }
+            defer { boltffi_free_buf(boltffiResult) }
+            return boltffiDecodeOwnedBuf(boltffiResult.ptr, Int(boltffiResult.len)) { boltffiReader in PreparedTransaction.decode(from: &boltffiReader) }
+        }
+    }
+
+    /// Broadcast exactly the prepared bytes. Failed submission remains persisted for sync retry.
+    public func broadcastPrepared(id: String) async throws -> BroadcastResult {
+        let boltffiIdBytes = boltffiEncode { boltffiIdWriter in boltffiIdWriter.writeString(id) }
+        let boltffiFuture = boltffiIdBytes.withUnsafeBufferPointer { boltffiIdBuffer in
+            return boltffi_method_class_bark_bolt_ffi_ffi_onchain_onchain_wallet_broadcast_prepared(self.handle, boltffiIdBuffer.baseAddress!, UInt(boltffiIdBuffer.count))
+        }
+        return try await boltffiAsyncCall(
+            futureHandle: boltffiFuture,
+            poll: boltffi_async_method_class_bark_bolt_ffi_ffi_onchain_onchain_wallet_broadcast_prepared_poll,
+            cancel: boltffi_async_method_class_bark_bolt_ffi_ffi_onchain_onchain_wallet_broadcast_prepared_cancel,
+            free: boltffi_async_method_class_bark_bolt_ffi_ffi_onchain_onchain_wallet_broadcast_prepared_free
+        ) { boltffiFuture, boltffiStatus in
+            var boltffiResult: FfiBuf_u8 = FfiBuf_u8()
+            let boltffiError = boltffi_async_method_class_bark_bolt_ffi_ffi_onchain_onchain_wallet_broadcast_prepared_complete(boltffiFuture, boltffiStatus, &boltffiResult)
+            if boltffiError.ptr != nil || Int(boltffiError.len) != 0 {
+                defer { boltffi_free_buf(boltffiError) }
+                throw boltffiDecodeOwnedBuf(boltffiError.ptr, Int(boltffiError.len)) { boltffiErrorReader in BarkError.decode(from: &boltffiErrorReader) }
+            }
+            let boltffiStatusCode = boltffiStatus!.pointee.code
+            guard boltffiStatusCode == 0 else {
+                throw FfiError(message: "FFI failed in async completion with code \(boltffiStatusCode)")
+            }
+            defer { boltffi_free_buf(boltffiResult) }
+            return boltffiDecodeOwnedBuf(boltffiResult.ptr, Int(boltffiResult.len)) { boltffiReader in BroadcastResult.decode(from: &boltffiReader) }
+        }
+    }
+
+    /// Release an unbroadcast preparation. This cannot cancel a transaction already recorded.
+    public func discardPrepared(id: String) async throws {
+        let boltffiIdBytes = boltffiEncode { boltffiIdWriter in boltffiIdWriter.writeString(id) }
+        let boltffiFuture = boltffiIdBytes.withUnsafeBufferPointer { boltffiIdBuffer in
+            return boltffi_method_class_bark_bolt_ffi_ffi_onchain_onchain_wallet_discard_prepared(self.handle, boltffiIdBuffer.baseAddress!, UInt(boltffiIdBuffer.count))
+        }
+        return try await boltffiAsyncCall(
+            futureHandle: boltffiFuture,
+            poll: boltffi_async_method_class_bark_bolt_ffi_ffi_onchain_onchain_wallet_discard_prepared_poll,
+            cancel: boltffi_async_method_class_bark_bolt_ffi_ffi_onchain_onchain_wallet_discard_prepared_cancel,
+            free: boltffi_async_method_class_bark_bolt_ffi_ffi_onchain_onchain_wallet_discard_prepared_free
+        ) { boltffiFuture, boltffiStatus in
+            let boltffiError = boltffi_async_method_class_bark_bolt_ffi_ffi_onchain_onchain_wallet_discard_prepared_complete(boltffiFuture, boltffiStatus)
+            if boltffiError.ptr != nil || Int(boltffiError.len) != 0 {
+                defer { boltffi_free_buf(boltffiError) }
+                throw boltffiDecodeOwnedBuf(boltffiError.ptr, Int(boltffiError.len)) { boltffiErrorReader in BarkError.decode(from: &boltffiErrorReader) }
+            }
+            let boltffiStatusCode = boltffiStatus!.pointee.code
+            guard boltffiStatusCode == 0 else {
+                throw FfiError(message: "FFI failed in async completion with code \(boltffiStatusCode)")
+            }
         }
     }
 

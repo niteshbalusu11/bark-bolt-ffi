@@ -77,13 +77,16 @@ different claims. Record them separately; do not mark one from evidence of anoth
 
 - [x] Item 13: build all three Android ABIs with 16 KB LOAD alignment and gate every AAR `.so` in CI.
 - [x] Publish and verify the v0.3.1 alignment patch release.
-- [ ] Item 14: exact-fee prepared onchain send/drain, reserved inputs, broadcast/discard.
-- [ ] Items 15/16: typed errors/outcomes and pending Lightning hash/amount/fees.
+- [x] Item 14: exact-fee prepared onchain send/drain, reserved inputs, broadcast/discard.
+- [x] Items 15/16: typed errors/outcomes and pending Lightning hash/amount/fees.
+- [ ] Publish/verify v0.4.0 prepared-send SDKs and notify Noah.
 
 Engineering plan and affected paths: [Noah priorities](plans/20-noah-release-priorities.md).
 Item 13 built/CI passed: [alignment evidence](validation/2026-10-19-v031.md).
 v0.3.1 fresh assets and 12 live public Swift consumer contracts passed; Noah was notified.
-Prepared-send SDK acceptance remains pending.
+Prepared-send native builds, live Swift/Kotlin/Rust and all source CI jobs passed.
+[Prepared-send evidence](validation/prepared-onchain-2026-10-19.md),
+[release plan](plans/22-prepared-sdk-release.md). Publication/fresh consumer verification remains pending.
 
 ### 19 — Post-release resource cleanup
 
