@@ -37,7 +37,7 @@ The successful hosted artifacts were downloaded and verified: Apple 12234905965 
 
 The local live Swift consumer of that real CI-built SDK passed all 12 tests, zero failures/skips, in 40.926s, including exact-fee prepare/drain, typed invalid rate, discard/reprepare and accepted exact-byte broadcast/history. Ten Python tooling tests and Swift source provenance checks pass. The downloaded three-ABI AAR has four LOAD segments per library, all minimum Align `0x4000`.
 
-The v0.4.0 XCFramework ZIP is 190,302,801 bytes, SHA256 `210b83c4b1f3db9f6cc7e1c59adada7531c8b9dd0a4ca15811479fca696d36fd`. PR #3 is merged. Publication, fresh downloads and public Git-URL consumer acceptance are recorded in the release follow-up.
+The v0.4.0 XCFramework ZIP is 190,302,801 bytes, SHA256 `210b83c4b1f3db9f6cc7e1c59adada7531c8b9dd0a4ca15811479fca696d36fd`. PR #3 is merged. [v0.4.0 is published](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.4.0) at `4176734d397101b1f5f80c2e9119c1302f961658`. All nine freshly downloaded release assets match SHA256SUMS; the downloaded AAR again passes all three ABI alignment checks. The clean public Git-URL Swift consumer fetched this revision and passed compile/link plus all seven offline contracts (five live cases explicitly skipped; all 12 live cases had already passed against the identical CI-built SDK before publication). Noah native migration thread `4ff9b718-306c-496c-831f-8edfa1484899` received the release/API/ABI and lifecycle handoff. [Published hashes and exact acceptance scope](v040-release.json).
 
 The release carries mobile SDKs and the hosted Linux JVM JAR; Darwin JVM can be built from source. IDs are process-local; discard
 cannot undo a transaction already recorded for broadcast/retry. Unknown upstream

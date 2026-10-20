@@ -1,0 +1,56 @@
+{
+  "version": "0.4.0",
+  "tag_commit": "4176734d397101b1f5f80c2e9119c1302f961658",
+  "native_source_commit": "9c895da711019e570883e4ae87bb7924c2c1fe1d",
+  "release_url": "https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.4.0",
+  "source_ci": "https://github.com/smolcars/bark-bolt-ffi/actions/runs/39352149601",
+  "source_ci_all_jobs_passed": true,
+  "native_source_equivalence_verified": true,
+  "fresh_asset_checksums_verified": true,
+  "assets": {
+    "BUILD-INFO.json": "b3c07f9f6f338eb70f3e38fa32563ea75fb5ab376cca511f7d144fe92c867b45",
+    "BarkBoltFFI.xcframework.zip": "210b83c4b1f3db9f6cc7e1c59adada7531c8b9dd0a4ca15811479fca696d36fd",
+    "Package.swift": "13eabb79476197613a5f8206b40e9eacbb7b79e8399e4351e03ed3a4b6898649",
+    "SHA256SUMS": "708844610a248ccc0fa2fcb0e84e73d8b85a0ae5177775dbfb7a802c6b04e868",
+    "bark-bolt-ffi-android-0.4.0.aar": "9b4fe4cbf036f7fdc9c4edad0536944e2739711364f2c907968433c65cde54c8",
+    "bark-bolt-ffi-android-0.4.0.pom": "0a3bca0763d5f058757c7348f7d08cc57e89691eda9c4df5068236aae12562e7",
+    "bark-bolt-ffi-jvm-linux-x86_64-0.4.0.jar": "9b7c11edc087cf13b9920df40e4eaede826589f3a4913ff81da5b71f6fa75bfd",
+    "bark-bolt-ffi-jvm-linux-x86_64-0.4.0.pom": "99e6c8c23a25273506a202ab5ccf19c61005504964de14b47681252b0191ef48",
+    "swift-provenance.json": "18cc0ce5804ad3d4343eeeaa8dafcbd5e3d14e308aaed9ef2ee10a461bf2e118"
+  },
+  "android_load_alignment": {
+    "arm64-v8a": "0x4000",
+    "armeabi-v7a": "0x4000",
+    "x86_64": "0x4000"
+  },
+  "live_swift_before_publication": {
+    "tests": 12,
+    "failures": 0,
+    "skips": 0,
+    "seconds": 40.926,
+    "artifact": "same CI-built SDK bytes as published"
+  },
+  "public_swift_consumer": {
+    "revision": "4176734d397101b1f5f80c2e9119c1302f961658",
+    "declared_tests": 12,
+    "passed": 7,
+    "failures": 0,
+    "skips": 5,
+    "live_regtest": false,
+    "purpose": "fresh public Git-URL download, checksum, compile/link and offline contracts; live coverage ran before publication"
+  },
+  "review": {
+    "model": "gpt-6-astra",
+    "reasoning": "high",
+    "confirmed_issues_fixed": 4,
+    "second_review": "approved; no source-level blockers"
+  },
+  "noah_thread_notified": "4ff9b718-306c-496c-831f-8edfa1484899",
+  "limits": [
+    "Prepared ids/reservations are process-local.",
+    "Discard cannot cancel a recorded transaction or sync retry.",
+    "Unclassified upstream errors remain Other.",
+    "Darwin JVM is source-buildable; Linux JVM is the attached host artifact.",
+    "Physical/minimum-OS devices and external payment providers were not rerun."
+  ]
+}

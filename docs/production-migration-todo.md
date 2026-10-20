@@ -1,12 +1,13 @@
 # Production migration checklist
 
-Status: original tasks 00–19 complete; Noah priority follow-ups below are open.
-Bark master, full balances, validated existing
-opens, Swift/Kotlin SDKs, native apps and RegTest acceptance passed. Exact tagged
-source passed all three hosted CI jobs. [v0.3.0](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.3.0)
-is published, fresh downloads and the public consumer are verified, and Noah
-received the migration notice. [Current evidence](validation/2026-10-19-v030.md)
-records source, CI, artifact hashes, scope limits and requested disk cleanup.
+Status: original tasks 00–19 and Noah priority follow-up 20 are complete.
+[v0.4.0](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.4.0) includes
+exact-fee prepared onchain sends, shared reservations, typed construction errors
+and broadcast outcomes. The separate [v0.3.1](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.3.1)
+patch fixes/gates 16 KB alignment on all three Android ABIs. Source CI and live
+Rust/Swift/Kotlin acceptance passed; fresh assets and public Swift consumers are
+verified. Noah received both release handoffs. [Prepared-send evidence](validation/prepared-onchain-2026-10-19.md)
+and [exact v0.4.0 release scope/hashes](validation/v040-release.json).
 
 ## Agreed decisions
 
@@ -79,14 +80,14 @@ different claims. Record them separately; do not mark one from evidence of anoth
 - [x] Publish and verify the v0.3.1 alignment patch release.
 - [x] Item 14: exact-fee prepared onchain send/drain, reserved inputs, broadcast/discard.
 - [x] Items 15/16: typed errors/outcomes and pending Lightning hash/amount/fees.
-- [ ] Publish/verify v0.4.0 prepared-send SDKs and notify Noah.
+- [x] Publish/verify v0.4.0 prepared-send SDKs and notify Noah.
 
 Engineering plan and affected paths: [Noah priorities](plans/20-noah-release-priorities.md).
 Item 13 built/CI passed: [alignment evidence](validation/2026-10-19-v031.md).
 v0.3.1 fresh assets and 12 live public Swift consumer contracts passed; Noah was notified.
 Prepared-send native builds, live Swift/Kotlin/Rust and all source CI jobs passed.
 [Prepared-send evidence](validation/prepared-onchain-2026-10-19.md),
-[release plan](plans/22-prepared-sdk-release.md). Publication/fresh consumer verification remains pending.
+[release plan](plans/22-prepared-sdk-release.md). v0.4.0 publication, fresh downloads and the public consumer passed; Noah was notified.
 
 ### 19 — Post-release resource cleanup
 
