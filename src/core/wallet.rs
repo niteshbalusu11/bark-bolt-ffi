@@ -161,6 +161,11 @@ impl Wallet {
         let cfg = config.into_bark(network)?;
         let seed = seed_from_str(network, &mnemonic_or_seed)?;
         let mut args = args.into_bark();
+        let _onchain_operation =
+            super::prepared_onchain::operation_guard(args.onchain.clone()).await;
+        if let (Some(onchain), Some(db)) = (&args.onchain, &args.persister) {
+            super::prepared_onchain::attach_database(onchain, db.clone()).await?;
+        }
 
         // The seed recovery scan runs inside `bark::Wallet::open` and reports
         // through this callback, so stash its outcome and hand it to callers via
@@ -1122,6 +1127,7 @@ impl Wallet {
     // ------------------------------------------------------------------------
 
     pub async fn board_amount(&self, amount_sats: u64) -> Result<types::PendingBoard, BarkError> {
+        let _operation = super::prepared_onchain::operation_guard(self.inner.onchain()).await;
         let amount = bitcoin::Amount::from_sat(amount_sats);
         info!("[BOARD] Boarding {} sats into Ark...", amount_sats);
 
@@ -1142,6 +1148,7 @@ impl Wallet {
     }
 
     pub async fn board_all(&self) -> Result<types::PendingBoard, BarkError> {
+        let _operation = super::prepared_onchain::operation_guard(self.inner.onchain()).await;
         info!("[BOARD] Boarding ALL funds into Ark...");
 
         let pb = self.inner.board_all().await.context("Board all failed")?;
@@ -1189,6 +1196,7 @@ impl Wallet {
         keypair_index: u32,
         expiry_height: u32,
     ) -> Result<types::PendingBoard, BarkError> {
+        let _operation = super::prepared_onchain::operation_guard(self.inner.onchain()).await;
         use bitcoin::base64::prelude::*;
         use bitcoin::psbt::Psbt;
 
@@ -1201,6 +1209,8 @@ impl Wallet {
             .decode(&psbt_base64)
             .context("Invalid base64")?;
         let psbt = Psbt::deserialize(&psbt_bytes).context("Invalid PSBT")?;
+        super::prepared_onchain::check_board_inputs(self.inner.onchain(), &psbt.unsigned_tx)
+            .await?;
 
         let keypair = self
             .inner

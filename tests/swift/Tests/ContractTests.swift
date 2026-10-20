@@ -28,6 +28,10 @@ final class ContractTests: XCTestCase {
             let callback = Callbacks()
             released = callback
             let wallet = try OnchainWallet(custom: callback)
+            do {
+                _ = try await wallet.prepareSend(address: "unused", amount: .drainAll, feeRateSatPerVb: 10, confirmedOnly: true)
+                XCTFail("Expected unsupported preparation")
+            } catch let error as BarkError { XCTAssertEqual(error.code, .unsupportedOperation) }
             let balance = try await wallet.balance()
             XCTAssertEqual(balance.totalSats, UInt64.max)
             do {
@@ -285,9 +289,24 @@ extension ContractTests {
         let destination = try regtestCommand("bcli", "getnewaddress")
         let owned = try await onchain.isMine(address: destination)
         XCTAssertFalse(owned)
-        let txid = try await onchain.drain(address: destination)
+        do {
+            _ = try await onchain.prepareSend(address: destination, amount: .drainAll, feeRateSatPerVb: 0, confirmedOnly: true)
+            XCTFail("Expected typed invalid fee rate")
+        } catch let error as BarkError { XCTAssertEqual(error.code, .invalidFeeRate) }
+        let preview = try await onchain.prepareSend(address: destination, amount: .drainAll, feeRateSatPerVb: 10, confirmedOnly: true)
+        let beforeBroadcast = try await onchain.transactions()
+        XCTAssertFalse(beforeBroadcast.contains { $0.txid == preview.txid })
+        XCTAssertFalse(preview.inputs.isEmpty)
+        try await onchain.discardPrepared(id: preview.id)
+        let prepared = try await onchain.prepareSend(address: destination, amount: .drainAll, feeRateSatPerVb: 10, confirmedOnly: true)
+        let broadcast = try await onchain.broadcastPrepared(id: prepared.id)
+        XCTAssertEqual(broadcast.txid, prepared.txid)
+        XCTAssertEqual(broadcast.broadcast, .accepted)
+        let txid = broadcast.txid
         let transactions = try await onchain.transactions()
         XCTAssertTrue(transactions.contains { $0.txid == txid })
+        XCTAssertEqual(transactions.first { $0.txid == txid }?.onchainFeeSats, prepared.feeSats)
+        try await onchain.discardPrepared(id: prepared.id)
         _ = try regtestCommand("generate", "1")
         _ = try await onchain.sync()
         let balance = try await onchain.balance()

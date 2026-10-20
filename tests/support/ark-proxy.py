@@ -20,7 +20,7 @@ class Proxy(socketserver.BaseRequestHandler):
                 try:
                     while data := source.recv(65536):
                         if delay:
-                            time.sleep(0.25)
+                            time.sleep(float(os.environ.get("RESPONSE_DELAY_SECONDS", "0.25")))
                         destination.sendall(data)
                 except OSError:
                     pass
