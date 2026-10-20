@@ -1,0 +1,31 @@
+{
+  "version": "0.3.1",
+  "tag_commit": "381d0ebfce0a74c333e950c6cab442464df9d5eb",
+  "release_url": "https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.3.1",
+  "fresh_asset_checksums_verified": true,
+  "assets": {
+    "BUILD-INFO.json": "380c26c45ac282cc276c524ca3414cc3580c8a6b80ff432de715c2ec340d1870",
+    "BarkBoltFFI.xcframework.zip": "06e837aea74517e58e21c1a8eb0080e93651dfd282dedafc9aebc382b737477b",
+    "Package.swift": "1a02fc7853cc2504db40fad972e288969dd6219fe67bb5b4464489a131b7a3eb",
+    "SHA256SUMS": "e3fadde5f4282015e37e0585d1e34b46b9542b17284f90dc2c37327898fd8ad7",
+    "bark-bolt-ffi-android-0.3.1.aar": "2490730020058e083a522f318ff1449e16cda552636c8bf9c31cd1ced24a238a",
+    "bark-bolt-ffi-android-0.3.1.pom": "6be5eb540fdf5317f7c76fdce6db5a6c2690feddc12e989b77817d56bef82563",
+    "bark-bolt-ffi-jvm-linux-x86_64-0.3.1.jar": "fa08bb1bcbbc6fc9db0c4378fd0c4a61365d79e4fc3ea08d6393797a6ff3456d",
+    "bark-bolt-ffi-jvm-linux-x86_64-0.3.1.pom": "94bcce8caf0addc9d2ac9044409057d7ec15a621fdbc39863300947454584873",
+    "swift-provenance.json": "ca15c1140c07d9a3407d79dee96e959877f49697fe8c3d5e3539326b0a1f7d21"
+  },
+  "android_load_alignment": {
+    "arm64-v8a": "0x4000",
+    "armeabi-v7a": "0x4000",
+    "x86_64": "0x4000"
+  },
+  "public_swift_consumer": {
+    "revision": "381d0ebfce0a74c333e950c6cab442464df9d5eb",
+    "tests": 12,
+    "failures": 0,
+    "skips": 0,
+    "live_regtest": true,
+    "seconds": 33.665
+  },
+  "noah_thread_notified": "4ff9b718-306c-496c-831f-8edfa1484899"
+}
