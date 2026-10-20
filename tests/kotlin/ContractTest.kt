@@ -63,6 +63,9 @@ class ContractTest {
         }
         val wallet = OnchainWallet.custom(callbacks)
         try {
+            assertEquals(BarkErrorCode.UNSUPPORTED_OPERATION, assertFailsWith<BarkError> {
+                wallet.prepareSend("unused",OnchainSendAmount.DrainAll,10uL,true)
+            }.code)
             assertEquals(ULong.MAX_VALUE, wallet.balance().totalSats)
             val failure = assertFailsWith<BarkError> { wallet.evictTx("11".repeat(32)) }
             assertTrue(failure.message.contains("callback failure 🦀\u0000"))
@@ -267,8 +270,21 @@ class NoahP1ContractTest {
                     onchain.sync()
                     val destination = regtestCommand("bcli","getnewaddress")
                     assertFalse(onchain.isMine(destination))
-                    val txid = onchain.drain(destination,null)
+                    assertEquals(BarkErrorCode.INVALID_FEE_RATE,assertFailsWith<BarkError> {
+                        onchain.prepareSend(destination,OnchainSendAmount.DrainAll,0uL,true)
+                    }.code)
+                    val preview = onchain.prepareSend(destination,OnchainSendAmount.DrainAll,10uL,true)
+                    assertFalse(onchain.transactions().any { it.txid==preview.txid })
+                    assertTrue(preview.inputs.isNotEmpty())
+                    onchain.discardPrepared(preview.id)
+                    val prepared = onchain.prepareSend(destination,OnchainSendAmount.DrainAll,10uL,true)
+                    val broadcast = onchain.broadcastPrepared(prepared.id)
+                    assertEquals(prepared.txid,broadcast.txid)
+                    assertEquals(BroadcastOutcome.Accepted,broadcast.broadcast)
+                    val txid = broadcast.txid
                     assertTrue(onchain.transactions().any { it.txid==txid })
+                    assertEquals(prepared.feeSats,onchain.transactions().first { it.txid==txid }.onchainFeeSats)
+                    onchain.discardPrepared(prepared.id)
                     regtestCommand("generate","1"); onchain.sync()
                     assertEquals(0uL,onchain.balance().totalSats)
                     regtestCommand("send-to",address,"0.002"); onchain.sync()
