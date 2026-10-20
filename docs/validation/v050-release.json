@@ -1,0 +1,78 @@
+{
+  "version": "0.5.0",
+  "tag_commit": "68b88c73ccaaa8e5fe607fbcc1e7d783a9ef4609",
+  "native_source_commit": "0f802ae720b0b9d4ab44bfe6dac20f8365bb1da8",
+  "release_url": "https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.5.0",
+  "source_ci": "https://github.com/smolcars/bark-bolt-ffi/actions/runs/39369347423",
+  "source_ci_all_jobs_passed": true,
+  "native_source_equivalence_verified": true,
+  "assets": {
+    "BUILD-INFO.json": "0053a37e6e8214b1012e3f2a1722a5f7a482b29291b85cc3f09c793619a106b1",
+    "BarkBoltFFI.xcframework.zip": "d9b3b1e74d31d92412f1dac06a38c338c834a962846f560f745922678f155e27",
+    "Package.swift": "2b76c832b05efc83cf787aae5e3625e40af297942a768a8f475567a84aa60608",
+    "SHA256SUMS": "0c7817883e2decec70000a6ba2dfa5252e67f18f032b68c24ef8655e4b683c60",
+    "bark-bolt-ffi-android-0.5.0.aar": "56de530b62556484ef59b0f0b004269d12b961d3297a6d4b5d175d0c34056c43",
+    "bark-bolt-ffi-android-0.5.0.pom": "06ada4a3e637e06f7627d4dac7aa1a680703a0b3c98a6e15698be838a8f7201f",
+    "bark-bolt-ffi-jvm-linux-x86_64-0.5.0.jar": "b7ed9b99cd2e177d32def1ae2944fd69045d5fe625d97dd86a59b4a09f89c779",
+    "bark-bolt-ffi-jvm-linux-x86_64-0.5.0.pom": "847500fc20ab4d94c5a6adcea91842cb863e81905bcd65263eb960a718b3f424",
+    "swift-provenance.json": "4be92c78aa9b53c58ce7eb8513d19b341ea4dae911ecd118b3e27d2bca2e4a56"
+  },
+  "android_load_alignment": {
+    "arm64-v8a": "0x4000",
+    "armeabi-v7a": "0x4000",
+    "x86_64": "0x4000"
+  },
+  "live_swift_before_publication": {
+    "tests": 12,
+    "failures": 0,
+    "skips": 0,
+    "seconds": 36.281,
+    "artifact": "same main CI SDK bytes as published"
+  },
+  "review": {
+    "model": "gpt-6-astra",
+    "reasoning": "high",
+    "confirmed_issues_fixed": 2,
+    "final_review": "passes implemented scope; no remaining concrete blocker",
+    "source_review_only": true
+  },
+  "limits": [
+    "Prepared IDs and transient reservations are process-local.",
+    "Prepared offboards / Ark sendOnchain require upstream prepare/commit and shared VTXO reservation hooks; not implemented.",
+    "Atomic durable operation keys for boarding, delegated refresh, exit progression and claim require upstream persistence hooks; not implemented.",
+    "Discard cannot cancel an accepted durable board or its sync retry.",
+    "Broadcast outcome describes the explicit exact-byte attempt after Bark acceptance; failed transport does not prove non-delivery.",
+    "Offline-created wallets must pin server identity keys through sync before preparing boards.",
+    "Direct coverage gaps: board result cancellation, expiry rejection, simultaneous board/CPFP calls, and failed-broadcast pending-board reopen.",
+    "Darwin JVM is source-buildable; attached JVM artifact is Linux x86_64.",
+    "Physical and minimum-OS devices were not rerun."
+  ],
+  "fresh_asset_checksums_verified": true,
+  "public_swift_consumer": {
+    "revision": "68b88c73ccaaa8e5fe607fbcc1e7d783a9ef4609",
+    "passed": 12,
+    "failures": 0,
+    "skips": 0,
+    "seconds": 22.601,
+    "live_regtest": true,
+    "purpose": "fresh public Git-URL download, checksum, compile/link and all live contracts"
+  },
+  "noah_notification": {
+    "threadId": "4ff9b718-306c-496c-831f-8edfa1484899",
+    "messageId": "message:mcp:5b6efea9-2e5c-4a15-9fbe-e80052005566:thread-send:bark-v050-release-noah-notify-r1",
+    "runId": "run:thread:4ff9b718-306c-496c-831f-8edfa1484899:ordinal:141",
+    "status": "starting",
+    "delivery": "started"
+  },
+  "device_cleanup": {
+    "task_created_devices": 0,
+    "thread_open_devices": 0,
+    "shared_noah_devices_preserved": true
+  },
+  "cleanup": {
+    "record": "v050-cleanup.json",
+    "removed_allocated_bytes": 17688813568,
+    "filesystem_available_increase": 15911804928,
+    "shared_devices_runtimes_and_wallet_volumes_preserved": true
+  }
+}

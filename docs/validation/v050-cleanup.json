@@ -1,0 +1,24 @@
+{
+  "removed_paths_allocated_bytes": {
+    "/Users/niteshchowdharybalusu/bark-bolt-ffi/target": 14387306496,
+    "/Users/niteshchowdharybalusu/bark-bolt-ffi/dist": 1544781824,
+    "/Users/niteshchowdharybalusu/bark-bolt-ffi/artifacts": 389259264,
+    "/Users/niteshchowdharybalusu/bark-bolt-ffi/tests/swift/.build": 442847232,
+    "/Users/niteshchowdharybalusu/bark-bolt-ffi/.kotlin": 0,
+    "/Users/niteshchowdharybalusu/bark-bolt-ffi/scripts/__pycache__": 36864,
+    "/Users/niteshchowdharybalusu/bark-bolt-ffi/tests/python/__pycache__": 16384,
+    "/tmp/bark-v050-apple-ci.zip": 423321600,
+    "/tmp/bark-v050-android-ci.zip": 215470080,
+    "/tmp/bark-v050-public-assets": 285773824
+  },
+  "removed_allocated_bytes": 17688813568,
+  "filesystem_available_before": 47803314176,
+  "filesystem_available_after": 63715119104,
+  "filesystem_available_increase": 15911804928,
+  "tracked_files_removed": 0,
+  "shared_devices_runtimes_and_wallet_volumes_preserved": true,
+  "docker_cleanup": "No Docker volumes or existing containers removed; isolated reorg test containers removed by their test guard.",
+  "measurement_note": "Allocated output sizes and APFS available-space change may differ; other threads share this volume.",
+  "all_preserved_container_ids_still_running": true,
+  "isolated_reorg_containers_absent": true
+}

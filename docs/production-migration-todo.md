@@ -1,13 +1,16 @@
 # Production migration checklist
 
-Status: original tasks 00–19 and Noah priority follow-up 20 are complete.
-[v0.4.0](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.4.0) includes
-exact-fee prepared onchain sends, shared reservations, typed construction errors
-and broadcast outcomes. The separate [v0.3.1](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.3.1)
-patch fixes/gates 16 KB alignment on all three Android ABIs. Source CI and live
-Rust/Swift/Kotlin acceptance passed; fresh assets and public Swift consumers are
-verified. Noah received both release handoffs. [Prepared-send evidence](validation/prepared-onchain-2026-10-19.md)
-and [exact v0.4.0 release scope/hashes](validation/v040-release.json).
+Status: original tasks 00–20 are complete. Noah follow-up 21 ships its supported
+scope in [v0.5.0](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.5.0):
+exact-fee prepared boarding, shared onchain reservations, direct chain transaction
+status and persisted exit history. Prepared offboards and atomic cross-operation
+keys remain upstream dependencies; see the unchecked requirements below.
+The full **main** Rust/Apple/Android matrix, live Rust/Swift/Kotlin tests and
+GPT-6 Astra high source review passed. [Execution evidence](validation/prepared-boarding-2026-10-20.md).
+v0.4.0 introduced prepared onchain sends; v0.3.1 gated 16 KB Android alignment.
+All nine fresh assets and all 12 live public Swift consumer contracts passed.
+Noah was notified. [Release verification](validation/v050-release.json) and
+[cleanup](validation/v050-cleanup.json) preserve the final evidence.
 
 ## Agreed decisions
 
@@ -79,8 +82,8 @@ different claims. Record them separately; do not mark one from evidence of anoth
 - [x] Prepared boarding with exact signed fees and shared onchain reservations.
 - [x] Read-only chain transaction status without wallet synchronization.
 - [x] listAllExits with amounts, terminal rows, history and transaction flags.
-- [ ] Rust/native/live validation, GPT-6 Astra high review and v0.5.0 SDK release.
-- [ ] Remove disposable builds and task-created devices after evidence is saved.
+- [x] Rust/native/live validation, GPT-6 Astra high review and v0.5.0 SDK release.
+- [x] Remove disposable builds and task-created devices after evidence is saved.
 - [ ] Upstream dependency: prepared offboards/sendOnchain with fixed negotiated
   fees and shared VTXO reservations (request 2).
 - [ ] Upstream dependency: atomic durable operation keys for boarding, delegated
@@ -88,7 +91,11 @@ different claims. Record them separately; do not mark one from evidence of anoth
 
 Engineering plan and feasibility: [Noah follow-up](plans/23-noah-prepared-boarding.md).
 The final two requirements remain open; do not treat a wrapper estimate or an
-unattributed pre-submit journal as their implementation.
+unattributed pre-submit journal as their implementation. Implemented scope passed
+the full main matrix, live native contracts and final Astra review; v0.5.0 is
+published and Noah received the handoff. Removed 17.69 GB of allocated build and
+download output; available disk increased by 15.91 GB. No task-created device
+remained; all shared devices and existing wallet containers/volumes were preserved.
 
 ### 20 — Noah priorities: items 13–16
 

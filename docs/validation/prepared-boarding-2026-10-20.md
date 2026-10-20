@@ -96,3 +96,20 @@ contracts in 36.281s, with zero failures/skips. This is separate from the earlie
 local three-target SDK run. Strict API parity and source/provenance verification
 passed again after staging. Release assets include authenticated full main
 artifacts, BUILD-INFO.json, SHA256SUMS and Swift provenance.
+
+v0.5.0 was published from tag commit
+`68b88c73ccaaa8e5fe607fbcc1e7d783a9ef4609`; the native source is unchanged from
+the successful main CI commit. All nine public assets were freshly downloaded,
+matched both the recorded hashes and SHA256SUMS, and the public AAR passed the
+three-ABI 16 KB alignment check again. Public Swift consumer, Noah notification
+and resource cleanup outcomes follow in [release record](v050-release.json).
+
+The fresh public Git-URL consumer of that exact tag commit passed all 12 live
+Swift contracts in 22.601s, zero failures/skips. Noah thread
+`4ff9b718-306c-496c-831f-8edfa1484899` received the SDK handoff after publication
+and verification; the release record retains the delivery receipt. Cleanup then
+removed 17.69 GB of allocated output/downloads (15.91 GB increase in available
+APFS space). No tracked files or shared devices/runtimes were removed. All
+pre-existing repository and Nitro/Noah container IDs remained running, with their
+volumes preserved; no isolated reorg test container remained. Exact path sizes
+and checks are in [cleanup evidence](v050-cleanup.json).
