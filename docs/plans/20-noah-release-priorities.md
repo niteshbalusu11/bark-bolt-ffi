@@ -22,7 +22,7 @@ LOAD entries, malformed output and any LOAD Align below 0x4000. Tool resolution
 must work on the local Mac and Linux CI; a missing tool fails the gate.
 Run parser regression cases, reproduce rejection on the published v0.3.0 AAR,
 build the three real optimized Android libraries/AAR and check all LOAD entries.
-Build/stage the versioned Apple/JVM assets, run packaged consumer contracts,
+Build/stage the versioned Apple and hosted Linux JVM assets, run packaged consumer contracts,
 record hosted CI separately, then publish immutable v0.3.1 assets/checksums and
 verify fresh downloads. Never substitute a parser test for an ELF build result.
 
@@ -42,3 +42,7 @@ After item 14's ownership design is settled, expose typed construction errors,
 explicit broadcast outcomes and pending Lightning send hash/amount/fee details
 from upstream checkpoints. Validate amount identity before resume. Record limits
 and actual test outcomes here before checking off acceptance.
+
+The mobile alignment patch reuses the successful hosted build outputs. Darwin JVM
+packaging is not rerun in this patch; its v0.3.0 API remains compatible and the
+current host JAR can still be built from source. Native source targets are unchanged.
