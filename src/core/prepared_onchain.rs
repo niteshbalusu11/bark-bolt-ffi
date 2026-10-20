@@ -10,6 +10,17 @@ use bitcoin::{Address, Amount, FeeRate, OutPoint, Psbt, Script, Transaction, Txi
 use crate::error::{construction_error_code, BarkError, BarkErrorCode};
 use crate::types::{OnchainSendAmount, PreparedTransaction};
 
+pub(crate) fn fee_rate(sat_per_vb: u64) -> Result<FeeRate, BarkError> {
+    FeeRate::from_sat_per_vb(sat_per_vb)
+        .filter(|rate| sat_per_vb > 0 && rate.fee_wu(bitcoin::Weight::from_wu(4_000_000)).is_some())
+        .ok_or_else(|| {
+            BarkError::typed(
+                BarkErrorCode::InvalidFeeRate,
+                "fee rate must be positive sat/vB without overflow",
+            )
+        })
+}
+
 pub(crate) async fn operation_guard(
     onchain: Option<std::sync::Arc<tokio::sync::RwLock<dyn OnchainWalletTrait>>>,
 ) -> Option<tokio::sync::OwnedMutexGuard<()>> {
@@ -51,6 +62,17 @@ pub(crate) async fn check_board_inputs(
     if let Some(onchain) = onchain {
         let guard = onchain.read().await;
         if let Some(state) = (&*guard as &dyn std::any::Any).downcast_ref::<WalletState>() {
+            let pending = state.pending_board_inputs().await?;
+            if transaction
+                .input
+                .iter()
+                .any(|input| pending.contains(&input.previous_output))
+            {
+                return Err(BarkError::typed(
+                    BarkErrorCode::PreparedInputsUnavailable,
+                    "board inputs are reserved by a pending board",
+                ));
+            }
             state.check_inputs(transaction).map_err(|error| {
                 BarkError::typed(BarkErrorCode::PreparedInputsUnavailable, error.to_string())
             })?;
@@ -80,6 +102,8 @@ async fn board_inputs(db: &dyn bark::persist::BarkPersister) -> anyhow::Result<V
 
 pub(crate) struct Prepared {
     pub transaction: Transaction,
+    pub psbt: Psbt,
+    pub board: Option<super::prepared_board::BoardPreparation>,
     pub recorded: bool,
 }
 
@@ -107,7 +131,58 @@ impl DerefMut for WalletState {
     }
 }
 
+/// Pending checkpoint locks must disappear even if a daemon build is cancelled.
+struct PendingBoardGuard<'a> {
+    state: &'a mut WalletState,
+    locks: Vec<OutPoint>,
+}
+impl Drop for PendingBoardGuard<'_> {
+    fn drop(&mut self) {
+        for point in &self.locks {
+            self.state.transient_lock(*point, false);
+        }
+    }
+}
+
 impl WalletState {
+    async fn reserve_pending_boards(&mut self) -> anyhow::Result<PendingBoardGuard<'_>> {
+        let locks: Vec<_> = self
+            .pending_board_inputs()
+            .await?
+            .into_iter()
+            .filter(|point| !self.wallet.is_outpoint_locked(*point))
+            .collect();
+        for point in &locks {
+            self.transient_lock(*point, true);
+        }
+        Ok(PendingBoardGuard { state: self, locks })
+    }
+
+    pub async fn send(
+        &mut self,
+        chain: &ChainSource,
+        address: Address,
+        amount: Amount,
+        fee_rate: FeeRate,
+    ) -> anyhow::Result<Txid> {
+        let guard = self.reserve_pending_boards().await?;
+        guard
+            .state
+            .wallet
+            .send(chain, address, amount, fee_rate)
+            .await
+    }
+
+    pub async fn drain(
+        &mut self,
+        chain: &ChainSource,
+        address: Address,
+        fee_rate: FeeRate,
+    ) -> anyhow::Result<Txid> {
+        let guard = self.reserve_pending_boards().await?;
+        guard.state.wallet.drain(chain, address, fee_rate).await
+    }
+
     pub async fn pending_board_inputs(&self) -> anyhow::Result<Vec<OutPoint>> {
         let mut inputs = board_inputs(&*self.db).await?;
         for db in self
@@ -252,6 +327,7 @@ impl WalletState {
             .then_some(())
             .context("prepared transaction was not fully signed")?;
         let transaction = psbt
+            .clone()
             .extract_tx()
             .context("failed to extract prepared transaction")?;
         let amount_sats = match amount {
@@ -296,6 +372,8 @@ impl WalletState {
             id,
             Prepared {
                 transaction,
+                psbt,
+                board: None,
                 recorded: false,
             },
         );
@@ -340,14 +418,20 @@ impl OnchainWalletTrait for WalletState {
         destinations: &[(Address, Amount)],
         fee_rate: FeeRate,
     ) -> anyhow::Result<Psbt> {
-        self.wallet.prepare_tx(destinations, fee_rate).await
+        let guard = self.reserve_pending_boards().await?;
+        guard.state.wallet.prepare_tx(destinations, fee_rate).await
     }
     async fn prepare_drain_tx(
         &mut self,
         destination: Address,
         fee_rate: FeeRate,
     ) -> anyhow::Result<Psbt> {
-        self.wallet.prepare_drain_tx(destination, fee_rate).await
+        let guard = self.reserve_pending_boards().await?;
+        guard
+            .state
+            .wallet
+            .prepare_drain_tx(destination, fee_rate)
+            .await
     }
     async fn sign_psbt(&mut self, psbt: Psbt) -> anyhow::Result<Psbt> {
         self.check_inputs(&psbt.unsigned_tx)?;
@@ -362,7 +446,15 @@ impl OnchainWalletTrait for WalletState {
         transaction: &Transaction,
         fees: MakeCpfpFees,
     ) -> Result<Transaction, CpfpError> {
-        self.wallet.make_signed_p2a_cpfp(transaction, fees).await
+        let guard = self
+            .reserve_pending_boards()
+            .await
+            .map_err(|error| CpfpError::StoreError(error.to_string()))?;
+        guard
+            .state
+            .wallet
+            .make_signed_p2a_cpfp(transaction, fees)
+            .await
     }
     async fn store_signed_p2a_cpfp(&mut self, transaction: &Transaction) -> Result<(), CpfpError> {
         self.check_inputs(transaction)

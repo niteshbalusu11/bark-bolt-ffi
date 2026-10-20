@@ -65,6 +65,23 @@ pub struct Wallet {
     db_path: Arc<std::path::PathBuf>,
 }
 
+/// Release reservations if foreign cancellation drops an undelivered result.
+struct PreparedBoardHandoff {
+    board: Option<types::PreparedBoard>,
+    core: Arc<CoreWallet>,
+}
+
+impl Drop for PreparedBoardHandoff {
+    fn drop(&mut self) {
+        if let Some(board) = self.board.take() {
+            let core = self.core.clone();
+            crate::ffi::runtime::TOKIO_RT.spawn(async move {
+                let _ = core.discard_prepared_board(board.id).await;
+            });
+        }
+    }
+}
+
 impl Wallet {
     fn run<F, Fut, T>(&self, action: F) -> impl Future<Output = T>
     where
@@ -712,6 +729,59 @@ impl Wallet {
     // ------------------------------------------------------------------------
     // Boarding (requires onchain wallet)
     // ------------------------------------------------------------------------
+
+    /// Build/sign without storing or broadcasting. IDs and locks are process-local.
+    pub async fn prepare_board(
+        &self,
+        amount: types::OnchainSendAmount,
+        fee_rate_sat_per_vb: u64,
+        confirmed_only: bool,
+    ) -> Result<types::PreparedBoard, BarkError> {
+        let mut handoff = self
+            .run(|core| async move {
+                let board = core
+                    .prepare_board(amount, fee_rate_sat_per_vb, confirmed_only)
+                    .await?;
+                Ok::<_, BarkError>(PreparedBoardHandoff {
+                    board: Some(board),
+                    core,
+                })
+            })
+            .await?;
+        Ok(handoff.board.take().expect("prepared board handoff"))
+    }
+
+    /// Commit to Bark and explicitly broadcast the exact reviewed transaction.
+    pub async fn submit_prepared_board(&self, id: String) -> Result<types::BoardResult, BarkError> {
+        self.run(|core| async move { core.submit_prepared_board(id).await })
+            .await
+    }
+
+    /// Releases an unsubmitted board; cannot undo a durable board or a broadcast.
+    pub async fn discard_prepared_board(&self, id: String) -> Result<(), BarkError> {
+        self.run(|core| async move { core.discard_prepared_board(id).await })
+            .await
+    }
+
+    pub async fn transaction_status(
+        &self,
+        txid: String,
+    ) -> Result<types::TransactionStatus, BarkError> {
+        self.run(|core| async move { core.transaction_status(txid).await })
+            .await
+    }
+
+    pub async fn list_all_exits(
+        &self,
+        include_history: bool,
+        include_transactions: bool,
+    ) -> Result<Vec<types::ExitTransactionStatus>, BarkError> {
+        self.run(|core| async move {
+            core.list_all_exits(include_history, include_transactions)
+                .await
+        })
+        .await
+    }
 
     pub async fn board_amount(&self, amount_sats: u64) -> Result<types::PendingBoard, BarkError> {
         self.run(|core| async move { core.board_amount(amount_sats).await })

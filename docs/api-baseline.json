@@ -1217,6 +1217,42 @@
       "name": "discard_prepared",
       "async": true,
       "source": "src/ffi/onchain.rs"
+    },
+    {
+      "owner": "Wallet",
+      "name": "prepare_board",
+      "async": true,
+      "source": "src/ffi/wallet.rs"
+    },
+    {
+      "owner": "Wallet",
+      "name": "submit_prepared_board",
+      "async": true,
+      "source": "src/ffi/wallet.rs"
+    },
+    {
+      "owner": "Wallet",
+      "name": "discard_prepared_board",
+      "async": true,
+      "source": "src/ffi/wallet.rs"
+    },
+    {
+      "owner": "Wallet",
+      "name": "transaction_status",
+      "async": true,
+      "source": "src/ffi/wallet.rs"
+    },
+    {
+      "owner": "Wallet",
+      "name": "list_all_exits",
+      "async": true,
+      "source": "src/ffi/wallet.rs"
+    },
+    {
+      "owner": "OnchainWallet",
+      "name": "transaction_status",
+      "async": true,
+      "source": "src/ffi/onchain.rs"
     }
   ],
   "records": [
@@ -1427,6 +1463,14 @@
     {
       "name": "BroadcastResult",
       "source": "src/types.rs"
+    },
+    {
+      "name": "PreparedBoard",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "BoardResult",
+      "source": "src/types.rs"
     }
   ],
   "enums": [
@@ -1500,6 +1544,10 @@
     },
     {
       "name": "BroadcastOutcome",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "TransactionStatus",
       "source": "src/types.rs"
     }
   ],
@@ -1593,6 +1641,10 @@
       "movement_id"
     ],
     "ExitTransactionStatus": [
+      "vtxo_id",
+      "amount_sats",
+      "state",
+      "history",
       "transactions"
     ],
     "ExitTransactionPackage": [
@@ -1644,6 +1696,16 @@
     "BarkError": [
       "message",
       "code"
+    ],
+    "PreparedBoard": [
+      "id",
+      "txid",
+      "gross_sats",
+      "net_sats",
+      "ark_fee_sats",
+      "onchain_fee_sats",
+      "vsize",
+      "inputs"
     ]
   }
 }

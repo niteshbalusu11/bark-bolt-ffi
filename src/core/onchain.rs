@@ -133,17 +133,7 @@ impl OnchainWallet {
     ) -> Result<types::PreparedTransaction, BarkError> {
         let address = parse_address(&address, self.network)
             .map_err(|error| BarkError::typed(BarkErrorCode::InvalidAddress, error.message))?;
-        let fee_rate = bitcoin::FeeRate::from_sat_per_vb(fee_rate_sat_per_vb)
-            .filter(|rate| {
-                fee_rate_sat_per_vb > 0
-                    && rate.fee_wu(bitcoin::Weight::from_wu(4_000_000)).is_some()
-            })
-            .ok_or_else(|| {
-                BarkError::typed(
-                    BarkErrorCode::InvalidFeeRate,
-                    "fee rate must be positive sat/vB without overflow",
-                )
-            })?;
+        let fee_rate = super::prepared_onchain::fee_rate(fee_rate_sat_per_vb)?;
         let gate = self.wallet.read().await.operation_gate.clone();
         let _operation = gate.lock().await;
         let mut state = self.wallet.write().await;
@@ -166,6 +156,12 @@ impl OnchainWallet {
                 "unknown prepared transaction id",
             )
         })?;
+        if prepared.board.is_some() {
+            return Err(BarkError::typed(
+                BarkErrorCode::PreparedTransactionNotFound,
+                "use submitPreparedBoard for a board preparation",
+            ));
+        }
         let transaction = prepared.transaction.clone();
         let was_recorded = prepared.recorded;
         let txid = transaction.compute_txid().to_string();
@@ -229,7 +225,19 @@ impl OnchainWallet {
 
     /// Before broadcast this releases inputs. After recording it only forgets the id.
     pub async fn discard_prepared(&self, id: String) -> Result<(), BarkError> {
+        let gate = self.wallet.read().await.operation_gate.clone();
+        let _operation = gate.lock().await;
         let mut state = self.wallet.write().await;
+        if state
+            .prepared
+            .get(&id)
+            .is_some_and(|entry| entry.board.is_some())
+        {
+            return Err(BarkError::typed(
+                BarkErrorCode::PreparedTransactionNotFound,
+                "use discardPreparedBoard for a board preparation",
+            ));
+        }
         let prepared = state.prepared.remove(&id).ok_or_else(|| {
             BarkError::typed(
                 BarkErrorCode::PreparedTransactionNotFound,
@@ -240,6 +248,17 @@ impl OnchainWallet {
             state.release_inputs(&prepared.transaction);
         }
         Ok(())
+    }
+
+    pub async fn transaction_status(
+        &self,
+        txid: String,
+    ) -> Result<types::TransactionStatus, BarkError> {
+        Ok(self
+            .chain
+            .tx_status(txid.parse().context("invalid transaction id")?)
+            .await?
+            .into())
     }
 
     pub async fn sync(&self) -> Result<u64, BarkError> {

@@ -87,6 +87,23 @@ impl OnchainWallet {
         })
     }
 
+    /// Query the chain source directly; network failures remain errors.
+    pub async fn transaction_status(
+        &self,
+        txid: String,
+    ) -> Result<crate::types::TransactionStatus, BarkError> {
+        match &self.inner {
+            OnchainWalletInner::Bdk(core) => {
+                let core = core.clone();
+                run_async(async move { core.transaction_status(txid).await }).await
+            }
+            OnchainWalletInner::Callback(_) => Err(BarkError::typed(
+                crate::BarkErrorCode::UnsupportedOperation,
+                "transactionStatus requires the BDK chain source",
+            )),
+        }
+    }
+
     pub async fn sync(&self) -> Result<u64, BarkError> {
         match &self.inner {
             OnchainWalletInner::Bdk(core) => {

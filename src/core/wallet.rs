@@ -23,7 +23,8 @@ use crate::{types, Network};
 /// Core Bark wallet logic. No binding-specific behavior — pure async over
 /// `bark::Wallet`. The native adapter adds runtime offload, callbacks and lifetime control.
 pub struct Wallet {
-    inner: bark::Wallet,
+    pub(super) inner: bark::Wallet,
+    pub(super) board_owner: Option<std::path::PathBuf>,
     /// Outcome of the seed recovery scan `bark::Wallet::open` ran.
     /// See [`Wallet::recovery_status`].
     recovery_status: types::RecoveryStatus,
@@ -160,6 +161,7 @@ impl Wallet {
         let network = network.into();
         let cfg = config.into_bark(network)?;
         let seed = seed_from_str(network, &mnemonic_or_seed)?;
+        let board_owner = args.datadir.as_ref().map(std::path::PathBuf::from);
         let mut args = args.into_bark();
         let _onchain_operation =
             super::prepared_onchain::operation_guard(args.onchain.clone()).await;
@@ -217,6 +219,10 @@ impl Wallet {
             .unwrap_or(types::RecoveryStatus::NotRun);
         Ok(Self {
             inner,
+            board_owner: board_owner
+                .map(|path| path.canonicalize())
+                .transpose()
+                .context("invalid Ark data directory")?,
             recovery_status,
         })
     }
@@ -1458,6 +1464,42 @@ impl Wallet {
         Ok(claimable.iter().map(Into::into).collect())
     }
 
+    /// Stored live and terminal exits, including rows no longer loaded in memory.
+    pub async fn list_all_exits(
+        &self,
+        include_history: bool,
+        include_transactions: bool,
+    ) -> Result<Vec<types::ExitTransactionStatus>, BarkError> {
+        let statuses = self
+            .inner
+            .exit_mgr()
+            .list_all(include_history, include_transactions)
+            .await?;
+        let mut result = Vec::with_capacity(statuses.len());
+        for status in statuses {
+            let amount = self
+                .inner
+                .get_vtxo_by_id(status.vtxo_id)
+                .await?
+                .amount()
+                .to_sat();
+            result.push(types::ExitTransactionStatus::from_bark(status, amount));
+        }
+        Ok(result)
+    }
+
+    pub async fn transaction_status(
+        &self,
+        txid: String,
+    ) -> Result<types::TransactionStatus, BarkError> {
+        Ok(self
+            .inner
+            .chain()
+            .tx_status(txid.parse().context("invalid transaction id")?)
+            .await?
+            .into())
+    }
+
     pub async fn get_exit_vtxos(&self) -> Result<Vec<types::ExitVtxo>, BarkError> {
         let exit_guard = self.inner.exit_mgr();
         Ok(exit_guard
@@ -1495,7 +1537,20 @@ impl Wallet {
             .get_exit_status(vtxo_id_parsed, include_history, include_transactions)
             .await
             .context("Get exit status failed")?;
-        Ok(status.map(Into::into))
+        match status {
+            Some(status) => {
+                let amount = self
+                    .inner
+                    .get_vtxo_by_id(status.vtxo_id)
+                    .await?
+                    .amount()
+                    .to_sat();
+                Ok(Some(types::ExitTransactionStatus::from_bark(
+                    status, amount,
+                )))
+            }
+            None => Ok(None),
+        }
     }
 
     /// Build a PSBT claiming exited VTXOs to `address`.

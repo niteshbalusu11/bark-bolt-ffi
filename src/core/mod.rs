@@ -1,5 +1,6 @@
 pub mod notification;
 pub mod onchain;
+mod prepared_board;
 mod prepared_onchain;
 pub mod wallet;
 

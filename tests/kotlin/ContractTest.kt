@@ -264,6 +264,10 @@ class NoahP1ContractTest {
                     assertTrue(status.transactions.all { it.parentTxHex.isNotEmpty() })
                     assertTrue(wallet.getExitStatus(id,false,false)!!.transactions.isEmpty())
                     wallet.cancelExit(id)
+                    val canceled = wallet.listAllExits(true,true).first { it.vtxoId==id }
+                    assertTrue(canceled.amountSats>0uL)
+                    assertTrue(canceled.history!!.isNotEmpty())
+                    assertTrue(canceled.transactions.isNotEmpty())
                     wallet.dangerousDropVtxo(id)
                     assertFailsWith<BarkError> { wallet.getVtxoById(id) }
                     assertFailsWith<BarkError> { wallet.dangerousDropVtxo("invalid") }
@@ -288,7 +292,17 @@ class NoahP1ContractTest {
                     regtestCommand("generate","1"); onchain.sync()
                     assertEquals(0uL,onchain.balance().totalSats)
                     regtestCommand("send-to",address,"0.002"); onchain.sync()
-                    assertTrue(wallet.boardAll().vtxoIds.isNotEmpty())
+                    val discarded = wallet.prepareBoard(OnchainSendAmount.DrainAll,1uL,true)
+                    wallet.discardPreparedBoard(discarded.id)
+                    val boardPreview = wallet.prepareBoard(OnchainSendAmount.DrainAll,1uL,true)
+                    assertEquals(boardPreview.grossSats,boardPreview.netSats+boardPreview.arkFeeSats)
+                    assertEquals(TransactionStatus.NotFound,wallet.transactionStatus(boardPreview.txid))
+                    val all = wallet.submitPreparedBoard(boardPreview.id)
+                    assertEquals(boardPreview.txid,all.txid)
+                    assertEquals(BroadcastOutcome.Accepted,all.broadcast)
+                    assertTrue(all.vtxoIds.isNotEmpty())
+                    assertEquals(TransactionStatus.InMempool,onchain.transactionStatus(all.txid))
+                    wallet.discardPreparedBoard(boardPreview.id)
                     regtestCommand("generate","6"); wallet.sync()
                 }
             }

@@ -14,6 +14,9 @@ pub enum BarkErrorCode {
     PreparedInputsUnavailable,
     UnsupportedOperation,
     Persistence,
+    BelowMinimumBoardAmount,
+    TooManyInputs,
+    PreparedBoardChanged,
 }
 
 /// Error message including the complete underlying cause chain.

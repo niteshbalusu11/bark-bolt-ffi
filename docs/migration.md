@@ -346,3 +346,54 @@ existing message-only constructors default to that code.
 with `checkLightningPayment`, match by payment hash and compare `amountSats`
 (and the fee presented) with the reviewed payment. A matching hash alone does
 not establish that an amountless invoice checkpoint has the reviewed amount.
+
+## Prepared boarding and stored exits (v0.5.0)
+
+Call `Wallet.prepareBoard(amount, feeRateSatPerVb, confirmedOnly)` with the same
+`OnchainSendAmount` used by prepared sends. An explicit amount is the **gross
+funding output**, so the Ark balance receives `netSats = grossSats - arkFeeSats`;
+`onchainFeeSats` is paid in addition for a fixed amount, or deducted from the
+eligible onchain balance for `DrainAll`. The fee and `vsize` come from the signed
+funding transaction, including every selected input. No key, movement, checkpoint
+or transaction is stored during preparation. No server cosign is requested until
+submission. The optional resulting VTXO IDs are therefore returned at submission.
+
+`submitPreparedBoard(id)` validates inputs/board parameters and submits the exact
+PSBT through Bark's normal cosigning and durable board action. Its `BoardResult`
+contains the txid, VTXO IDs, and an explicit exact-byte broadcast attempt's
+`accepted` / `failed(reason)` / `notAttempted(reason)` outcome. Bark can also try
+broadcasting during acceptance; `failed` describes the explicit final attempt,
+and is never proof the transaction was not received. Pending boards may be retried
+by sync. `notAttempted` means board setup failed before Bark's initial broadcast.
+Retrying a submitted process-local ID does not create another board/movement.
+If the funding-cache write fails after Bark acceptance, `failed` explicitly says
+so, and its inputs stay locked. Retry submission to record those same bytes
+before discarding; discard returns `persistence` until that succeeds.
+`discardPreparedBoard(id)` only releases unsubmitted inputs; after acceptance it
+forgets the ID and does not cancel Bark's durable board. Other handles for the
+same onchain database share reservations. Preparation requires a BDK onchain
+wallet; callback wallets return `unsupportedOperation`. A wallet created offline
+must sync once to pin both server identity keys before preparation; preparation
+otherwise returns `unsupportedOperation` without writing those keys.
+
+Additional typed errors: `belowMinimumBoardAmount`, `tooManyInputs`, and
+`preparedBoardChanged` (expired or changed parameters). An input spent elsewhere
+is rejected with `preparedInputsUnavailable`. Discard and prepare again after
+an input or parameter change. IDs remain process-local, including across app
+restarts; this API does not provide durable client operation keys.
+
+`Wallet.transactionStatus(txid)` and BDK `OnchainWallet.transactionStatus(txid)`
+query the configured chain source without wallet sync. They return `notFound`,
+`inMempool`, or `confirmed(height)`; malformed IDs and network failures remain
+errors. `notFound` means this chain source does not currently know the txid.
+
+`Wallet.listAllExits(includeHistory, includeTransactions)` reads Bark's persisted
+live **and terminal** exits, including canceled/claimed rows after reopen. Each
+`ExitTransactionStatus` includes the exact `amountSats`, typed state, optional
+history and optional transaction packages. `getExitVtxos()` remains the active
+in-memory listing. Destructively dropping a VTXO can also remove data needed by
+the persisted exit queries; preserve wallet data when using history.
+
+Prepared offboards / Ark `sendOnchain` and atomic durable operation keys are
+**not included**. Their upstream requirements and the unsafe wrapper alternatives
+are recorded in [the feasibility plan](plans/23-noah-prepared-boarding.md).

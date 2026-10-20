@@ -1339,14 +1339,15 @@ pub struct ExitClaimTransaction {
 #[boltffi::data]
 pub struct ExitTransactionStatus {
     pub vtxo_id: String,
+    pub amount_sats: u64,
     pub state: ExitState,
     pub history: Option<Vec<ExitState>>,
     pub transaction_count: u32,
     pub transactions: Vec<ExitTransactionPackage>,
 }
 
-impl From<bark::exit::ExitTransactionStatus> for ExitTransactionStatus {
-    fn from(ets: bark::exit::ExitTransactionStatus) -> Self {
+impl ExitTransactionStatus {
+    pub(crate) fn from_bark(ets: bark::exit::ExitTransactionStatus, amount_sats: u64) -> Self {
         let transactions = ets
             .transactions
             .iter()
@@ -1377,6 +1378,7 @@ impl From<bark::exit::ExitTransactionStatus> for ExitTransactionStatus {
             .collect();
         Self {
             vtxo_id: ets.vtxo_id.to_string(),
+            amount_sats,
             state: (&ets.state).into(),
             history: ets.history.map(|h| h.iter().map(Into::into).collect()),
             transaction_count: ets.transactions.len() as u32,
@@ -1660,6 +1662,49 @@ pub struct PreparedTransaction {
     pub fee_sats: u64,
     pub vsize: u64,
     pub inputs: Vec<OutPoint>,
+}
+
+/// Signed boarding proposal; no key, movement or transaction has been stored.
+#[derive(Clone, Debug)]
+#[boltffi::data]
+pub struct PreparedBoard {
+    pub id: String,
+    pub txid: String,
+    pub gross_sats: u64,
+    pub net_sats: u64,
+    pub ark_fee_sats: u64,
+    pub onchain_fee_sats: u64,
+    pub vsize: u64,
+    pub inputs: Vec<OutPoint>,
+}
+
+/// Once accepted by Bark, the board remains pending across discard/reopen.
+#[derive(Clone, Debug)]
+#[boltffi::data]
+pub struct BoardResult {
+    pub txid: String,
+    pub broadcast: BroadcastOutcome,
+    pub vtxo_ids: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[boltffi::data]
+pub enum TransactionStatus {
+    NotFound,
+    InMempool,
+    Confirmed { height: u32 },
+}
+
+impl From<bark_bitcoin_ext::TxStatus> for TransactionStatus {
+    fn from(status: bark_bitcoin_ext::TxStatus) -> Self {
+        match status {
+            bark_bitcoin_ext::TxStatus::NotFound => Self::NotFound,
+            bark_bitcoin_ext::TxStatus::Mempool => Self::InMempool,
+            bark_bitcoin_ext::TxStatus::Confirmed(block) => Self::Confirmed {
+                height: block.height.into(),
+            },
+        }
+    }
 }
 
 #[derive(Clone, Debug)]

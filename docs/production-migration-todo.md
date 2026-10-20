@@ -74,6 +74,22 @@ different claims. Record them separately; do not mark one from evidence of anoth
 
 ## Tasks
 
+### 21 — Noah prepared boarding, chain status and durable exit listings
+
+- [ ] Prepared boarding with exact signed fees and shared onchain reservations.
+- [ ] Read-only chain transaction status without wallet synchronization.
+- [ ] listAllExits with amounts, terminal rows, history and transaction flags.
+- [ ] Rust/native/live validation, GPT-6 Astra high review and v0.5.0 SDK release.
+- [ ] Remove disposable builds and task-created devices after evidence is saved.
+- [ ] Upstream dependency: prepared offboards/sendOnchain with fixed negotiated
+  fees and shared VTXO reservations (request 2).
+- [ ] Upstream dependency: atomic durable operation keys for boarding, delegated
+  refresh, exit progression and claim (request 3).
+
+Engineering plan and feasibility: [Noah follow-up](plans/23-noah-prepared-boarding.md).
+The final two requirements remain open; do not treat a wrapper estimate or an
+unattributed pre-submit journal as their implementation.
+
 ### 20 — Noah priorities: items 13–16
 
 - [x] Item 13: build all three Android ABIs with 16 KB LOAD alignment and gate every AAR `.so` in CI.
