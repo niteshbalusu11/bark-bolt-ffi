@@ -1,6 +1,7 @@
 # Production migration checklist
 
-Status: tasks 00–19 complete. Bark master, full balances, validated existing
+Status: original tasks 00–19 complete; Noah priority follow-ups below are open.
+Bark master, full balances, validated existing
 opens, Swift/Kotlin SDKs, native apps and RegTest acceptance passed. Exact tagged
 source passed all three hosted CI jobs. [v0.3.0](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.3.0)
 is published, fresh downloads and the public consumer are verified, and Noah
@@ -71,6 +72,16 @@ different claims. Record them separately; do not mark one from evidence of anoth
   during final cleanup. Its history remains in earlier commits.
 
 ## Tasks
+
+### 20 — Noah priorities: items 13–16
+
+- [ ] Item 13: build all three Android ABIs with 16 KB LOAD alignment and gate every AAR `.so` in CI.
+- [ ] Publish and verify the v0.3.1 alignment patch release.
+- [ ] Item 14: exact-fee prepared onchain send/drain, reserved inputs, broadcast/discard.
+- [ ] Items 15/16: typed errors/outcomes and pending Lightning hash/amount/fees.
+
+Engineering plan and affected paths: [Noah priorities](plans/20-noah-release-priorities.md).
+Acceptance is pending; previous release evidence does not validate these changes.
 
 ### 19 — Post-release resource cleanup
 

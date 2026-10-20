@@ -33,7 +33,7 @@ def checksum(path):
 def source_digest():
     digest = hashlib.sha256()
     files = sorted((ROOT / 'src').rglob('*.rs')) + [ROOT / name for name in
-        ['Cargo.toml', 'Cargo.lock', 'boltffi.toml', 'rust-toolchain.toml', 'scripts/build-sdk.sh']] + sorted((ROOT / 'sdk/swift-support').glob('*.swift'))
+        ['Cargo.toml', 'Cargo.lock', 'boltffi.toml', 'rust-toolchain.toml', '.cargo/config.toml', 'scripts/build-sdk.sh']] + sorted((ROOT / 'sdk/swift-support').glob('*.swift'))
     for path in files:
         digest.update(str(path.relative_to(ROOT)).encode() + b'\0' + path.read_bytes() + b'\0')
     return digest.hexdigest()

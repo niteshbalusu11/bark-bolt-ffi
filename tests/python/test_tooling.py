@@ -20,6 +20,21 @@ def load_script(name):
 
 artifact = load_script('swift-artifact')
 runner = load_script('ci-regtest-runner')
+alignment = load_script('check-android-alignment')
+
+
+class AndroidAlignmentTests(unittest.TestCase):
+    def test_all_load_segments_must_be_aligned(self):
+        good = '  LOAD 0x0 0x0 0x0 0x100 0x100 R E 0x4000\n'
+        self.assertEqual([0x4000, 0x10000], alignment.load_alignments(
+            good + good.replace('0x4000', '0x10000')))
+        with self.assertRaisesRegex(ValueError, 'below 0x4000'):
+            alignment.load_alignments(good + good.replace('0x4000', '0x1000'))
+
+    def test_missing_or_malformed_load_segments_fail(self):
+        for output in ['', '  NOTE 0x4000', '  LOAD malformed']:
+            with self.subTest(output=output), self.assertRaises(ValueError):
+                alignment.load_alignments(output)
 
 
 class ReleaseTests(unittest.TestCase):
@@ -37,7 +52,7 @@ class ReleaseTests(unittest.TestCase):
             'Cargo.toml': '[package]\nname="fixture"\nversion="9.8.7"\nedition="2021"\n',
             'Cargo.lock': 'version = 4\n[[package]]\nname="fixture"\nversion="9.8.7"\n',
             'rust-toolchain.toml': '[toolchain]\nchannel="1.90.0"\n',
-            'boltffi.toml': '', 'sdk/swift-support/Concurrency.swift': '',
+            'boltffi.toml': '', '.cargo/config.toml': '', 'sdk/swift-support/Concurrency.swift': '',
             'scripts/build-sdk.sh': '', 'sdk/swift/Sources/fixture.swift': '// SDK\n',
             'Package.swift': '// immutable checksum abc123\n',
         }

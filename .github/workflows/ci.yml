@@ -71,6 +71,8 @@ jobs:
       - run: BOLTFFI="$PWD/target/tools/boltffi" just build-android --release
       - run: target/tools/boltffi generate swift --deny-skipped && python3 scripts/check-api.py
       - run: ./gradlew :sdk:android:assembleRelease :sdk:android:generatePomFileForReleasePublication :sdk:jvm:test :sdk:jvm:jar :sdk:jvm:generatePomFileForJvmPublication :sdk:jvm:testPackaged :examples:android:assembleRelease :examples:android:assembleDebug :examples:android:assembleDebugAndroidTest
+      - name: Check every Android shared library supports 16 KB pages
+        run: python3 scripts/check-android-alignment.py
       - run: python3 scripts/check-kotlin-artifacts.py
       - name: Enable emulator acceleration
         run: |

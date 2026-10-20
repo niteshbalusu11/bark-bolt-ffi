@@ -21,6 +21,9 @@ enabled = true
 architectures = ["arm64", "armv7", "x86_64"]
 min_sdk = 24
 
+[targets.android.link]
+extra_args = ["-Wl,-z,max-page-size=16384"]
+
 [targets.android.kotlin]
 module_name = "BarkBoltFFI"
 package = "io.github.niteshbalusu11.bark"
