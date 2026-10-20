@@ -369,6 +369,10 @@ Retrying a submitted process-local ID does not create another board/movement.
 If the funding-cache write fails after Bark acceptance, `failed` explicitly says
 so, and its inputs stay locked. Retry submission to record those same bytes
 before discarding; discard returns `persistence` until that succeeds.
+BDK `boardPsbt` submissions that overlap a pending board are also refused with
+`preparedInputsUnavailable`. Resume accepted boards with sync (or retry their
+prepared ID while it is alive); discard cannot replace a durable board. The
+external-PSBT replacement workflow requires a separate reservation-aware API.
 `discardPreparedBoard(id)` only releases unsubmitted inputs; after acceptance it
 forgets the ID and does not cancel Bark's durable board. Other handles for the
 same onchain database share reservations. Preparation requires a BDK onchain

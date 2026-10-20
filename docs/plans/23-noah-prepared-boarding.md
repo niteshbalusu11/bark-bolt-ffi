@@ -24,6 +24,11 @@
    assembling them in the FFI would duplicate wallet orchestration without
    supplying the missing shared reservation and preparation guarantees. Server acceptance of a caller-selected
    rate also needs a protocol decision; it cannot be guaranteed client-side.
+   Baseline correction: this pinned Bark already checkpoints offboards and commits
+   their fees when starting. Its `run_offboard` returns a txid only from an
+   AwaitingConfirmations checkpoint; an action parked before broadcast returns an
+   error and remains pending. This improves the older bare-txid behavior, but
+   does not supply the requested preview/submit API or explicit outcome DTO.
 5. Generic durable operation keys need an upstream persistence hook tying a
    caller key to the initial checkpoint/movement before any network side effect.
    Delegated refresh, exit progression and claim do not expose this. An extension
@@ -99,3 +104,16 @@ sync once before preparation. Reject it without writes rather than let upstream
 lazy connection store identity keys. Construct funding script/expiry directly
 from the checked ArkInfo snapshot and BoardBuilder. Pinned server-rpc initializes
 its ArkInfo cache once; heartbeat does not mutate fee parameters on this revision.
+
+## v0.5.0 cleanup ownership refinement
+
+After public asset and tagged-consumer verification, remove this checkout's
+ignored `target`, `dist`, `artifacts`, `tests/swift/.build` and empty `.kotlin`
+outputs, plus task-specific temporary artifact archives/extractions. Check that
+no tracked file is under a removal path and preserve committed SDKs/evidence.
+No simulator or emulator was created/opened by this task; the booted Noah devices
+and shared runtimes stay in place. The reorg fixture's disposable Bitcoin
+container is already removed by its guard. Preserve the pre-existing repository
+RegTest stack and every Nitro/Noah volume. Measure allocated output bytes before
+removal and available filesystem bytes before/after; these differ when concurrent
+threads use the same APFS volume.

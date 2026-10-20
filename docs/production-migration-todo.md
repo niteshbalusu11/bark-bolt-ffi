@@ -76,9 +76,9 @@ different claims. Record them separately; do not mark one from evidence of anoth
 
 ### 21 — Noah prepared boarding, chain status and durable exit listings
 
-- [ ] Prepared boarding with exact signed fees and shared onchain reservations.
-- [ ] Read-only chain transaction status without wallet synchronization.
-- [ ] listAllExits with amounts, terminal rows, history and transaction flags.
+- [x] Prepared boarding with exact signed fees and shared onchain reservations.
+- [x] Read-only chain transaction status without wallet synchronization.
+- [x] listAllExits with amounts, terminal rows, history and transaction flags.
 - [ ] Rust/native/live validation, GPT-6 Astra high review and v0.5.0 SDK release.
 - [ ] Remove disposable builds and task-created devices after evidence is saved.
 - [ ] Upstream dependency: prepared offboards/sendOnchain with fixed negotiated
