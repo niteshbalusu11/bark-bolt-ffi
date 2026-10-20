@@ -88,6 +88,13 @@ height0. See each `WalletModel` for the actual open/shutdown/recovery sequence.
 | Android | API 24 | arm64-v8a/armeabi-v7a/x86_64 | API 35 ARM64 locally and x86_64 in CI |
 | Kotlin/JVM | Java17 | build-host native JAR | macOS ARM64 and Linux x86_64 contracts |
 
+Main/tag CI builds the full packaged matrix above for release preparation.
+PR CI sets `BARK_PR_BUILD=1`: `scripts/build-sdk.sh` selects `boltffi.pr.toml`,
+building Android arm64-v8a/x86_64 and ARM64 iOS device, simulator and macOS slices.
+Package checks and example Android ABI filters follow the same PR selection.
+Release staging always requires the full Apple matrix. The local RegTest overlay
+remains ARM64-only. CI runs formatting, Clippy and tests; cargo audit is omitted.
+
 Minimum OS versions and the other packaged ABIs are compile targets; this does
 not claim physical-device or every-OS runtime testing. The example apps are
 RegTest tools with debug-only local HTTP networking and test command bridges.

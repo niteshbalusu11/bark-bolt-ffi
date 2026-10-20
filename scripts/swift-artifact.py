@@ -44,7 +44,9 @@ def artifacts():
             if p.is_file() and p.name != 'provenance.json' and p.name != '.DS_Store'}
 
 
-def check_build():
+def check_build(pr_build=False):
+    targets = {key: target for key, target in TARGETS.items()
+               if not pr_build or key[2] == 'arm64'}
     generated = ROOT / 'dist/apple'
     framework = generated / 'BarkBoltFFI.xcframework'
     info = plistlib.loads((framework / 'Info.plist').read_bytes())
@@ -56,7 +58,7 @@ def check_build():
             architectures = library['SupportedArchitectures']
             for arch in architectures:
                 key = (library['SupportedPlatform'], library.get('SupportedPlatformVariant'), arch)
-                assert key in TARGETS, f'Unexpected Apple slice: {key}'
+                assert key in targets, f'Unexpected Apple slice: {key}'
                 thin = binary
                 if len(architectures) > 1:
                     thin = Path(directory) / ('-'.join(str(v) for v in key) + '.a')
@@ -73,11 +75,11 @@ def check_build():
                         minimums.append(tuple(int(v) for v in parts[1].split('.')))
                 limit = (13, 0) if key[0] == 'macos' else (16, 0)
                 assert minimums and all(v[:2] <= limit for v in minimums), f'{key}: native deployment target exceeds {limit}: {max(minimums, default=())}'
-                expected = target_dir / TARGETS[key] / 'release/libbark_bolt_ffi.a'
+                expected = target_dir / targets[key] / 'release/libbark_bolt_ffi.a'
                 assert checksum(thin) == checksum(expected), f'{key} is not the current release build'
                 seen.add(key)
-        assert seen == set(TARGETS), f'Missing Apple slices: {set(TARGETS) - seen}'
-    print('Five release Apple ABI slices match Cargo output and declared deployment targets')
+        assert seen == set(targets), f'Missing Apple slices: {set(targets) - seen}'
+    print(f'All {len(targets)} release Apple ABI slices match Cargo output and declared deployment targets')
     return framework
 
 
@@ -156,7 +158,7 @@ if __name__ == '__main__':
     commands.add_argument('--check-source', action='store_true', help='Require release artifacts to match current source/version')
     options = parser.parse_args()
     if options.check_build:
-        check_build()
+        check_build(pr_build=os.environ.get('BARK_PR_BUILD') == '1')
     else:
         if options.stage_release:
             stage()

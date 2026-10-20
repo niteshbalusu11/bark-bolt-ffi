@@ -11,6 +11,9 @@ BOLTFFI="${BOLTFFI:-boltffi}"
 [[ "$("$BOLTFFI" --version)" == "boltffi 0.31.1" ]] || { echo 'Use BoltFFI CLI 0.31.1' >&2; exit 1; }
 platform="${1:?Choose apple or android}"
 shift
+if [[ "${BARK_PR_BUILD:-0}" == 1 ]]; then
+    set -- --overlay boltffi.pr.toml "$@"
+fi
 if [[ "$platform" == apple ]]; then
     export IPHONEOS_DEPLOYMENT_TARGET=16.0
     "$BOLTFFI" pack apple "$@" --deny-skipped --layout ffi-only
