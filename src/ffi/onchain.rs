@@ -25,6 +25,23 @@ enum OnchainWalletInner {
     Callback(Arc<RwLock<CallbackWalletAdapter>>),
 }
 
+/// A cancelled foreign wait must not lose the only way to release reserved inputs.
+struct PreparedHandoff {
+    transaction: Option<crate::types::PreparedTransaction>,
+    core: Arc<CoreOnchainWallet>,
+}
+
+impl Drop for PreparedHandoff {
+    fn drop(&mut self) {
+        if let Some(transaction) = self.transaction.take() {
+            let core = self.core.clone();
+            crate::ffi::runtime::TOKIO_RT.spawn(async move {
+                let _ = core.discard_prepared(transaction.id).await;
+            });
+        }
+    }
+}
+
 #[boltffi::export]
 impl OnchainWallet {
     /// BDK-backed wallet. Opens the shared sqlite cache.
@@ -38,8 +55,8 @@ impl OnchainWallet {
             let db = open_sqlite_db(&datadir)?;
             let registration =
                 crate::backup::register_live_database(&crate::ffi::db::sqlite_path(&datadir))?;
-            let mut core = CoreOnchainWallet::default(network, mnemonic, config, db).await?;
-            core.db_path_registration = Some(registration);
+            let core =
+                CoreOnchainWallet::default(network, mnemonic, config, db, registration).await?;
             Ok(Self {
                 inner: OnchainWalletInner::Bdk(Arc::new(core)),
             })
@@ -150,6 +167,71 @@ impl OnchainWallet {
             OnchainWalletInner::Callback(_) => {
                 Err("send() not supported for callback wallets".into())
             }
+        }
+    }
+
+    /// Build and sign, returning the exact fee and reserving inputs across handles/daemon sync.
+    /// The id lasts until discard or all onchain/daemon handles are dropped; it is not backed up.
+    pub async fn prepare_send(
+        &self,
+        address: String,
+        amount: crate::types::OnchainSendAmount,
+        fee_rate_sat_per_vb: u64,
+        confirmed_only: bool,
+    ) -> Result<crate::types::PreparedTransaction, BarkError> {
+        match &self.inner {
+            OnchainWalletInner::Bdk(core) => {
+                let core = core.clone();
+                let mut handoff = run_async(async move {
+                    let transaction = core
+                        .prepare_send(address, amount, fee_rate_sat_per_vb, confirmed_only)
+                        .await?;
+                    Ok::<_, BarkError>(PreparedHandoff {
+                        transaction: Some(transaction),
+                        core,
+                    })
+                })
+                .await?;
+                Ok(handoff
+                    .transaction
+                    .take()
+                    .expect("prepared transaction handoff"))
+            }
+            OnchainWalletInner::Callback(_) => Err(BarkError::typed(
+                crate::BarkErrorCode::UnsupportedOperation,
+                "prepareSend requires the BDK onchain wallet",
+            )),
+        }
+    }
+
+    /// Broadcast exactly the prepared bytes. Failed submission remains persisted for sync retry.
+    pub async fn broadcast_prepared(
+        &self,
+        id: String,
+    ) -> Result<crate::types::BroadcastResult, BarkError> {
+        match &self.inner {
+            OnchainWalletInner::Bdk(core) => {
+                let core = core.clone();
+                run_async(async move { core.broadcast_prepared(id).await }).await
+            }
+            OnchainWalletInner::Callback(_) => Err(BarkError::typed(
+                crate::BarkErrorCode::UnsupportedOperation,
+                "broadcastPrepared requires the BDK onchain wallet",
+            )),
+        }
+    }
+
+    /// Release an unbroadcast preparation. This cannot cancel a transaction already recorded.
+    pub async fn discard_prepared(&self, id: String) -> Result<(), BarkError> {
+        match &self.inner {
+            OnchainWalletInner::Bdk(core) => {
+                let core = core.clone();
+                run_async(async move { core.discard_prepared(id).await }).await
+            }
+            OnchainWalletInner::Callback(_) => Err(BarkError::typed(
+                crate::BarkErrorCode::UnsupportedOperation,
+                "discardPrepared requires the BDK onchain wallet",
+            )),
         }
     }
 
@@ -278,5 +360,56 @@ impl OnchainWallet {
             OnchainWalletInner::Bdk(v) => v.inner(),
             OnchainWalletInner::Callback(v) => v.clone(),
         }
+    }
+}
+
+#[cfg(test)]
+mod prepared_cancellation_tests {
+    use super::*;
+    use crate::types::OnchainSendAmount;
+
+    #[test]
+    fn cancelled_foreign_wait_discards_unclaimed_preparation() {
+        if std::env::var("BARK_REGTEST").as_deref() != Ok("1") {
+            return;
+        }
+        crate::ffi::runtime::TOKIO_RT.block_on(async {
+            let directory = tempfile::tempdir().unwrap();
+            let config: Config = serde_json::from_value(serde_json::json!({
+                "server_address":"http://127.0.0.1:3635", "bitcoind_address":"http://127.0.0.1:19443",
+                "bitcoind_user":"second", "bitcoind_pass":"ark",
+            })).unwrap();
+            let onchain = OnchainWallet::default(Network::Regtest, crate::generate_mnemonic().unwrap(), config, directory.path().to_str().unwrap().into()).await.unwrap();
+            let address = onchain.new_address().await.unwrap();
+            let funding = std::process::Command::new("bash").args(["scripts/ark-dev.sh", "send-to", &address, "0.001"]).output().unwrap();
+            assert!(funding.status.success(), "{}", String::from_utf8_lossy(&funding.stderr));
+            onchain.sync().await.unwrap();
+            let OnchainWalletInner::Bdk(core) = &onchain.inner else { unreachable!() };
+            let core = core.clone();
+            let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
+            let (finish_tx, finish_rx) = tokio::sync::oneshot::channel();
+            let waiter = tokio::spawn(run_async(async move {
+                let transaction = core.prepare_send(address, OnchainSendAmount::DrainAll, 10, true).await.unwrap();
+                ready_tx.send(()).unwrap();
+                finish_rx.await.unwrap();
+                PreparedHandoff { transaction: Some(transaction), core }
+            }));
+            ready_rx.await.unwrap();
+            waiter.abort();
+            let _ = waiter.await;
+            finish_tx.send(()).unwrap();
+            let destination = onchain.new_address().await.unwrap();
+            tokio::time::timeout(std::time::Duration::from_secs(3), async {
+                loop {
+                    match onchain.prepare_send(destination.clone(), OnchainSendAmount::DrainAll, 10, true).await {
+                        Ok(prepared) => { onchain.discard_prepared(prepared.id).await.unwrap(); break; }
+                        Err(error) => {
+                            assert_eq!(error.code, crate::BarkErrorCode::InsufficientFunds);
+                            tokio::task::yield_now().await;
+                        }
+                    }
+                }
+            }).await.expect("cancelled preparation retained its inputs");
+        });
     }
 }
