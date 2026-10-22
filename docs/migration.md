@@ -1,16 +1,16 @@
 # Installing and migrating
 
-This SDK exposes Bark master `bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c`
-(0.7.1-dev,2026-10-16) through BoltFFI 0.31.1. Swift and Kotlin are the
+This SDK exposes Bark 0.8.0 (`lib-0.8.0`, commit
+`959a489ff4934b181783b41c7d3ee68d85b95cbf`, 2026-10-22) through BoltFFI 0.31.1. Swift and Kotlin are the
 supported consumer languages. The Rust core remains in this repository.
 
 ## Swift
 
 Add `https://github.com/smolcars/bark-bolt-ffi` in Xcode's package dependencies,
-select version 0.4.0, and link the `BarkBoltFFI` product. In a package manifest:
+select version 0.6.0, and link the `BarkBoltFFI` product. In a package manifest:
 
 ```swift
-.package(url: "https://github.com/smolcars/bark-bolt-ffi.git", exact: "0.4.0")
+.package(url: "https://github.com/smolcars/bark-bolt-ffi.git", exact: "0.6.0")
 // Target dependency:
 .product(name: "BarkBoltFFI", package: "bark-bolt-ffi")
 ```
@@ -31,7 +31,7 @@ BOLTFFI="$PWD/target/tools/boltffi" scripts/build-sdk.sh android --release
 ./gradlew :sdk:android:publishToMavenLocal :sdk:jvm:publishToMavenLocal
 ```
 
-Use `mavenLocal()` with `io.github.niteshbalusu11:bark-bolt-ffi-android:0.4.0`,
+Use `mavenLocal()` with `io.github.niteshbalusu11:bark-bolt-ffi-android:0.6.0`,
 or the host-specific `bark-bolt-ffi-jvm-darwin-arm64` / `bark-bolt-ffi-jvm-linux-x86_64`
 artifact. Import `io.github.niteshbalusu11.bark.*`. The Maven POM supplies the
 coroutines dependency. The Android AAR embeds all three JNI ABIs and consumer
@@ -39,9 +39,9 @@ R8 rules. JVM JARs contain the native library for the build host; choose a JAR
 matching the deployment OS/architecture. Linux CI builds on Ubuntu24.04; rebuild
 locally when targeting an older libc. Maven Central publication is separate.
 Versioned AAR/JAR/POM files are attached to the
-[v0.4.0 release](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.4.0);
-verify them against its SHA256SUMS. v0.4.0 attaches the Linux x86_64 JVM JAR;
-build the Darwin JVM JAR from source. Use matching v0.4.0 bindings/native binaries,
+[v0.6.0 release](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.6.0);
+verify them against its SHA256SUMS. v0.6.0 attaches the Linux x86_64 JVM JAR;
+build the Darwin JVM JAR from source. Use matching v0.6.0 bindings/native binaries,
 including on Swift, because the typed error record changes the ABI. GitHub Actions also uploads artifacts and
 example APKs. To use a downloaded AAR or JVM JAR directly, include it as a local
 file dependency and declare `org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2`
@@ -401,3 +401,67 @@ the persisted exit queries; preserve wallet data when using history.
 Prepared offboards / Ark `sendOnchain` and atomic durable operation keys are
 **not included**. Their upstream requirements and the unsafe wrapper alternatives
 are recorded in [the feasibility plan](plans/23-noah-prepared-boarding.md).
+
+## Bark 0.8.0, payment requests and Lightning send options (v0.6.0)
+
+Existing wallet databases open unchanged: Bark 0.8.0 adds no SQLite migration.
+Bark changes between bfbe6b7 and 0.8.0 are listed in
+[the plan](plans/24-bark-0.8.0-payments.md).
+
+Breaking changes:
+
+- `payLightningInvoice`, `payLightningOffer`, `payLightningAddress` and
+  `payLnurl` take `options: LightningSendOptions? = nil` instead of `wait`.
+  `LightningSendOptions(wait: true)` replaces `wait: true`. `retryForSecs` sets
+  how long the server keeps trying to pay. The server caps it at its maximum
+  (5 minutes by default); `0` makes a single attempt; `nil` uses the server's
+  own retry time.
+- `sendArkoorPayment` returns the `Movement` id of the payment.
+- `sendOnchain` returns `OffboardResult` instead of a txid string.
+  `OffboardResult` (also returned by `offboardAll` and `offboardVtxos`) adds
+  `movementId`. Use these ids to attach notes to the right history entry with
+  `updateHistoryMetadata` instead of matching amounts and times.
+
+New:
+
+- `parsePaymentRequest(input)` accepts BIP 321 and `lightning:` URIs, BOLT11
+  invoices, BOLT12 offers, Lightning Addresses, LNURL-pay links, Ark addresses,
+  bitcoin addresses and hex output scripts. It returns the URI amount, label and
+  message plus one `PaymentOption` per destination. An option's typed `errors`
+  (`networkMismatch`, `invalidArkAddress(ArkAddressError)`,
+  `amountMismatch(expectedSats, gotSats)`, `invalidAmount`, `unsupported`)
+  explain why it cannot be used; `requiresAmount` and `supportsComment` tell the
+  UI what to ask for. `defaultOption` is Bark's pick: the first error-free Ark,
+  then Lightning, then onchain option. Input that is no payment request, has
+  no supported destination, or is a BOLT12 offer priced in a fiat currency
+  fails with `BarkErrorCode.invalidPaymentRequest`.
+- `sendPayment(method, amountSats, comment, options)` pays one option and
+  returns `PaymentResult.onchain(txid, movementId)`, `.lightning(status)` or
+  `.ark(movementId)`. Output scripts and custom methods are rejected, as in Bark.
+  Pass `amountSats` only when the option's `requiresAmount` is set, and prefer
+  the request's own `amountSats`: Bark accepts up to twice an invoice's amount
+  when one is passed for an invoice that already has an amount.
+- `estimatePaymentFee(method, amountSats)` and `estimatePaymentFees(request,
+  amountSats)` (cheapest first) use Bark's per-method estimators. The plural
+  call fails when any option cannot be estimated, as in Bark; estimate options
+  one by one to skip those.
+- `bip321Uri(options)` builds a receive URI with a new Ark address, an address
+  from the attached onchain wallet and, when `amountSats` is set, a BOLT11
+  invoice. Options that leave no destination are rejected. Each generated destination is returned next to the URI. The invoice
+  is an ordinary pending Lightning receive; cancel it with
+  `cancelLightningReceive` if the request is abandoned. Without an onchain
+  wallet the onchain destination is omitted. On non-mainnet networks Bark puts
+  the onchain address in a `tb` parameter, per BIP 321.
+- `debugInfo()` returns the network, mailbox id and VTXO xpub for support
+  requests. The xpub reveals every VTXO public key of the wallet; share it only
+  with support.
+
+Lightning and Lightning Address sends through `sendPayment` behave like the
+corresponding `pay*` methods. Bark logs, but does not return, the server's
+Lightning failure reason.
+
+Known Bark behavior, unchanged in this release: an interactive refresh that
+starts in the last moments of a round's submit window joins that round. When
+the server closes the round empty, the call fails with `round N failed by
+server`. Nothing is spent; retry the refresh. Apps that open a wallet and
+refresh immediately hit this more often.

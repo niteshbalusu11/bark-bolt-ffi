@@ -1,6 +1,6 @@
 [package]
 name = "bark-bolt-ffi"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2021"
 license = "MIT"
 authors = ["Team Second <hello@second.tech>"]
@@ -14,20 +14,20 @@ crate-type = ["lib", "staticlib", "cdylib"]
 [dependencies.ark]
 package = "ark-lib"
 git = "https://gitlab.com/ark-bitcoin/bark"
-rev = "bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c"
+rev = "959a489ff4934b181783b41c7d3ee68d85b95cbf"
 default-features = false
 
 [dependencies.bark]
 package = "bark-wallet"
 features = ["sqlite-bundled", "tls-webpki-roots", "native", "onchain-bdk", "bitcoind-rpc"]
 git = "https://gitlab.com/ark-bitcoin/bark"
-rev = "bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c"
+rev = "959a489ff4934b181783b41c7d3ee68d85b95cbf"
 default-features = false
 
 [dependencies.bark-bitcoin-ext]
 package = "bark-bitcoin-ext"
 git = "https://gitlab.com/ark-bitcoin/bark"
-rev = "bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c"
+rev = "959a489ff4934b181783b41c7d3ee68d85b95cbf"
 default-features = false
 
 [dependencies]

@@ -1,6 +1,6 @@
 # Bark BoltFFI
 
-Native **Swift and Kotlin** bindings for [Bark master](https://gitlab.com/ark-bitcoin/bark/-/commit/bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c),
+Native **Swift and Kotlin** bindings for [Bark 0.8.0](https://gitlab.com/ark-bitcoin/bark/-/tree/lib-0.8.0),
 using BoltFFI 0.31.1. Includes SwiftUI and Jetpack Compose example wallets,
 isolated Bitcoin/Ark/Lightning RegTest infrastructure and GitHub Actions.
 
@@ -17,7 +17,7 @@ transaction/PSBT validation, SQLite persistence and native datadir locking.
 
 Swift: add `https://github.com/smolcars/bark-bolt-ffi` in Xcode and link
 `BarkBoltFFI`. The root SwiftPM package uses the versioned, checksummed release
-XCFramework. Kotlin: build the AAR/JVM JAR below, or download [versioned release artifacts](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.5.0);
+XCFramework. Kotlin: build the AAR/JVM JAR below, or download [versioned release artifacts](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.6.0);
 [the migration guide](docs/migration.md) documents local Maven publication.
 
 ## Local build

@@ -20,7 +20,8 @@ fn regtest(args: &[&str]) -> String {
     String::from_utf8(output.stdout).unwrap().trim().into()
 }
 fn config() -> Config {
-    serde_json::from_value(serde_json::json!({"server_address":"http://127.0.0.1:3635", "bitcoind_address":"http://127.0.0.1:19443", "bitcoind_user":"second", "bitcoind_pass":"ark", "vtxo_exit_margin":2})).unwrap()
+    let port = |name: &str, default: &str| std::env::var(name).unwrap_or(default.into());
+    serde_json::from_value(serde_json::json!({"server_address":format!("http://127.0.0.1:{}", port("ARK_PORT", "3635")), "bitcoind_address":format!("http://127.0.0.1:{}", port("BITCOIN_PORT", "19443")), "bitcoind_user":"second", "bitcoind_pass":"ark", "vtxo_exit_margin":2})).unwrap()
 }
 fn args(path: &Path) -> WalletOpenArgs {
     WalletOpenArgs {

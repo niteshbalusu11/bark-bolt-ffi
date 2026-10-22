@@ -64,7 +64,7 @@ struct WalletView: View {
                         Button("New Ark address") { model.perform { model.arkAddress = try await model.wallet!.newAddress() } }
                     }
                     Section("Send") {
-                        TextField("Ark address or Lightning invoice", text: $destination, axis: .vertical)
+                        TextField("Address, invoice or payment link", text: $destination, axis: .vertical)
                             .textInputAutocapitalization(.never).autocorrectionDisabled().accessibilityIdentifier("destination")
                         LabeledContent("Amount in sats") { TextField("Amount in sats", text: $amount).keyboardType(.numberPad).accessibilityIdentifier("send-amount") }
                         Button("Send payment") { model.perform { try await model.send(destination: destination, amount: amount) } }.accessibilityIdentifier("send-payment")

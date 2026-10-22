@@ -393,7 +393,7 @@ mod prepared_cancellation_tests {
         crate::ffi::runtime::TOKIO_RT.block_on(async {
             let directory = tempfile::tempdir().unwrap();
             let config: Config = serde_json::from_value(serde_json::json!({
-                "server_address":"http://127.0.0.1:3635", "bitcoind_address":"http://127.0.0.1:19443",
+                "server_address":crate::ffi::regtest_url("ARK_PORT", "3635"), "bitcoind_address":crate::ffi::regtest_url("BITCOIN_PORT", "19443"),
                 "bitcoind_user":"second", "bitcoind_pass":"ark",
             })).unwrap();
             let onchain = OnchainWallet::default(Network::Regtest, crate::generate_mnemonic().unwrap(), config, directory.path().to_str().unwrap().into()).await.unwrap();

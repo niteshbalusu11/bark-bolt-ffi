@@ -76,8 +76,11 @@ class WalletModel(application: Application) : AndroidViewModel(application) {
     }
     suspend fun send(destination: String, amount: String) {
         val ark = checkNotNull(wallet)
-        if (destination.startsWith("ln", ignoreCase = true)) ark.payLightningInvoice(destination, amount(amount), true)
-        else ark.sendArkoorPayment(destination, amount(amount))
+        val request = ark.parsePaymentRequest(destination)
+        val option = checkNotNull(request.defaultOption) { "No usable payment method in this request." }
+        // Pay the requested amount; ask for one only when the destination carries none.
+        val sats = if (option.requiresAmount) request.amountSats ?: amount(amount) else null
+        ark.sendPayment(option.method, sats, options = LightningSendOptions(wait = true))
         status = "Payment sent"
     }
     suspend fun board(text: String) { checkNotNull(wallet).boardAmount(amount(text)); status = "Board submitted. Mine a block, then sync." }

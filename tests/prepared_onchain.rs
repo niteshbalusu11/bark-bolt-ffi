@@ -18,6 +18,10 @@ fn regtest(args: &[&str]) -> String {
     String::from_utf8(output.stdout).unwrap().trim().to_owned()
 }
 
+fn port(name: &str, default: u16) -> u16 {
+    std::env::var(name).map_or(default, |value| value.parse().unwrap())
+}
+
 struct Proxy {
     child: std::process::Child,
     port: u16,
@@ -31,7 +35,11 @@ impl Proxy {
             .env("ARK_PORT", upstream_port.to_string())
             .env(
                 "RESPONSE_DELAY_SECONDS",
-                if upstream_port == 19443 { "0" } else { "0.25" },
+                if upstream_port == port("BITCOIN_PORT", 19443) {
+                    "0"
+                } else {
+                    "0.25"
+                },
             )
             .stdout(std::process::Stdio::piped())
             .spawn()
@@ -72,12 +80,12 @@ fn failed_broadcast_retry_cannot_spend_newly_reserved_inputs() {
         return;
     }
     tokio::runtime::Runtime::new().unwrap().block_on(async {
-        let mut proxy = Proxy::start(19443);
+        let mut proxy = Proxy::start(port("BITCOIN_PORT", 19443));
         let directory = tempfile::tempdir().unwrap();
         let onchain = OnchainWallet::default(
             Network::Regtest,
             generate_mnemonic().unwrap(),
-            config(3635, proxy.port),
+            config(port("ARK_PORT", 3635), proxy.port),
             directory.path().to_str().unwrap().into(),
         )
         .await
@@ -146,10 +154,10 @@ fn preparation_waits_for_board_cosign_and_excludes_its_funding() {
         return;
     }
     tokio::runtime::Runtime::new().unwrap().block_on(async {
-        let proxy = Proxy::start(3635);
+        let proxy = Proxy::start(port("ARK_PORT", 3635));
         let directory = tempfile::tempdir().unwrap();
         let mnemonic = generate_mnemonic().unwrap();
-        let settings = config(proxy.port, 19443);
+        let settings = config(proxy.port, port("BITCOIN_PORT", 19443));
         let onchain = std::sync::Arc::new(
             OnchainWallet::default(
                 Network::Regtest,
@@ -224,10 +232,7 @@ fn live_exact_prepared_send_shared_handles_daemon_and_confirmed_drain() {
     tokio::runtime::Runtime::new().unwrap().block_on(async {
         let directory = tempfile::tempdir().unwrap();
         let mnemonic = generate_mnemonic().unwrap();
-        let config: Config = serde_json::from_value(serde_json::json!({
-            "server_address":"http://127.0.0.1:3635", "bitcoind_address":"http://127.0.0.1:19443",
-            "bitcoind_user":"second", "bitcoind_pass":"ark",
-        })).unwrap();
+        let config = config(port("ARK_PORT", 3635), port("BITCOIN_PORT", 19443));
         let datadir = directory.path().to_str().unwrap().to_owned();
         let onchain = OnchainWallet::default(Network::Regtest, mnemonic.clone(), config.clone(), datadir.clone()).await.unwrap();
         let second = OnchainWallet::default(Network::Regtest, mnemonic.clone(), config.clone(), datadir.clone()).await.unwrap();

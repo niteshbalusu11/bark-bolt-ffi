@@ -107,12 +107,11 @@ final class WalletModel: ObservableObject {
 
     func send(destination: String, amount: String) async throws {
         guard let wallet else { throw AppError.message("Open a wallet first.") }
-        let sats = try self.amount(amount)
-        if destination.lowercased().hasPrefix("ln") {
-            _ = try await wallet.payLightningInvoice(invoice: destination, amountSats: sats, wait: true)
-        } else {
-            try await wallet.sendArkoorPayment(arkAddress: destination, amountSats: sats)
-        }
+        let request = try await wallet.parsePaymentRequest(input: destination)
+        guard let option = request.defaultOption else { throw AppError.message("No usable payment method in this request.") }
+        // Pay the requested amount; ask for one only when the destination carries none.
+        let sats: UInt64? = try option.requiresAmount ? request.amountSats ?? self.amount(amount) : nil
+        _ = try await wallet.sendPayment(method: option.method, amountSats: sats, options: LightningSendOptions(wait: true))
         status = "Payment sent"
     }
 

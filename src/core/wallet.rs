@@ -17,7 +17,7 @@ use bark::WalletSeed;
 
 use crate::config::Config;
 use crate::core::parse_address;
-use crate::error::BarkError;
+use crate::error::{BarkError, BarkErrorCode};
 use crate::{types, Network};
 
 /// Core Bark wallet logic. No binding-specific behavior — pure async over
@@ -565,10 +565,7 @@ impl Wallet {
     ) -> Result<types::OffboardResult, BarkError> {
         let addr = parse_address(&bitcoin_address, self.inner.network().await?)?;
 
-        let txid = self.inner.offboard_all(addr).await?;
-        Ok(types::OffboardResult {
-            txid: txid.to_string(),
-        })
+        Ok(self.inner.offboard_all(addr).await?.into())
     }
 
     pub async fn offboard_vtxos(
@@ -583,10 +580,7 @@ impl Wallet {
             .map(|id| id.parse::<VtxoId>().context("invalid vtxo id"))
             .collect();
 
-        let txid = self.inner.offboard_vtxos(ids?, addr).await?;
-        Ok(types::OffboardResult {
-            txid: txid.to_string(),
-        })
+        Ok(self.inner.offboard_vtxos(ids?, addr).await?.into())
     }
 
     // ------------------------------------------------------------------------
@@ -597,13 +591,13 @@ impl Wallet {
         &self,
         invoice: String,
         amount_sats: Option<u64>,
-        wait: bool,
+        options: types::LightningSendOptions,
     ) -> Result<types::LightningSendStatus, BarkError> {
         let invoice: Invoice = invoice.parse().context("invalid invoice")?;
         let amount = amount_sats.map(bitcoin::Amount::from_sat);
         let resolved = self
             .inner
-            .pay_lightning_invoice(invoice, amount, wait)
+            .pay_lightning_invoice_with(invoice, amount, options.into())
             .await?;
         self.lightning_send_status(resolved).await
     }
@@ -612,14 +606,14 @@ impl Wallet {
         &self,
         offer: String,
         amount_sats: Option<u64>,
-        wait: bool,
+        options: types::LightningSendOptions,
     ) -> Result<types::LightningSendStatus, BarkError> {
         let offer_obj =
             Offer::from_str(&offer).map_err(|e| anyhow::anyhow!("invalid BOLT12 offer: {e:?}"))?;
         let amount = amount_sats.map(bitcoin::Amount::from_sat);
         let resolved = self
             .inner
-            .pay_lightning_offer(offer_obj, amount, wait)
+            .pay_lightning_offer_with(offer_obj, amount, options.into())
             .await?;
         self.lightning_send_status(resolved).await
     }
@@ -634,7 +628,7 @@ impl Wallet {
         lightning_address: String,
         amount_sats: u64,
         comment: Option<String>,
-        wait: bool,
+        options: types::LightningSendOptions,
     ) -> Result<types::LightningSendStatus, BarkError> {
         let addr: bark::lnurllib::lightning_address::LightningAddress = lightning_address
             .trim()
@@ -643,7 +637,7 @@ impl Wallet {
         let amount = bitcoin::Amount::from_sat(amount_sats);
         let resolved = self
             .inner
-            .pay_lightning_address(&addr, amount, comment.as_deref(), wait)
+            .pay_lightning_address_with(&addr, amount, comment.as_deref(), options.into())
             .await?;
         self.lightning_send_status(resolved).await
     }
@@ -659,13 +653,13 @@ impl Wallet {
         lnurl: String,
         amount_sats: u64,
         comment: Option<String>,
-        wait: bool,
+        options: types::LightningSendOptions,
     ) -> Result<types::LightningSendStatus, BarkError> {
         let lnurl: bark::lnurllib::lnurl::LnUrl = lnurl.trim().parse().context("invalid lnurl")?;
         let amount = bitcoin::Amount::from_sat(amount_sats);
         let resolved = self
             .inner
-            .pay_lnurl(&lnurl, amount, comment.as_deref(), wait)
+            .pay_lnurl_with(&lnurl, amount, comment.as_deref(), options.into())
             .await?;
         self.lightning_send_status(resolved).await
     }
@@ -905,11 +899,10 @@ impl Wallet {
         &self,
         ark_address: String,
         amount_sats: u64,
-    ) -> Result<(), BarkError> {
+    ) -> Result<u32, BarkError> {
         let addr: ark::Address = ark_address.parse().context("invalid ark address")?;
         let amount = bitcoin::Amount::from_sat(amount_sats);
-        self.inner.send_arkoor_payment(&addr, amount).await?;
-        Ok(())
+        Ok(self.inner.send_arkoor_payment(&addr, amount).await?.0)
     }
 
     /// Whether this wallet can pay `address` out-of-round: same network and
@@ -933,11 +926,216 @@ impl Wallet {
         &self,
         address: String,
         amount_sats: u64,
-    ) -> Result<String, BarkError> {
+    ) -> Result<types::OffboardResult, BarkError> {
         let addr = parse_address(&address, self.inner.network().await?)?;
         let amount = bitcoin::Amount::from_sat(amount_sats);
-        let txid = self.inner.send_onchain(addr, amount).await?;
-        Ok(txid.to_string())
+        Ok(self.inner.send_onchain(addr, amount).await?.into())
+    }
+
+    // ------------------------------------------------------------------------
+    // Payment requests
+    // ------------------------------------------------------------------------
+
+    pub async fn parse_payment_request(
+        &self,
+        input: String,
+    ) -> Result<types::PaymentRequest, BarkError> {
+        use futures_util::FutureExt;
+        let invalid =
+            |message: String| BarkError::typed(BarkErrorCode::InvalidPaymentRequest, message);
+        // Read the network first, so only parsing failures get the typed code.
+        self.inner.network().await?;
+        // Upstream unwraps BOLT12 offer amounts, which panics on fiat-priced offers.
+        let parsed = std::panic::AssertUnwindSafe(self.inner.parse_payment_request(input.trim()))
+            .catch_unwind()
+            .await
+            .map_err(|_| {
+                invalid("unsupported payment request (fiat-priced BOLT12 offer?)".into())
+            })?;
+        let request = parsed.map_err(|e| invalid(format!("{e:#}")))?;
+        if request.options.is_empty() {
+            return Err(invalid(
+                "no supported payment method in this request".into(),
+            ));
+        }
+        Ok(request.into())
+    }
+
+    pub async fn estimate_payment_fee(
+        &self,
+        method: types::PaymentMethod,
+        amount_sats: u64,
+    ) -> Result<types::FeeEstimate, BarkError> {
+        let option = bark::AvailablePaymentMethod {
+            method: method.try_into()?,
+            errors: vec![],
+        };
+        let amount = bitcoin::Amount::from_sat(amount_sats);
+        Ok(self
+            .inner
+            .estimate_payment_fee(&option, amount)
+            .await?
+            .into())
+    }
+
+    pub async fn estimate_payment_fees(
+        &self,
+        request: types::PaymentRequest,
+        amount_sats: Option<u64>,
+    ) -> Result<Vec<types::PaymentMethodFee>, BarkError> {
+        // Upstream estimates every option regardless of its parse errors.
+        let options = request
+            .options
+            .into_iter()
+            .map(|option| {
+                Ok(bark::AvailablePaymentMethod {
+                    method: option.method.try_into()?,
+                    errors: vec![],
+                })
+            })
+            .collect::<Result<_, BarkError>>()?;
+        let request = bark::PaymentRequest {
+            amount: request.amount_sats.map(bitcoin::Amount::from_sat),
+            label: request.label,
+            message: request.message,
+            options,
+        };
+        let fees = self
+            .inner
+            .estimate_payment_fees(request, amount_sats.map(bitcoin::Amount::from_sat))
+            .await?;
+        Ok(fees
+            .into_iter()
+            .map(|(option, fee)| types::PaymentMethodFee {
+                method: (&option.method).into(),
+                fee: fee.into(),
+            })
+            .collect())
+    }
+
+    pub async fn send_payment(
+        &self,
+        method: types::PaymentMethod,
+        amount_sats: Option<u64>,
+        comment: Option<String>,
+        options: types::LightningSendOptions,
+    ) -> Result<types::PaymentResult, BarkError> {
+        let method: bark::movement::PaymentMethod = method.try_into()?;
+        // Upstream's dispatcher drops the onchain movement id; send_onchain keeps it.
+        if let bark::movement::PaymentMethod::Bitcoin(address) = &method {
+            let amount = amount_sats.context("amount is required for bitcoin address")?;
+            let address = address.assume_checked_ref().to_string();
+            let result = self.send_onchain(address, amount).await?;
+            return Ok(types::PaymentResult::Onchain {
+                txid: result.txid,
+                movement_id: result.movement_id,
+            });
+        }
+        let amount = amount_sats.map(bitcoin::Amount::from_sat);
+        let output = self
+            .inner
+            .send_payment_with(&method, amount, comment.as_deref(), options.into())
+            .await?;
+        Ok(match output {
+            bark::PaymentInitOutput::Lightning(invoice) => types::PaymentResult::Lightning {
+                status: self.lightning_send_status(invoice).await?,
+            },
+            bark::PaymentInitOutput::Ark(movement_id) => types::PaymentResult::Ark {
+                movement_id: movement_id.0,
+            },
+            bark::PaymentInitOutput::Onchain(_) => {
+                return Err("bitcoin payments are sent above".into());
+            }
+        })
+    }
+
+    pub async fn bip321_uri(
+        &self,
+        options: types::Bip321UriOptions,
+    ) -> Result<types::Bip321Uri, BarkError> {
+        let onchain = self.inner.onchain().filter(|_| options.onchain);
+        let invoice = options.lightning && options.amount_sats.is_some();
+        if !options.ark && !invoice && onchain.is_none() {
+            return Err("a BIP 321 URI needs an Ark address, an onchain address or an amount for an invoice".into());
+        }
+        // Ark addresses and invoices may call the server. Derive the onchain address
+        // before them, rather than letting the builder hold the onchain lock throughout.
+        let early_address = match &onchain {
+            Some(onchain) if options.ark || invoice => {
+                let mut onchain = onchain.write().await;
+                Some(
+                    onchain
+                        .address()
+                        .await
+                        .context("failed to get onchain address")?,
+                )
+            }
+            _ => None,
+        };
+        let mut guard = match &onchain {
+            Some(onchain) if early_address.is_none() => Some(onchain.write().await),
+            _ => None,
+        };
+        // The builder takes `&mut Wallet`; a clone is a handle to the same wallet.
+        let mut wallet = self.inner.clone();
+        let mut builder = wallet
+            .bip321_uri()
+            .ark(options.ark)
+            .onchain(false)
+            .lightning_bolt11(options.lightning);
+        if let Some(guard) = guard.as_mut() {
+            builder = builder.onchain_wallet(&mut **guard);
+        }
+        if let Some(amount_sats) = options.amount_sats {
+            builder = builder.amount_sat(amount_sats);
+        }
+        if let Some(label) = options.label {
+            builder = builder.label(label);
+        }
+        if let Some(message) = options.message {
+            builder = builder.message(message);
+        }
+        let mut uri = builder.build().await?;
+        drop(guard);
+        if let Some(address) = early_address {
+            // Where the builder puts it: the address on mainnet, a `tb` parameter elsewhere.
+            let address = address.into_unchecked();
+            if self.inner.network().await? == bitcoin::Network::Bitcoin {
+                uri.set_address(address)
+            } else {
+                uri.push_tb(address, false)
+            }
+            .context("failed to add onchain address")?;
+        }
+        Ok(types::Bip321Uri {
+            uri: uri.to_string(),
+            ark_address: uri
+                .extensions()
+                .ark()
+                .first()
+                .map(|a| a.inner().to_string()),
+            onchain_address: uri
+                .address()
+                .or_else(|| uri.tb().first().map(|a| a.inner()))
+                .map(ToString::to_string),
+            invoice: uri.lightning().first().map(|invoice| {
+                let invoice = invoice.inner();
+                types::LightningInvoice {
+                    invoice: invoice.to_string(),
+                    payment_hash: invoice.payment_hash().to_string(),
+                    amount_sats: invoice.amount_milli_satoshis().unwrap_or(0) / 1000,
+                }
+            }),
+        })
+    }
+
+    pub async fn debug_info(&self) -> Result<types::DebugInfo, BarkError> {
+        let info = self.inner.debug_info().await?;
+        Ok(types::DebugInfo {
+            network: info.network.into(),
+            mailbox_id: hex::encode(info.mailbox_id.serialize()),
+            vtxo_xpub: info.vtxo_xpub.to_string(),
+        })
     }
 
     // ------------------------------------------------------------------------

@@ -245,7 +245,7 @@ extension ContractTests {
         do {
             let recipient = try await Wallet.open(network: .regtest, mnemonicOrSeed: generateMnemonic(), config: config, args: WalletOpenArgs(runDaemon: false, datadir: directory.appendingPathComponent("recipient").path, createWithoutServer: true, skipRecovery: true))
             let receiveAddress = try await recipient.newAddress()
-            try await wallet.sendArkoorPayment(arkAddress: receiveAddress, amountSats: 10000)
+            _ = try await wallet.sendArkoorPayment(arkAddress: receiveAddress, amountSats: 10000)
             try await recipient.sync()
             let incomingHistory = try await recipient.history()
             let received = incomingHistory.flatMap(\.receivedOnAddresses).filter { $0.paymentMethod.value == receiveAddress }
@@ -439,7 +439,7 @@ extension ContractTests {
         XCTAssertEqual(sending.pendingArkoorSendSats, funded.totalSats)
         XCTAssertEqual(sending.spendableSats, 0)
         XCTAssertEqual(sending.totalSats, funded.totalSats)
-        try await send.value
+        _ = try await send.value
         try await recipient.sync()
         let before = try await wallet.balance()
         let destination = try await onchain.newAddress()
@@ -460,5 +460,50 @@ extension ContractTests {
         XCTAssertEqual(expired.spendableSats, 0)
         XCTAssertEqual(expired.pendingSats, 0)
         XCTAssertEqual(expired.totalSats, 10000)
+    }
+}
+
+extension ContractTests {
+    func testLivePaymentRequestsAndLightningOptions() async throws {
+        guard ProcessInfo.processInfo.environment["BARK_REGTEST"] == "1" else { throw XCTSkip("requires live RegTest") }
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let env = ProcessInfo.processInfo.environment
+        let config = Config(serverAddress: "http://127.0.0.1:\(env["ARK_PORT"] ?? "3635")", bitcoindAddress: "http://127.0.0.1:\(env["BITCOIN_PORT"] ?? "19443")", bitcoindUser: "second", bitcoindPass: "ark")
+        let mnemonic = try generateMnemonic()
+        let onchain = try await OnchainWallet.default(network: .regtest, mnemonic: mnemonic, config: config, datadir: directory.path)
+        let wallet = try await Wallet.openWithOnchain(network: .regtest, mnemonicOrSeed: mnemonic, config: config, args: WalletOpenArgs(runDaemon: false, datadir: directory.path, skipRecovery: true), onchain: onchain)
+        let recipient = try await Wallet.open(network: .regtest, mnemonicOrSeed: generateMnemonic(), config: config, args: WalletOpenArgs(runDaemon: false, datadir: directory.appendingPathComponent("recipient").path, skipRecovery: true))
+        _ = try regtestCommand("send-to", try await onchain.newAddress(), "0.005")
+        _ = try await onchain.sync()
+        _ = try await wallet.boardAmount(amountSats: 200000)
+        _ = try regtestCommand("generate", "6")
+        try await wallet.sync()
+        let info = try await wallet.debugInfo()
+        XCTAssertEqual(info.network, .regtest)
+        XCTAssertEqual(info.mailboxId, try wallet.mailboxIdentifier())
+        do {
+            _ = try await wallet.parsePaymentRequest(input: "not a payment")
+            XCTFail("Expected an invalid payment request")
+        } catch let error as BarkError { XCTAssertEqual(error.code, .invalidPaymentRequest) }
+        let uri = try await recipient.bip321Uri(options: Bip321UriOptions(amountSats: 3000, label: "coffee"))
+        let request = try await wallet.parsePaymentRequest(input: uri.uri)
+        XCTAssertEqual(request.amountSats, 3000)
+        XCTAssertEqual(request.options.map(\.method.methodType), ["invoice", "ark"])
+        let option = try XCTUnwrap(request.defaultOption)
+        XCTAssertEqual(option.method.value, uri.arkAddress)
+        let fees = try await wallet.estimatePaymentFees(request: request, amountSats: nil)
+        XCTAssertEqual(fees.count, 2)
+        guard case .ark(let movementId) = try await wallet.sendPayment(method: option.method, amountSats: 3000) else { return XCTFail("Expected an Ark payment") }
+        let direct = try await wallet.sendArkoorPayment(arkAddress: try XCTUnwrap(uri.arkAddress), amountSats: 1000)
+        let ids = Set(try await wallet.history().map(\.id))
+        XCTAssertTrue(ids.isSuperset(of: [movementId, direct]))
+        let mainnet = try await wallet.parsePaymentRequest(input: "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq")
+        XCTAssertEqual(mainnet.options.first?.errors, [.networkMismatch])
+        _ = try regtestCommand("wait-lightning-sync")
+        let added = try JSONSerialization.jsonObject(with: Data(regtestCommand("lncli", "addinvoice", "--amt=2000").utf8)) as? [String: Any]
+        let invoice = try XCTUnwrap(added?["payment_request"] as? String)
+        let status = try await wallet.payLightningInvoice(invoice: invoice, amountSats: nil, options: LightningSendOptions(wait: true, retryForSecs: 30))
+        guard case .paid = status else { return XCTFail("Expected a paid invoice, got \(status)") }
     }
 }

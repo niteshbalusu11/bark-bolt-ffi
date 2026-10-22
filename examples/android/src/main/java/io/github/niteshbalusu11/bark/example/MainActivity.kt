@@ -90,7 +90,7 @@ fun WalletScreen(model: WalletModel) {
                 item { Address("Ark address", model.arkAddress) }
                 item { Address("Onchain address", model.onchainAddress) }
                 item { Heading("Send") }
-                item { OutlinedTextField(destination, { destination = it }, label = { Text("Ark address or Lightning invoice") }, modifier = Modifier.fillMaxWidth().testTag("destination"), enabled = !model.busy) }
+                item { OutlinedTextField(destination, { destination = it }, label = { Text("Address, invoice or payment link") }, modifier = Modifier.fillMaxWidth().testTag("destination"), enabled = !model.busy) }
                 item { OutlinedTextField(amount, { amount = it }, label = { Text("Amount in sats") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth().testTag("send-amount"), enabled = !model.busy) }
                 item { Action("Send payment", model, "send-payment") { model.send(destination, amount) } }
                 item { Heading("Lightning receive") }

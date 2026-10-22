@@ -380,7 +380,7 @@ mod positive_tests {
         crate::ffi::runtime::TOKIO_RT.block_on(async {
             let directory = tempfile::tempdir().unwrap();
             std::fs::copy("tests/fixtures/noah-v2-schema42.sqlite",directory.path().join("db.sqlite")).unwrap();
-            let config = || serde_json::from_value(serde_json::json!({"server_address":"http://127.0.0.1:3635","bitcoind_address":"http://127.0.0.1:19443","bitcoind_user":"second","bitcoind_pass":"ark"})).unwrap();
+            let config = || serde_json::from_value(serde_json::json!({"server_address":crate::ffi::regtest_url("ARK_PORT", "3635"),"bitcoind_address":crate::ffi::regtest_url("BITCOIN_PORT", "19443"),"bitcoind_user":"second","bitcoind_pass":"ark"})).unwrap();
             let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about".to_string();
             let datadir = directory.path().to_str().unwrap().to_string();
             let onchain = crate::ffi::onchain::OnchainWallet::open_existing(crate::Network::Regtest,mnemonic.clone(),config(),datadir.clone()).await.unwrap();
