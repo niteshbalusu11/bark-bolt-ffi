@@ -138,7 +138,13 @@ def extended(apps):
                          lambda result: result['spendable'] > paid['spendable'])
         payments = rpc('lncli', 'listpayments')['payments']
         assert any(p['payment_hash'] == inbound['paymentHash'] and p['status'] == 'SUCCEEDED' for p in payments)
-        app.command('refresh')
+        # Bark joins a round even when its submit window is nearly over, then fails
+        # when the server closes that round empty. Nothing was spent, so retry.
+        for attempt in range(3):
+            refreshed = app.command('refresh', allow_error=attempt < 2)
+            if refreshed.get('ok'):
+                break
+            assert 'failed by server' in refreshed.get('error', ''), refreshed
         rpc('generate', 6)
         app.command('sync')
         address = rpc('bcli', 'getnewaddress')

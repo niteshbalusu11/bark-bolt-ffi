@@ -459,3 +459,9 @@ New:
 Lightning and Lightning Address sends through `sendPayment` behave like the
 corresponding `pay*` methods. Bark logs, but does not return, the server's
 Lightning failure reason.
+
+Known Bark behavior, unchanged in this release: an interactive refresh that
+starts in the last moments of a round's submit window joins that round. When
+the server closes the round empty, the call fails with `round N failed by
+server`. Nothing is spent; retry the refresh. Apps that open a wallet and
+refresh immediately hit this more often.
