@@ -51,8 +51,8 @@ checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
 name = "ark-lib"
-version = "0.7.1"
-source = "git+https://gitlab.com/ark-bitcoin/bark?rev=bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c#bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c"
+version = "0.8.0"
+source = "git+https://gitlab.com/ark-bitcoin/bark?rev=959a489ff4934b181783b41c7d3ee68d85b95cbf#959a489ff4934b181783b41c7d3ee68d85b95cbf"
 dependencies = [
  "async-trait",
  "bark-bitcoin-ext",
@@ -137,8 +137,8 @@ checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
 name = "bark-bitcoin-ext"
-version = "0.7.1"
-source = "git+https://gitlab.com/ark-bitcoin/bark?rev=bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c#bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c"
+version = "0.8.0"
+source = "git+https://gitlab.com/ark-bitcoin/bark?rev=959a489ff4934b181783b41c7d3ee68d85b95cbf#959a489ff4934b181783b41c7d3ee68d85b95cbf"
 dependencies = [
  "async-trait",
  "bdk_bitcoind_rpc",
@@ -155,7 +155,7 @@ dependencies = [
 
 [[package]]
 name = "bark-bolt-ffi"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "ark-lib",
@@ -180,8 +180,8 @@ dependencies = [
 
 [[package]]
 name = "bark-common"
-version = "0.7.1"
-source = "git+https://gitlab.com/ark-bitcoin/bark?rev=bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c#bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c"
+version = "0.8.0"
+source = "git+https://gitlab.com/ark-bitcoin/bark?rev=959a489ff4934b181783b41c7d3ee68d85b95cbf#959a489ff4934b181783b41c7d3ee68d85b95cbf"
 dependencies = [
  "anyhow",
  "serde",
@@ -190,8 +190,8 @@ dependencies = [
 
 [[package]]
 name = "bark-runtime"
-version = "0.7.1"
-source = "git+https://gitlab.com/ark-bitcoin/bark?rev=bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c#bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c"
+version = "0.8.0"
+source = "git+https://gitlab.com/ark-bitcoin/bark?rev=959a489ff4934b181783b41c7d3ee68d85b95cbf#959a489ff4934b181783b41c7d3ee68d85b95cbf"
 dependencies = [
  "futures",
  "gloo-timers",
@@ -203,8 +203,8 @@ dependencies = [
 
 [[package]]
 name = "bark-server-rpc"
-version = "0.7.1"
-source = "git+https://gitlab.com/ark-bitcoin/bark?rev=bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c#bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c"
+version = "0.8.0"
+source = "git+https://gitlab.com/ark-bitcoin/bark?rev=959a489ff4934b181783b41c7d3ee68d85b95cbf#959a489ff4934b181783b41c7d3ee68d85b95cbf"
 dependencies = [
  "ark-lib",
  "bitcoin",
@@ -221,8 +221,8 @@ dependencies = [
 
 [[package]]
 name = "bark-wallet"
-version = "0.7.1"
-source = "git+https://gitlab.com/ark-bitcoin/bark?rev=bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c#bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c"
+version = "0.8.0"
+source = "git+https://gitlab.com/ark-bitcoin/bark?rev=959a489ff4934b181783b41c7d3ee68d85b95cbf#959a489ff4934b181783b41c7d3ee68d85b95cbf"
 dependencies = [
  "anyhow",
  "ark-lib",
@@ -367,7 +367,7 @@ checksum = "32637268377fc7b10a8c6d51de3e7fba1ce5dd371a96e342b34e6078db558e7f"
 [[package]]
 name = "bip321"
 version = "0.4.0"
-source = "git+https://gitlab.com/ark-bitcoin/bark?rev=bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c#bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c"
+source = "git+https://gitlab.com/ark-bitcoin/bark?rev=959a489ff4934b181783b41c7d3ee68d85b95cbf#959a489ff4934b181783b41c7d3ee68d85b95cbf"
 dependencies = [
  "bark-bitcoin-ext",
  "bitcoin",

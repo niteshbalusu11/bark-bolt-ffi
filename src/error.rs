@@ -17,6 +17,8 @@ pub enum BarkErrorCode {
     BelowMinimumBoardAmount,
     TooManyInputs,
     PreparedBoardChanged,
+    /// The input is no payment string Bark understands.
+    InvalidPaymentRequest,
 }
 
 /// Error message including the complete underlying cause chain.

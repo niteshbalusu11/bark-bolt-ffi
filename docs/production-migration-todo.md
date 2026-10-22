@@ -77,6 +77,18 @@ different claims. Record them separately; do not mark one from evidence of anoth
 
 ## Tasks
 
+### 22 — Bark 0.8.0, Lightning send options, payment requests and BIP 321
+
+- [ ] Pin Bark lib-0.8.0 and the matching RegTest server/CLI images.
+- [ ] Movement ids from arkoor sends, onchain sends and offboards.
+- [ ] LightningSendOptions (wait, retryForSecs) on every Lightning pay method.
+- [ ] parsePaymentRequest with typed option errors, payment fee estimates and sendPayment.
+- [ ] bip321Uri and debugInfo.
+- [ ] Rust/Swift/Kotlin live RegTest, both example apps, hosted CI.
+- [ ] Publish v0.6.0 and notify the Noah rewrite thread.
+
+Engineering plan and affected paths: [Bark 0.8.0 plan](plans/24-bark-0.8.0-payments.md).
+
 ### 21 — Noah prepared boarding, chain status and durable exit listings
 
 - [x] Prepared boarding with exact signed fees and shared onchain reservations.

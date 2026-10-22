@@ -349,14 +349,20 @@ impl Wallet {
     // Lightning (send)
     // ------------------------------------------------------------------------
 
+    /// Pay a BOLT11 invoice. `options` defaults to returning once the payment
+    /// starts, with the server's own retry time.
     pub async fn pay_lightning_invoice(
         &self,
         invoice: String,
         amount_sats: Option<u64>,
-        #[boltffi::default(false)] wait: bool,
+        #[boltffi::default(None)] options: Option<types::LightningSendOptions>,
     ) -> Result<types::LightningSendStatus, BarkError> {
-        self.run(|core| async move { core.pay_lightning_invoice(invoice, amount_sats, wait).await })
-            .await
+        let options = options.unwrap_or_default();
+        self.run(|core| async move {
+            core.pay_lightning_invoice(invoice, amount_sats, options)
+                .await
+        })
+        .await
     }
 
     /// Pay to a Lightning Address (`user@domain`), resolved via LNURL-pay.
@@ -365,10 +371,11 @@ impl Wallet {
         lightning_address: String,
         amount_sats: u64,
         comment: Option<String>,
-        #[boltffi::default(false)] wait: bool,
+        #[boltffi::default(None)] options: Option<types::LightningSendOptions>,
     ) -> Result<types::LightningSendStatus, BarkError> {
+        let options = options.unwrap_or_default();
         self.run(|core| async move {
-            core.pay_lightning_address(lightning_address, amount_sats, comment, wait)
+            core.pay_lightning_address(lightning_address, amount_sats, comment, options)
                 .await
         })
         .await
@@ -383,9 +390,10 @@ impl Wallet {
         lnurl: String,
         amount_sats: u64,
         comment: Option<String>,
-        #[boltffi::default(false)] wait: bool,
+        #[boltffi::default(None)] options: Option<types::LightningSendOptions>,
     ) -> Result<types::LightningSendStatus, BarkError> {
-        self.run(|core| async move { core.pay_lnurl(lnurl, amount_sats, comment, wait).await })
+        let options = options.unwrap_or_default();
+        self.run(|core| async move { core.pay_lnurl(lnurl, amount_sats, comment, options).await })
             .await
     }
 
@@ -393,9 +401,10 @@ impl Wallet {
         &self,
         offer: String,
         amount_sats: Option<u64>,
-        #[boltffi::default(false)] wait: bool,
+        #[boltffi::default(None)] options: Option<types::LightningSendOptions>,
     ) -> Result<types::LightningSendStatus, BarkError> {
-        self.run(|core| async move { core.pay_lightning_offer(offer, amount_sats, wait).await })
+        let options = options.unwrap_or_default();
+        self.run(|core| async move { core.pay_lightning_offer(offer, amount_sats, options).await })
             .await
     }
 
@@ -546,7 +555,8 @@ impl Wallet {
     // Arkoor
     // ------------------------------------------------------------------------
 
-    /// Send an out-of-round payment to an Ark address.
+    /// Send an out-of-round payment to an Ark address. Returns the id of the
+    /// `Movement` that records it.
     ///
     /// An address this bark cannot deliver to (see `validateArkoorAddress`) is
     /// rejected up front, leaving the VTXOs spendable rather than cosigned.
@@ -554,7 +564,7 @@ impl Wallet {
         &self,
         ark_address: String,
         amount_sats: u64,
-    ) -> Result<(), BarkError> {
+    ) -> Result<u32, BarkError> {
         self.run(|core| async move { core.send_arkoor_payment(ark_address, amount_sats).await })
             .await
     }
@@ -572,8 +582,86 @@ impl Wallet {
         &self,
         address: String,
         amount_sats: u64,
-    ) -> Result<String, BarkError> {
+    ) -> Result<types::OffboardResult, BarkError> {
         self.run(|core| async move { core.send_onchain(address, amount_sats).await })
+            .await
+    }
+
+    // ------------------------------------------------------------------------
+    // Payment requests
+    // ------------------------------------------------------------------------
+
+    /// Parse any payment string Bark understands: BIP 321 and `lightning:`
+    /// URIs, BOLT11 invoices, BOLT12 offers, Lightning Addresses, LNURL-pay
+    /// links, Ark addresses, bitcoin addresses and hex output scripts.
+    ///
+    /// Problems with individual options are returned in their `errors`. Fails
+    /// with `BarkErrorCode.invalidPaymentRequest` when nothing parses.
+    pub async fn parse_payment_request(
+        &self,
+        input: String,
+    ) -> Result<types::PaymentRequest, BarkError> {
+        self.run(|core| async move { core.parse_payment_request(input).await })
+            .await
+    }
+
+    /// Estimate the fee of paying `amount_sats` with one method.
+    pub async fn estimate_payment_fee(
+        &self,
+        method: types::PaymentMethod,
+        amount_sats: u64,
+    ) -> Result<types::FeeEstimate, BarkError> {
+        self.run(|core| async move { core.estimate_payment_fee(method, amount_sats).await })
+            .await
+    }
+
+    /// Estimate every option of `request`, cheapest first. `amount_sats`
+    /// defaults to the request's amount; one of them is required.
+    pub async fn estimate_payment_fees(
+        &self,
+        request: types::PaymentRequest,
+        amount_sats: Option<u64>,
+    ) -> Result<Vec<types::PaymentMethodFee>, BarkError> {
+        self.run(|core| async move { core.estimate_payment_fees(request, amount_sats).await })
+            .await
+    }
+
+    /// Pay with one method of a parsed payment request.
+    ///
+    /// Pass `amount_sats` only when the option's `requiresAmount` is set, and
+    /// prefer the request's own `amountSats`. Bark accepts up to twice an
+    /// invoice's amount when one is passed for an invoice that has an amount.
+    /// `comment` is forwarded only when `supportsComment` is set, and
+    /// `options` applies to Lightning methods only.
+    pub async fn send_payment(
+        &self,
+        method: types::PaymentMethod,
+        amount_sats: Option<u64>,
+        #[boltffi::default(None)] comment: Option<String>,
+        #[boltffi::default(None)] options: Option<types::LightningSendOptions>,
+    ) -> Result<types::PaymentResult, BarkError> {
+        let options = options.unwrap_or_default();
+        self.run(|core| async move {
+            core.send_payment(method, amount_sats, comment, options)
+                .await
+        })
+        .await
+    }
+
+    /// Build a BIP 321 URI for receiving, generating a new Ark address, an
+    /// onchain address and a BOLT11 invoice as `options` requests.
+    pub async fn bip321_uri(
+        &self,
+        #[boltffi::default(None)] options: Option<types::Bip321UriOptions>,
+    ) -> Result<types::Bip321Uri, BarkError> {
+        let options = options.unwrap_or_default();
+        self.run(|core| async move { core.bip321_uri(options).await })
+            .await
+    }
+
+    /// Network, mailbox id and VTXO xpub, for support requests.
+    pub async fn debug_info(&self) -> Result<types::DebugInfo, BarkError> {
+        self.run(|core| async move { core.debug_info().await })
             .await
     }
 
@@ -1297,7 +1385,7 @@ mod noah_tests {
         crate::ffi::runtime::TOKIO_RT.block_on(async {
             let directory = tempfile::tempdir().unwrap();
             let fixture: serde_json::Value = serde_json::from_str(include_str!("../../tests/fixtures/nitro-v0.0.144-crypto.json")).unwrap();
-            let config: Config = serde_json::from_value(serde_json::json!({"server_address":"http://127.0.0.1:3635", "bitcoind_address":"http://127.0.0.1:19443","bitcoind_user":"second","bitcoind_pass":"ark"})).unwrap();
+            let config: Config = serde_json::from_value(serde_json::json!({"server_address":crate::ffi::regtest_url("ARK_PORT", "3635"), "bitcoind_address":crate::ffi::regtest_url("BITCOIN_PORT", "19443"),"bitcoind_user":"second","bitcoind_pass":"ark"})).unwrap();
             let wallet = Wallet::open(Network::Regtest, fixture["mnemonic"].as_str().unwrap().into(), config, WalletOpenArgs { run_daemon:false,datadir:directory.path().to_string_lossy().into(),create_if_not_exists:true,create_without_server:true,skip_recovery:true }).await.unwrap();
             assert!(wallet.peek_public_key(0).await.is_err());
             assert!(wallet.sign_message("test".into(),0).await.is_err());
@@ -1373,7 +1461,7 @@ mod noah_p1_tests {
         }
         crate::ffi::runtime::TOKIO_RT.block_on(async {
             let directory = tempfile::tempdir().unwrap();
-            let config: Config = serde_json::from_value(serde_json::json!({"server_address":format!("http://127.0.0.1:{}",port.trim()),"bitcoind_address":"http://127.0.0.1:19443","bitcoind_user":"second","bitcoind_pass":"ark","vtxo_exit_margin":2})).unwrap();
+            let config: Config = serde_json::from_value(serde_json::json!({"server_address":format!("http://127.0.0.1:{}",port.trim()),"bitcoind_address":crate::ffi::regtest_url("BITCOIN_PORT", "19443"),"bitcoind_user":"second","bitcoind_pass":"ark","vtxo_exit_margin":2})).unwrap();
             let mnemonic = crate::generate_mnemonic().unwrap();
             let args = |path: std::path::PathBuf| WalletOpenArgs { run_daemon:false,datadir:path.to_string_lossy().into(),create_if_not_exists:true,create_without_server:true,skip_recovery:true };
             let onchain = OnchainWallet::default(Network::Regtest,mnemonic.clone(),config.clone(),directory.path().to_string_lossy().into()).await.unwrap();
@@ -1433,7 +1521,7 @@ mod noah_p1_tests {
         }
         crate::ffi::runtime::TOKIO_RT.block_on(async {
             let directory = tempfile::tempdir().unwrap();
-            let config: Config = serde_json::from_value(serde_json::json!({"server_address":"http://127.0.0.1:3635","bitcoind_address":"http://127.0.0.1:19443","bitcoind_user":"second","bitcoind_pass":"ark","vtxo_exit_margin":2})).unwrap();
+            let config: Config = serde_json::from_value(serde_json::json!({"server_address":crate::ffi::regtest_url("ARK_PORT", "3635"),"bitcoind_address":crate::ffi::regtest_url("BITCOIN_PORT", "19443"),"bitcoind_user":"second","bitcoind_pass":"ark","vtxo_exit_margin":2})).unwrap();
             let mnemonic = crate::generate_mnemonic().unwrap();
             let onchain = OnchainWallet::default(Network::Regtest,mnemonic.clone(),config.clone(),directory.path().to_string_lossy().into()).await.unwrap();
             let wallet = Wallet::open_with_onchain(Network::Regtest,mnemonic,config.clone(),WalletOpenArgs { run_daemon:false,datadir:directory.path().to_string_lossy().into(),create_if_not_exists:true,create_without_server:true,skip_recovery:true },&onchain).await.unwrap();

@@ -409,3 +409,44 @@ class FullBalanceContractTest {
         } finally { proxy.destroy(); proxy.waitFor(); directory.deleteRecursively() }
     }
 }
+
+class PaymentRequestContractTest {
+    @org.junit.Test(timeout=300000) fun livePaymentRequestsAndLightningOptions() = runBlocking<Unit> {
+        org.junit.Assume.assumeTrue(System.getenv("BARK_REGTEST") == "1")
+        val directory = java.nio.file.Files.createTempDirectory("bark-payments").toFile()
+        val config = Config(serverAddress="http://127.0.0.1:${System.getenv("ARK_PORT") ?: "3635"}",bitcoindAddress="http://127.0.0.1:${System.getenv("BITCOIN_PORT") ?: "19443"}",bitcoindUser="second",bitcoindPass="ark")
+        val mnemonic = generateMnemonic()
+        try {
+            OnchainWallet.default(Network.REGTEST,mnemonic,config,directory.path).use { onchain ->
+                Wallet.openWithOnchain(Network.REGTEST,mnemonic,config,WalletOpenArgs(runDaemon=false,datadir=directory.path,skipRecovery=true),onchain).use { wallet ->
+                    Wallet.open(Network.REGTEST,generateMnemonic(),config,WalletOpenArgs(runDaemon=false,datadir=java.io.File(directory,"recipient").path,skipRecovery=true)).use { recipient ->
+                        regtestCommand("send-to",onchain.newAddress(),"0.005"); onchain.sync()
+                        wallet.boardAmount(200000uL)
+                        regtestCommand("generate","6"); wallet.sync()
+                        val info = wallet.debugInfo()
+                        assertEquals(Network.REGTEST,info.network)
+                        assertEquals(wallet.mailboxIdentifier(),info.mailboxId)
+                        assertEquals(BarkErrorCode.INVALID_PAYMENT_REQUEST,assertFailsWith<BarkError> { wallet.parsePaymentRequest("not a payment") }.code)
+                        val uri = recipient.bip321Uri(Bip321UriOptions(amountSats=3000uL,label="coffee"))
+                        val request = wallet.parsePaymentRequest(uri.uri)
+                        assertEquals(3000uL,request.amountSats)
+                        assertEquals(listOf("invoice","ark"),request.options.map { it.method.methodType })
+                        val option = assertNotNull(request.defaultOption)
+                        assertEquals(uri.arkAddress,option.method.value)
+                        assertEquals(2,wallet.estimatePaymentFees(request,null).size)
+                        val result = assertIs<PaymentResult.Ark>(wallet.sendPayment(option.method,3000uL))
+                        val direct = wallet.sendArkoorPayment(assertNotNull(uri.arkAddress),1000uL)
+                        assertTrue(wallet.history().map { it.id }.containsAll(listOf(result.movementId,direct)))
+                        val mainnet = wallet.parsePaymentRequest("bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq")
+                        assertEquals(listOf<PaymentMethodParsingError>(PaymentMethodParsingError.NetworkMismatch),mainnet.options.first().errors)
+                        regtestCommand("wait-lightning-sync")
+                        val added = regtestCommand("lncli","addinvoice","--amt=2000")
+                        val invoice = assertNotNull(Regex("\"payment_request\":\\s*\"([^\"]+)\"").find(added)).groupValues[1]
+                        val status = wallet.payLightningInvoice(invoice,null,LightningSendOptions(wait=true,retryForSecs=30u))
+                        assertIs<LightningSendStatus.Paid>(status)
+                    }
+                }
+            }
+        } finally { directory.deleteRecursively() }
+    }
+}

@@ -1253,6 +1253,42 @@
       "name": "transaction_status",
       "async": true,
       "source": "src/ffi/onchain.rs"
+    },
+    {
+      "owner": "Wallet",
+      "name": "parse_payment_request",
+      "async": true,
+      "source": "src/ffi/wallet.rs"
+    },
+    {
+      "owner": "Wallet",
+      "name": "estimate_payment_fee",
+      "async": true,
+      "source": "src/ffi/wallet.rs"
+    },
+    {
+      "owner": "Wallet",
+      "name": "estimate_payment_fees",
+      "async": true,
+      "source": "src/ffi/wallet.rs"
+    },
+    {
+      "owner": "Wallet",
+      "name": "send_payment",
+      "async": true,
+      "source": "src/ffi/wallet.rs"
+    },
+    {
+      "owner": "Wallet",
+      "name": "bip321_uri",
+      "async": true,
+      "source": "src/ffi/wallet.rs"
+    },
+    {
+      "owner": "Wallet",
+      "name": "debug_info",
+      "async": true,
+      "source": "src/ffi/wallet.rs"
     }
   ],
   "records": [
@@ -1471,6 +1507,34 @@
     {
       "name": "BoardResult",
       "source": "src/types.rs"
+    },
+    {
+      "name": "LightningSendOptions",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "PaymentOption",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "PaymentRequest",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "PaymentMethodFee",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "Bip321UriOptions",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "Bip321Uri",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "DebugInfo",
+      "source": "src/types.rs"
     }
   ],
   "enums": [
@@ -1549,6 +1613,18 @@
     {
       "name": "TransactionStatus",
       "source": "src/types.rs"
+    },
+    {
+      "name": "ArkAddressError",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "PaymentMethodParsingError",
+      "source": "src/types.rs"
+    },
+    {
+      "name": "PaymentResult",
+      "source": "src/types.rs"
     }
   ],
   "callbacks": [
@@ -1574,7 +1650,7 @@
       ]
     }
   ],
-  "bark_revision": "bfbe6b7c3088a09dd4e81c4ac24cdc763a627a8c",
+  "bark_revision": "959a489ff4934b181783b41c7d3ee68d85b95cbf",
   "nitro_reference": "v0.0.144 (10bcf3ec9325696601de10f833fab747f0a5ec4c)",
   "field_contracts": {
     "StoredPublicKey": [
@@ -1706,6 +1782,32 @@
       "onchain_fee_sats",
       "vsize",
       "inputs"
+    ],
+    "OffboardResult": [
+      "txid",
+      "movement_id"
+    ],
+    "LightningSendOptions": [
+      "wait",
+      "retry_for_secs"
+    ],
+    "PaymentOption": [
+      "method",
+      "errors",
+      "requires_amount",
+      "supports_comment"
+    ],
+    "PaymentRequest": [
+      "amount_sats",
+      "label",
+      "message",
+      "options",
+      "default_option"
+    ],
+    "DebugInfo": [
+      "network",
+      "mailbox_id",
+      "vtxo_xpub"
     ]
   }
 }

@@ -301,10 +301,22 @@ pub struct LightningInvoice {
 // OffboardResult
 // ============================================================================
 
+/// What an offboard or onchain send broadcast, and its history entry.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[boltffi::data]
 pub struct OffboardResult {
     pub txid: String,
+    /// Id of the `Movement` that records this offboard or send.
+    pub movement_id: u32,
+}
+
+impl From<bark::OffboardResult> for OffboardResult {
+    fn from(result: bark::OffboardResult) -> Self {
+        Self {
+            txid: result.txid.to_string(),
+            movement_id: result.movement_id.0,
+        }
+    }
 }
 
 // ============================================================================
@@ -1816,6 +1828,41 @@ mod tests {
         assert!(args.skip_status_check);
         assert!(args.allow_partial);
     }
+
+    #[test]
+    fn lightning_send_options_are_forwarded() {
+        let default: bark::LightningSendOptions = LightningSendOptions::default().into();
+        assert!(!default.wait);
+        assert_eq!(default.retry_for, None);
+        let single: bark::LightningSendOptions = LightningSendOptions {
+            wait: true,
+            retry_for_secs: Some(0),
+        }
+        .into();
+        assert!(single.wait);
+        assert_eq!(single.retry_for, Some(std::time::Duration::ZERO));
+    }
+
+    #[test]
+    fn payment_methods_round_trip() {
+        let address = "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq";
+        let method = PaymentMethod {
+            method_type: "bitcoin".into(),
+            value: address.into(),
+        };
+        let upstream = bark::movement::PaymentMethod::try_from(method).unwrap();
+        assert!(upstream.is_bitcoin() && upstream.requires_amount());
+        let back = PaymentMethod::from(&upstream);
+        assert_eq!(
+            (back.method_type.as_str(), back.value.as_str()),
+            ("bitcoin", address)
+        );
+        let unknown = PaymentMethod {
+            method_type: "carrier-pigeon".into(),
+            value: address.into(),
+        };
+        assert!(bark::movement::PaymentMethod::try_from(unknown).is_err());
+    }
     use std::str::FromStr;
 
     fn txid(byte: u8) -> bitcoin::Txid {
@@ -2332,16 +2379,271 @@ pub struct MovementDestination {
     pub amount_sats: u64,
 }
 
+impl From<&bark::movement::PaymentMethod> for PaymentMethod {
+    fn from(method: &bark::movement::PaymentMethod) -> Self {
+        Self {
+            method_type: method.type_str().into(),
+            value: method.value_string(),
+        }
+    }
+}
+
+impl TryFrom<PaymentMethod> for bark::movement::PaymentMethod {
+    type Error = crate::BarkError;
+
+    fn try_from(method: PaymentMethod) -> Result<Self, Self::Error> {
+        Ok(Self::from_type_value(&method.method_type, &method.value)?)
+    }
+}
+
 impl From<&bark::movement::MovementDestination> for MovementDestination {
     fn from(destination: &bark::movement::MovementDestination) -> Self {
         Self {
-            payment_method: PaymentMethod {
-                method_type: destination.destination.type_str().into(),
-                value: destination.destination.value_string(),
-            },
+            payment_method: (&destination.destination).into(),
             amount_sats: destination.amount.to_sat(),
         }
     }
+}
+
+// ============================================================================
+// Lightning send options and payment requests
+// ============================================================================
+
+/// Options for a Lightning payment, mirroring `bark::LightningSendOptions`.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[boltffi::data]
+pub struct LightningSendOptions {
+    /// Keep the call open until the payment settles or fails, instead of
+    /// returning once it has started.
+    ///
+    /// Default: false
+    #[boltffi::default(false)]
+    pub wait: bool,
+    /// Seconds the server keeps trying to pay. The server caps it at its
+    /// maximum (5 minutes by default); 0 makes a single attempt.
+    ///
+    /// Default: unset, the server's own retry time
+    #[boltffi::default(None)]
+    pub retry_for_secs: Option<u32>,
+}
+
+impl From<LightningSendOptions> for bark::LightningSendOptions {
+    fn from(options: LightningSendOptions) -> Self {
+        Self::default().wait(options.wait).retry_for(
+            options
+                .retry_for_secs
+                .map(|secs| std::time::Duration::from_secs(secs.into())),
+        )
+    }
+}
+
+/// Why an Ark address cannot receive an arkoor payment from this wallet.
+/// Mirrors `bark::ArkoorAddressError`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[boltffi::data]
+pub enum ArkAddressError {
+    NetworkMismatch,
+    /// Another Ark server's address, including Arkade addresses.
+    ServerMismatch,
+    PolicyNotSupported {
+        policy: String,
+    },
+    UnknownDeliveryMechanism {
+        mechanism: String,
+    },
+    Other {
+        message: String,
+    },
+}
+
+impl From<&bark::ArkoorAddressError> for ArkAddressError {
+    fn from(error: &bark::ArkoorAddressError) -> Self {
+        use bark::ArkoorAddressError as E;
+        match error {
+            E::NetworkMismatch => Self::NetworkMismatch,
+            E::ServerMismatch => Self::ServerMismatch,
+            E::PolicyNotSupported(policy) => Self::PolicyNotSupported {
+                policy: policy.policy_type().to_string(),
+            },
+            E::UnknownDeliveryMechanism(mechanism) => Self::UnknownDeliveryMechanism {
+                mechanism: mechanism.clone(),
+            },
+            E::Other(message) => Self::Other {
+                message: message.clone(),
+            },
+        }
+    }
+}
+
+/// A problem with one option of a parsed payment request.
+/// Mirrors `bark::PaymentMethodParsingError`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[boltffi::data]
+pub enum PaymentMethodParsingError {
+    /// The destination is for another bitcoin network.
+    NetworkMismatch,
+    InvalidArkAddress {
+        error: ArkAddressError,
+    },
+    /// The URI amount differs from the amount the destination encodes.
+    AmountMismatch {
+        expected_sats: u64,
+        got_sats: u64,
+    },
+    InvalidAmount,
+    Unsupported,
+}
+
+impl From<&bark::PaymentMethodParsingError> for PaymentMethodParsingError {
+    fn from(error: &bark::PaymentMethodParsingError) -> Self {
+        use bark::PaymentMethodParsingError as E;
+        match error {
+            E::NetworkMismatch => Self::NetworkMismatch,
+            E::InvalidArkAddress(error) => Self::InvalidArkAddress {
+                error: error.into(),
+            },
+            E::AmountMismatch { expected, got } => Self::AmountMismatch {
+                expected_sats: expected.to_sat(),
+                got_sats: got.to_sat(),
+            },
+            E::InvalidAmount => Self::InvalidAmount,
+            E::Unsupported => Self::Unsupported,
+        }
+    }
+}
+
+/// One way to pay a parsed payment request.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[boltffi::data]
+pub struct PaymentOption {
+    pub method: PaymentMethod,
+    /// Problems with this option; it is usable only when empty.
+    pub errors: Vec<PaymentMethodParsingError>,
+    /// The destination carries no amount, so `send_payment` needs one.
+    pub requires_amount: bool,
+    /// `send_payment` forwards a comment (Lightning Address and LNURL).
+    pub supports_comment: bool,
+}
+
+impl From<&bark::AvailablePaymentMethod> for PaymentOption {
+    fn from(option: &bark::AvailablePaymentMethod) -> Self {
+        Self {
+            method: (&option.method).into(),
+            errors: option.errors.iter().map(Into::into).collect(),
+            requires_amount: option.method.requires_amount(),
+            supports_comment: option.method.supports_comment(),
+        }
+    }
+}
+
+/// A parsed payment string. Mirrors `bark::PaymentRequest`.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[boltffi::data]
+pub struct PaymentRequest {
+    pub amount_sats: Option<u64>,
+    pub label: Option<String>,
+    pub message: Option<String>,
+    pub options: Vec<PaymentOption>,
+    /// Bark's choice when the caller doesn't pick: the first error-free Ark,
+    /// then Lightning, then onchain option.
+    pub default_option: Option<PaymentOption>,
+}
+
+impl From<bark::PaymentRequest> for PaymentRequest {
+    fn from(request: bark::PaymentRequest) -> Self {
+        Self {
+            amount_sats: request.amount.map(|a| a.to_sat()),
+            default_option: request.default_option().map(Into::into),
+            options: request.options.iter().map(Into::into).collect(),
+            label: request.label,
+            message: request.message,
+        }
+    }
+}
+
+/// Estimated fee for paying with one method.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[boltffi::data]
+pub struct PaymentMethodFee {
+    pub method: PaymentMethod,
+    pub fee: FeeEstimate,
+}
+
+/// Outcome of `Wallet::send_payment`.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[boltffi::data]
+pub enum PaymentResult {
+    /// The onchain send was broadcast.
+    Onchain { txid: String, movement_id: u32 },
+    /// The Lightning payment's state after it started, or after it settled
+    /// or failed when `wait` is set.
+    Lightning { status: LightningSendStatus },
+    /// The arkoor payment completed.
+    Ark { movement_id: u32 },
+}
+
+/// What `Wallet::bip321_uri` includes. Mirrors bark's `BarkBip321UriBuilder`.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[boltffi::data]
+pub struct Bip321UriOptions {
+    #[boltffi::default(None)]
+    pub amount_sats: Option<u64>,
+    #[boltffi::default(None)]
+    pub label: Option<String>,
+    #[boltffi::default(None)]
+    pub message: Option<String>,
+    /// Include a new Ark address.
+    ///
+    /// Default: true
+    #[boltffi::default(true)]
+    pub ark: bool,
+    /// Include a new address from the attached onchain wallet. Skipped when
+    /// the wallet has no onchain wallet.
+    ///
+    /// Default: true
+    #[boltffi::default(true)]
+    pub onchain: bool,
+    /// Include a BOLT11 invoice for `amount_sats`. Skipped without an amount.
+    ///
+    /// Default: true
+    #[boltffi::default(true)]
+    pub lightning: bool,
+}
+
+impl Default for Bip321UriOptions {
+    fn default() -> Self {
+        Self {
+            amount_sats: None,
+            label: None,
+            message: None,
+            ark: true,
+            onchain: true,
+            lightning: true,
+        }
+    }
+}
+
+/// A BIP 321 payment URI and the destinations generated for it.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[boltffi::data]
+pub struct Bip321Uri {
+    pub uri: String,
+    pub ark_address: Option<String>,
+    pub onchain_address: Option<String>,
+    /// A pending Lightning receive, like one from `bolt11_invoice`.
+    pub invoice: Option<LightningInvoice>,
+}
+
+/// Wallet identifiers to share in support requests. Mirrors `bark::DebugInfo`.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[boltffi::data]
+pub struct DebugInfo {
+    pub network: Network,
+    /// Hex-encoded server mailbox id, as returned by `mailbox_identifier`.
+    pub mailbox_id: String,
+    /// The xpub every VTXO key derives from. It reveals the wallet's VTXO
+    /// public keys but cannot spend.
+    pub vtxo_xpub: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

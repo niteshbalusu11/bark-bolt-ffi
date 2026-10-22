@@ -84,6 +84,15 @@ lnd_at_tip() {
     lncli getinfo | jq -e --argjson tip "$tip" '.synced_to_chain and .block_height == $tip'
 }
 
+# CLN offers HTLCs from its own height; paying before it reaches the tip after a
+# large mine can give an HTLC an already-passed deadline and force-close the channel.
+lightning_at_tip() {
+    local tip
+    tip=$(bitcoin getblockcount)
+    lncli getinfo | jq -e --argjson tip "$tip" '.synced_to_chain and .block_height == $tip' >/dev/null &&
+        cln getinfo | jq -e --argjson tip "$tip" '.blockheight == $tip'
+}
+
 lnd_funded() { lncli walletbalance | jq -e '.confirmed_balance | tonumber >= 2000000'; }
 
 channel_active() {
@@ -158,6 +167,7 @@ Usage: scripts/ark-dev.sh COMMAND [ARGS...]
   send-to ADDRESS BTC_AMOUNT  Fund an address and mine one block
   fund-aspd BTC_AMOUNT        Fund the Ark server and mine one block
   setup-lightning-channels    Reuse/create the LND-to-CLN channel
+  wait-lightning-sync         Wait until LND and CLN reach the Bitcoin tip
   bcli | aspd | bark | lncli | cln [ARGS...]  Run the corresponding CLI
 
 Ordinary down preserves volumes. COMPOSE_PROJECT_NAME, BITCOIN_PORT and ARK_PORT
@@ -180,6 +190,7 @@ case "$command" in
     send-to) send_to_address "$@" ;;
     fund-aspd) fund_aspd "$@" ;;
     setup-lightning-channels) setup_lightning_channels ;;
+    wait-lightning-sync) wait_for 'Lightning chain sync' lightning_at_tip >/dev/null ;;
     bcli|aspd|bark|lncli|cln) "$command" "$@" ;;
     *) usage >&2; die "Unknown command: $command" ;;
 esac
