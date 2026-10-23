@@ -24,14 +24,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: sudo apt-get update && sudo apt-get install -y protobuf-compiler cmake pkg-config libssl-dev just jq shellcheck
       - run: rustup toolchain install 1.90.0 --profile minimal --component rustfmt,clippy
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # Restore everywhere, save only from main: PR and tag entries are unreadable elsewhere and evict main's.
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: rust-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
-          restore-keys: rust-${{ runner.os }}-
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: python3 scripts/swift-artifact.py
       - if: github.ref_type == 'tag'
         run: python3 scripts/swift-artifact.py --check-source
@@ -59,20 +55,28 @@ jobs:
           cmdline-tools-version: '11076708'
           packages: 'platform-tools'
       - run: sdkmanager 'ndk;28.2.13676358' 'platforms;android-35' 'build-tools;35.0.0'
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # Restore everywhere, save only from main: PR and tag entries are unreadable elsewhere and evict main's.
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
             ~/.gradle/caches
             ~/.gradle/wrapper
-            target
-          key: android-${{ runner.os }}-${{ hashFiles('Cargo.lock', '**/*.gradle.kts') }}
-          restore-keys: android-${{ runner.os }}-
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
       - run: scripts/install-boltffi.sh
       - run: BOLTFFI="$PWD/target/tools/boltffi" just build-android --release
       - run: target/tools/boltffi generate swift --deny-skipped && python3 scripts/check-api.py
       - run: ./gradlew :sdk:android:assembleRelease :sdk:android:generatePomFileForReleasePublication :sdk:jvm:test :sdk:jvm:jar :sdk:jvm:generatePomFileForJvmPublication :sdk:jvm:testPackaged :examples:android:assembleRelease :examples:android:assembleDebug :examples:android:assembleDebugAndroidTest
+      - if: github.ref == 'refs/heads/main'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
       - name: Check every Android shared library supports 16 KB pages
         run: python3 scripts/check-android-alignment.py
       - run: python3 scripts/check-kotlin-artifacts.py
@@ -120,14 +124,10 @@ jobs:
       - run: rustup target add aarch64-apple-ios aarch64-apple-ios-sim aarch64-apple-darwin
       - if: github.event_name != 'pull_request'
         run: rustup target add x86_64-apple-ios x86_64-apple-darwin
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # Restore everywhere, save only from main: PR and tag entries are unreadable elsewhere and evict main's.
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: apple-${{ runner.arch }}-${{ hashFiles('Cargo.lock') }}
-          restore-keys: apple-${{ runner.arch }}-
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: scripts/install-boltffi.sh
       - run: BOLTFFI="$PWD/target/tools/boltffi" just build-ios --release
       - run: python3 scripts/swift-artifact.py --check-build

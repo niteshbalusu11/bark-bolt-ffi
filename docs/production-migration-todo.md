@@ -79,6 +79,13 @@ different claims. Record them separately; do not mark one from evidence of anoth
 
 ## Tasks
 
+### 23 — CI caches shared from main
+
+- [ ] Rust dependency caches via rust-cache and Gradle caches, saved only from main.
+- [ ] PR CI green; main saves; a warm main rerun shows the restore and build-time effect.
+
+Engineering plan and findings: [CI caches](plans/25-ci-caches.md).
+
 ### 22 — Bark 0.8.0, Lightning send options, payment requests and BIP 321
 
 - [x] Pin Bark lib-0.8.0 and the matching RegTest server/CLI images.
