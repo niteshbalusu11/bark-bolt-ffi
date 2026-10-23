@@ -511,19 +511,24 @@ public struct LightningInvoice: Hashable, Equatable, Sendable {
     }
 }
 
+/// What an offboard or onchain send broadcast, and its history entry.
 public struct OffboardResult: Hashable, Equatable, Sendable {
     public var txid: String
+    /// Id of the `Movement` that records this offboard or send.
+    public var movementId: UInt32
 
-    public init(txid: String) {
+    public init(txid: String, movementId: UInt32) {
         self.txid = txid
+        self.movementId = movementId
     }
 
     @inlinable static func decode(from reader: inout WireReader) -> OffboardResult {
-        OffboardResult(txid: reader.readString())
+        OffboardResult(txid: reader.readString(), movementId: reader.readU32())
     }
 
     @inlinable func encode(to writer: inout WireWriter) {
         writer.writeString(self.txid)
+        writer.writeU32(self.movementId)
     }
 }
 
@@ -1972,6 +1977,255 @@ public struct MovementDestination: Hashable, Equatable, Sendable {
     }
 }
 
+/// Options for a Lightning payment, mirroring `bark::LightningSendOptions`.
+public struct LightningSendOptions: Hashable, Equatable, Sendable {
+    /// Keep the call open until the payment settles or fails, instead of
+    /// returning once it has started.
+    ///
+    /// Default: false
+    public var wait: Bool
+    /// Seconds the server keeps trying to pay. The server caps it at its
+    /// maximum (5 minutes by default); 0 makes a single attempt.
+    ///
+    /// Default: unset, the server's own retry time
+    public var retryForSecs: UInt32?
+
+    public init(wait: Bool = false, retryForSecs: UInt32? = nil) {
+        self.wait = wait
+        self.retryForSecs = retryForSecs
+    }
+
+    @inlinable static func decode(from reader: inout WireReader) -> LightningSendOptions {
+        LightningSendOptions(wait: reader.readBool(), retryForSecs: reader.readOptional { reader in reader.readU32() })
+    }
+
+    @inlinable func encode(to writer: inout WireWriter) {
+        writer.writeBool(self.wait)
+        writer.writeOptional(self.retryForSecs) { writer, boltffiValue0 in writer.writeU32(boltffiValue0) }
+    }
+}
+
+/// One way to pay a parsed payment request.
+public struct PaymentOption: Hashable, Equatable, Sendable {
+    public var method: PaymentMethod
+    /// Problems with this option; it is usable only when empty.
+    public var errors: [PaymentMethodParsingError]
+    /// The destination carries no amount, so `send_payment` needs one.
+    public var requiresAmount: Bool
+    /// `send_payment` forwards a comment (Lightning Address and LNURL).
+    public var supportsComment: Bool
+
+    public init(
+        method: PaymentMethod,
+        errors: [PaymentMethodParsingError],
+        requiresAmount: Bool,
+        supportsComment: Bool
+    ) {
+        self.method = method
+        self.errors = errors
+        self.requiresAmount = requiresAmount
+        self.supportsComment = supportsComment
+    }
+
+    @inlinable static func decode(from reader: inout WireReader) -> PaymentOption {
+        PaymentOption(
+            method: PaymentMethod.decode(from: &reader),
+            errors: reader.readArray { reader in PaymentMethodParsingError.decode(from: &reader) },
+            requiresAmount: reader.readBool(),
+            supportsComment: reader.readBool()
+        )
+    }
+
+    @inlinable func encode(to writer: inout WireWriter) {
+        self.method.encode(to: &writer)
+        writer.writeArray(self.errors) { writer, boltffiValue0 in boltffiValue0.encode(to: &writer) }
+        writer.writeBool(self.requiresAmount)
+        writer.writeBool(self.supportsComment)
+    }
+}
+
+/// A parsed payment string. Mirrors `bark::PaymentRequest`.
+public struct PaymentRequest: Hashable, Equatable, Sendable {
+    public var amountSats: UInt64?
+    public var label: String?
+    public var message: String?
+    public var options: [PaymentOption]
+    /// Bark's choice when the caller doesn't pick: the first error-free Ark,
+    /// then Lightning, then onchain option.
+    public var defaultOption: PaymentOption?
+
+    public init(
+        amountSats: UInt64?,
+        label: String?,
+        message: String?,
+        options: [PaymentOption],
+        defaultOption: PaymentOption?
+    ) {
+        self.amountSats = amountSats
+        self.label = label
+        self.message = message
+        self.options = options
+        self.defaultOption = defaultOption
+    }
+
+    @inlinable static func decode(from reader: inout WireReader) -> PaymentRequest {
+        PaymentRequest(
+            amountSats: reader.readOptional { reader in reader.readU64() },
+            label: reader.readOptional { reader in reader.readString() },
+            message: reader.readOptional { reader in reader.readString() },
+            options: reader.readArray { reader in PaymentOption.decode(from: &reader) },
+            defaultOption: reader.readOptional { reader in PaymentOption.decode(from: &reader) }
+        )
+    }
+
+    @inlinable func encode(to writer: inout WireWriter) {
+        writer.writeOptional(self.amountSats) { writer, boltffiValue0 in writer.writeU64(boltffiValue0) }
+        writer.writeOptional(self.label) { writer, boltffiValue0 in writer.writeString(boltffiValue0) }
+        writer.writeOptional(self.message) { writer, boltffiValue0 in writer.writeString(boltffiValue0) }
+        writer.writeArray(self.options) { writer, boltffiValue0 in boltffiValue0.encode(to: &writer) }
+        writer.writeOptional(self.defaultOption) { writer, boltffiValue0 in boltffiValue0.encode(to: &writer) }
+    }
+}
+
+/// Estimated fee for paying with one method.
+public struct PaymentMethodFee: Hashable, Equatable, Sendable {
+    public var method: PaymentMethod
+    public var fee: FeeEstimate
+
+    public init(method: PaymentMethod, fee: FeeEstimate) {
+        self.method = method
+        self.fee = fee
+    }
+
+    @inlinable static func decode(from reader: inout WireReader) -> PaymentMethodFee {
+        PaymentMethodFee(method: PaymentMethod.decode(from: &reader), fee: FeeEstimate.decode(from: &reader))
+    }
+
+    @inlinable func encode(to writer: inout WireWriter) {
+        self.method.encode(to: &writer)
+        self.fee.encode(to: &writer)
+    }
+}
+
+/// What `Wallet::bip321_uri` includes. Mirrors bark's `BarkBip321UriBuilder`.
+public struct Bip321UriOptions: Hashable, Equatable, Sendable {
+    public var amountSats: UInt64?
+    public var label: String?
+    public var message: String?
+    /// Include a new Ark address.
+    ///
+    /// Default: true
+    public var ark: Bool
+    /// Include a new address from the attached onchain wallet. Skipped when
+    /// the wallet has no onchain wallet.
+    ///
+    /// Default: true
+    public var onchain: Bool
+    /// Include a BOLT11 invoice for `amount_sats`. Skipped without an amount.
+    ///
+    /// Default: true
+    public var lightning: Bool
+
+    public init(
+        amountSats: UInt64? = nil,
+        label: String? = nil,
+        message: String? = nil,
+        ark: Bool = true,
+        onchain: Bool = true,
+        lightning: Bool = true
+    ) {
+        self.amountSats = amountSats
+        self.label = label
+        self.message = message
+        self.ark = ark
+        self.onchain = onchain
+        self.lightning = lightning
+    }
+
+    @inlinable static func decode(from reader: inout WireReader) -> Bip321UriOptions {
+        Bip321UriOptions(
+            amountSats: reader.readOptional { reader in reader.readU64() },
+            label: reader.readOptional { reader in reader.readString() },
+            message: reader.readOptional { reader in reader.readString() },
+            ark: reader.readBool(),
+            onchain: reader.readBool(),
+            lightning: reader.readBool()
+        )
+    }
+
+    @inlinable func encode(to writer: inout WireWriter) {
+        writer.writeOptional(self.amountSats) { writer, boltffiValue0 in writer.writeU64(boltffiValue0) }
+        writer.writeOptional(self.label) { writer, boltffiValue0 in writer.writeString(boltffiValue0) }
+        writer.writeOptional(self.message) { writer, boltffiValue0 in writer.writeString(boltffiValue0) }
+        writer.writeBool(self.ark)
+        writer.writeBool(self.onchain)
+        writer.writeBool(self.lightning)
+    }
+}
+
+/// A BIP 321 payment URI and the destinations generated for it.
+public struct Bip321Uri: Hashable, Equatable, Sendable {
+    public var uri: String
+    public var arkAddress: String?
+    public var onchainAddress: String?
+    /// A pending Lightning receive, like one from `bolt11_invoice`.
+    public var invoice: LightningInvoice?
+
+    public init(
+        uri: String,
+        arkAddress: String?,
+        onchainAddress: String?,
+        invoice: LightningInvoice?
+    ) {
+        self.uri = uri
+        self.arkAddress = arkAddress
+        self.onchainAddress = onchainAddress
+        self.invoice = invoice
+    }
+
+    @inlinable static func decode(from reader: inout WireReader) -> Bip321Uri {
+        Bip321Uri(
+            uri: reader.readString(),
+            arkAddress: reader.readOptional { reader in reader.readString() },
+            onchainAddress: reader.readOptional { reader in reader.readString() },
+            invoice: reader.readOptional { reader in LightningInvoice.decode(from: &reader) }
+        )
+    }
+
+    @inlinable func encode(to writer: inout WireWriter) {
+        writer.writeString(self.uri)
+        writer.writeOptional(self.arkAddress) { writer, boltffiValue0 in writer.writeString(boltffiValue0) }
+        writer.writeOptional(self.onchainAddress) { writer, boltffiValue0 in writer.writeString(boltffiValue0) }
+        writer.writeOptional(self.invoice) { writer, boltffiValue0 in boltffiValue0.encode(to: &writer) }
+    }
+}
+
+/// Wallet identifiers to share in support requests. Mirrors `bark::DebugInfo`.
+public struct DebugInfo: Hashable, Equatable, Sendable {
+    public var network: Network
+    /// Hex-encoded server mailbox id, as returned by `mailbox_identifier`.
+    public var mailboxId: String
+    /// The xpub every VTXO key derives from. It reveals the wallet's VTXO
+    /// public keys but cannot spend.
+    public var vtxoXpub: String
+
+    public init(network: Network, mailboxId: String, vtxoXpub: String) {
+        self.network = network
+        self.mailboxId = mailboxId
+        self.vtxoXpub = vtxoXpub
+    }
+
+    @inlinable static func decode(from reader: inout WireReader) -> DebugInfo {
+        DebugInfo(network: Network(rawValue: reader.readI32())!, mailboxId: reader.readString(), vtxoXpub: reader.readString())
+    }
+
+    @inlinable func encode(to writer: inout WireWriter) {
+        writer.writeI32(self.network.rawValue)
+        writer.writeString(self.mailboxId)
+        writer.writeString(self.vtxoXpub)
+    }
+}
+
 public struct ParsedArkAddress: Hashable, Equatable, Sendable {
     public var userPubkey: String?
     public var arkId: String
@@ -2128,6 +2382,8 @@ public enum BarkErrorCode: Int32, Hashable, Sendable, CaseIterable {
     case belowMinimumBoardAmount = 10
     case tooManyInputs = 11
     case preparedBoardChanged = 12
+    /// The input is no payment string Bark understands.
+    case invalidPaymentRequest = 13
 
     @usableFromInline init(fromC c: Int32) {
         self = BarkErrorCode(rawValue: c)!
@@ -2800,6 +3056,141 @@ public enum WalletNotification: Hashable, Equatable, Sendable {
             movement.encode(to: &writer)
         case .channelLagging:
             writer.writeU32(2)
+        }
+    }
+}
+
+/// Why an Ark address cannot receive an arkoor payment from this wallet.
+/// Mirrors `bark::ArkoorAddressError`.
+public enum ArkAddressError: Hashable, Equatable, Sendable {
+    case networkMismatch
+    /// Another Ark server's address, including Arkade addresses.
+    case serverMismatch
+    case policyNotSupported(policy: String)
+    case unknownDeliveryMechanism(mechanism: String)
+    case other(message: String)
+
+    @inlinable static func decode(from reader: inout WireReader) -> ArkAddressError {
+        let tag = reader.readU32()
+        switch tag {
+        case 0:
+            return .networkMismatch
+        case 1:
+            return .serverMismatch
+        case 2:
+            return .policyNotSupported(policy: reader.readString())
+        case 3:
+            return .unknownDeliveryMechanism(mechanism: reader.readString())
+        case 4:
+            return .other(message: reader.readString())
+        default:
+            fatalError("Invalid ArkAddressError tag: \(tag)")
+        }
+    }
+
+    @inlinable func encode(to writer: inout WireWriter) {
+        switch self {
+        case .networkMismatch:
+            writer.writeU32(0)
+        case .serverMismatch:
+            writer.writeU32(1)
+        case let .policyNotSupported(policy):
+            writer.writeU32(2)
+            writer.writeString(policy)
+        case let .unknownDeliveryMechanism(mechanism):
+            writer.writeU32(3)
+            writer.writeString(mechanism)
+        case let .other(message):
+            writer.writeU32(4)
+            writer.writeString(message)
+        }
+    }
+}
+
+/// A problem with one option of a parsed payment request.
+/// Mirrors `bark::PaymentMethodParsingError`.
+public enum PaymentMethodParsingError: Hashable, Equatable, Sendable {
+    /// The destination is for another bitcoin network.
+    case networkMismatch
+    case invalidArkAddress(error: ArkAddressError)
+    /// The URI amount differs from the amount the destination encodes.
+    case amountMismatch(expectedSats: UInt64, gotSats: UInt64)
+    case invalidAmount
+    case unsupported
+
+    @inlinable static func decode(from reader: inout WireReader) -> PaymentMethodParsingError {
+        let tag = reader.readU32()
+        switch tag {
+        case 0:
+            return .networkMismatch
+        case 1:
+            return .invalidArkAddress(error: ArkAddressError.decode(from: &reader))
+        case 2:
+            return .amountMismatch(expectedSats: reader.readU64(), gotSats: reader.readU64())
+        case 3:
+            return .invalidAmount
+        case 4:
+            return .unsupported
+        default:
+            fatalError("Invalid PaymentMethodParsingError tag: \(tag)")
+        }
+    }
+
+    @inlinable func encode(to writer: inout WireWriter) {
+        switch self {
+        case .networkMismatch:
+            writer.writeU32(0)
+        case let .invalidArkAddress(error):
+            writer.writeU32(1)
+            error.encode(to: &writer)
+        case let .amountMismatch(expectedSats, gotSats):
+            writer.writeU32(2)
+            writer.writeU64(expectedSats)
+            writer.writeU64(gotSats)
+        case .invalidAmount:
+            writer.writeU32(3)
+        case .unsupported:
+            writer.writeU32(4)
+        }
+    }
+}
+
+/// Outcome of `Wallet::send_payment`.
+public enum PaymentResult: Hashable, Equatable, Sendable {
+    /// The onchain send was broadcast.
+    case onchain(txid: String, movementId: UInt32)
+    /// The Lightning payment's state after it started, or after it settled
+    /// or failed when `wait` is set.
+    case lightning(status: LightningSendStatus)
+    /// The arkoor payment completed.
+    case ark(movementId: UInt32)
+
+    @inlinable static func decode(from reader: inout WireReader) -> PaymentResult {
+        let tag = reader.readU32()
+        switch tag {
+        case 0:
+            return .onchain(txid: reader.readString(), movementId: reader.readU32())
+        case 1:
+            return .lightning(status: LightningSendStatus.decode(from: &reader))
+        case 2:
+            return .ark(movementId: reader.readU32())
+        default:
+            fatalError("Invalid PaymentResult tag: \(tag)")
+        }
+    }
+
+    @inlinable func encode(to writer: inout WireWriter) {
+        switch self {
+        case let .onchain(txid, movementId):
+            writer.writeU32(0)
+            writer.writeString(txid)
+            writer.writeU32(movementId)
+        case let .lightning(status):
+            writer.writeU32(1)
+            status.encode(to: &writer)
+        case let .ark(movementId):
+            writer.writeU32(2)
+            writer.writeU32(movementId)
         }
     }
 }
@@ -4162,19 +4553,25 @@ public final class Wallet {
         }
     }
 
-    public func payLightningInvoice(invoice: String, amountSats: UInt64?, wait: Bool = false) async throws -> LightningSendStatus {
+    /// Pay a BOLT11 invoice. `options` defaults to returning once the payment
+    /// starts, with the server's own retry time.
+    public func payLightningInvoice(invoice: String, amountSats: UInt64?, options: LightningSendOptions? = nil) async throws -> LightningSendStatus {
         let boltffiInvoiceBytes = boltffiEncode { boltffiInvoiceWriter in boltffiInvoiceWriter.writeString(invoice) }
         let boltffiFuture = boltffiInvoiceBytes.withUnsafeBufferPointer { boltffiInvoiceBuffer in
             let boltffiAmountSatsBytes = boltffiEncode { boltffiAmountSatsWriter in boltffiAmountSatsWriter.writeOptional(amountSats) { writer, value in writer.writeU64(value) } }
             return boltffiAmountSatsBytes.withUnsafeBufferPointer { boltffiAmountSatsBuffer in
-                return boltffi_method_class_bark_bolt_ffi_ffi_wallet_wallet_pay_lightning_invoice(
-                    self.handle,
-                    boltffiInvoiceBuffer.baseAddress!,
-                    UInt(boltffiInvoiceBuffer.count),
-                    boltffiAmountSatsBuffer.baseAddress!,
-                    UInt(boltffiAmountSatsBuffer.count),
-                    wait
-                )
+                let boltffiOptionsBytes = boltffiEncode { boltffiOptionsWriter in boltffiOptionsWriter.writeOptional(options) { boltffiOptionsWriter, boltffiValue0 in boltffiValue0.encode(to: &boltffiOptionsWriter) } }
+                return boltffiOptionsBytes.withUnsafeBufferPointer { boltffiOptionsBuffer in
+                    return boltffi_method_class_bark_bolt_ffi_ffi_wallet_wallet_pay_lightning_invoice(
+                        self.handle,
+                        boltffiInvoiceBuffer.baseAddress!,
+                        UInt(boltffiInvoiceBuffer.count),
+                        boltffiAmountSatsBuffer.baseAddress!,
+                        UInt(boltffiAmountSatsBuffer.count),
+                        boltffiOptionsBuffer.baseAddress!,
+                        UInt(boltffiOptionsBuffer.count)
+                    )
+                }
             }
         }
         return try await boltffiAsyncCall(
@@ -4203,21 +4600,25 @@ public final class Wallet {
         lightningAddress: String,
         amountSats: UInt64,
         comment: String?,
-        wait: Bool = false
+        options: LightningSendOptions? = nil
     ) async throws -> LightningSendStatus {
         let boltffiLightningAddressBytes = boltffiEncode { boltffiLightningAddressWriter in boltffiLightningAddressWriter.writeString(lightningAddress) }
         let boltffiFuture = boltffiLightningAddressBytes.withUnsafeBufferPointer { boltffiLightningAddressBuffer in
             let boltffiCommentBytes = boltffiEncode { boltffiCommentWriter in boltffiCommentWriter.writeOptional(comment) { boltffiCommentWriter, boltffiValue0 in boltffiCommentWriter.writeString(boltffiValue0) } }
             return boltffiCommentBytes.withUnsafeBufferPointer { boltffiCommentBuffer in
-                return boltffi_method_class_bark_bolt_ffi_ffi_wallet_wallet_pay_lightning_address(
-                    self.handle,
-                    boltffiLightningAddressBuffer.baseAddress!,
-                    UInt(boltffiLightningAddressBuffer.count),
-                    amountSats,
-                    boltffiCommentBuffer.baseAddress!,
-                    UInt(boltffiCommentBuffer.count),
-                    wait
-                )
+                let boltffiOptionsBytes = boltffiEncode { boltffiOptionsWriter in boltffiOptionsWriter.writeOptional(options) { boltffiOptionsWriter, boltffiValue0 in boltffiValue0.encode(to: &boltffiOptionsWriter) } }
+                return boltffiOptionsBytes.withUnsafeBufferPointer { boltffiOptionsBuffer in
+                    return boltffi_method_class_bark_bolt_ffi_ffi_wallet_wallet_pay_lightning_address(
+                        self.handle,
+                        boltffiLightningAddressBuffer.baseAddress!,
+                        UInt(boltffiLightningAddressBuffer.count),
+                        amountSats,
+                        boltffiCommentBuffer.baseAddress!,
+                        UInt(boltffiCommentBuffer.count),
+                        boltffiOptionsBuffer.baseAddress!,
+                        UInt(boltffiOptionsBuffer.count)
+                    )
+                }
             }
         }
         return try await boltffiAsyncCall(
@@ -4249,21 +4650,25 @@ public final class Wallet {
         lnurl: String,
         amountSats: UInt64,
         comment: String?,
-        wait: Bool = false
+        options: LightningSendOptions? = nil
     ) async throws -> LightningSendStatus {
         let boltffiLnurlBytes = boltffiEncode { boltffiLnurlWriter in boltffiLnurlWriter.writeString(lnurl) }
         let boltffiFuture = boltffiLnurlBytes.withUnsafeBufferPointer { boltffiLnurlBuffer in
             let boltffiCommentBytes = boltffiEncode { boltffiCommentWriter in boltffiCommentWriter.writeOptional(comment) { boltffiCommentWriter, boltffiValue0 in boltffiCommentWriter.writeString(boltffiValue0) } }
             return boltffiCommentBytes.withUnsafeBufferPointer { boltffiCommentBuffer in
-                return boltffi_method_class_bark_bolt_ffi_ffi_wallet_wallet_pay_lnurl(
-                    self.handle,
-                    boltffiLnurlBuffer.baseAddress!,
-                    UInt(boltffiLnurlBuffer.count),
-                    amountSats,
-                    boltffiCommentBuffer.baseAddress!,
-                    UInt(boltffiCommentBuffer.count),
-                    wait
-                )
+                let boltffiOptionsBytes = boltffiEncode { boltffiOptionsWriter in boltffiOptionsWriter.writeOptional(options) { boltffiOptionsWriter, boltffiValue0 in boltffiValue0.encode(to: &boltffiOptionsWriter) } }
+                return boltffiOptionsBytes.withUnsafeBufferPointer { boltffiOptionsBuffer in
+                    return boltffi_method_class_bark_bolt_ffi_ffi_wallet_wallet_pay_lnurl(
+                        self.handle,
+                        boltffiLnurlBuffer.baseAddress!,
+                        UInt(boltffiLnurlBuffer.count),
+                        amountSats,
+                        boltffiCommentBuffer.baseAddress!,
+                        UInt(boltffiCommentBuffer.count),
+                        boltffiOptionsBuffer.baseAddress!,
+                        UInt(boltffiOptionsBuffer.count)
+                    )
+                }
             }
         }
         return try await boltffiAsyncCall(
@@ -4287,19 +4692,23 @@ public final class Wallet {
         }
     }
 
-    public func payLightningOffer(offer: String, amountSats: UInt64?, wait: Bool = false) async throws -> LightningSendStatus {
+    public func payLightningOffer(offer: String, amountSats: UInt64?, options: LightningSendOptions? = nil) async throws -> LightningSendStatus {
         let boltffiOfferBytes = boltffiEncode { boltffiOfferWriter in boltffiOfferWriter.writeString(offer) }
         let boltffiFuture = boltffiOfferBytes.withUnsafeBufferPointer { boltffiOfferBuffer in
             let boltffiAmountSatsBytes = boltffiEncode { boltffiAmountSatsWriter in boltffiAmountSatsWriter.writeOptional(amountSats) { writer, value in writer.writeU64(value) } }
             return boltffiAmountSatsBytes.withUnsafeBufferPointer { boltffiAmountSatsBuffer in
-                return boltffi_method_class_bark_bolt_ffi_ffi_wallet_wallet_pay_lightning_offer(
-                    self.handle,
-                    boltffiOfferBuffer.baseAddress!,
-                    UInt(boltffiOfferBuffer.count),
-                    boltffiAmountSatsBuffer.baseAddress!,
-                    UInt(boltffiAmountSatsBuffer.count),
-                    wait
-                )
+                let boltffiOptionsBytes = boltffiEncode { boltffiOptionsWriter in boltffiOptionsWriter.writeOptional(options) { boltffiOptionsWriter, boltffiValue0 in boltffiValue0.encode(to: &boltffiOptionsWriter) } }
+                return boltffiOptionsBytes.withUnsafeBufferPointer { boltffiOptionsBuffer in
+                    return boltffi_method_class_bark_bolt_ffi_ffi_wallet_wallet_pay_lightning_offer(
+                        self.handle,
+                        boltffiOfferBuffer.baseAddress!,
+                        UInt(boltffiOfferBuffer.count),
+                        boltffiAmountSatsBuffer.baseAddress!,
+                        UInt(boltffiAmountSatsBuffer.count),
+                        boltffiOptionsBuffer.baseAddress!,
+                        UInt(boltffiOptionsBuffer.count)
+                    )
+                }
             }
         }
         return try await boltffiAsyncCall(
@@ -4750,11 +5159,12 @@ public final class Wallet {
         }
     }
 
-    /// Send an out-of-round payment to an Ark address.
+    /// Send an out-of-round payment to an Ark address. Returns the id of the
+    /// `Movement` that records it.
     ///
     /// An address this bark cannot deliver to (see `validateArkoorAddress`) is
     /// rejected up front, leaving the VTXOs spendable rather than cosigned.
-    public func sendArkoorPayment(arkAddress: String, amountSats: UInt64) async throws {
+    public func sendArkoorPayment(arkAddress: String, amountSats: UInt64) async throws -> UInt32 {
         let boltffiArkAddressBytes = boltffiEncode { boltffiArkAddressWriter in boltffiArkAddressWriter.writeString(arkAddress) }
         let boltffiFuture = boltffiArkAddressBytes.withUnsafeBufferPointer { boltffiArkAddressBuffer in
             return boltffi_method_class_bark_bolt_ffi_ffi_wallet_wallet_send_arkoor_payment(
@@ -4770,7 +5180,8 @@ public final class Wallet {
             cancel: boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_send_arkoor_payment_cancel,
             free: boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_send_arkoor_payment_free
         ) { boltffiFuture, boltffiStatus in
-            let boltffiError = boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_send_arkoor_payment_complete(boltffiFuture, boltffiStatus)
+            var boltffiResult: UInt32 = UInt32()
+            let boltffiError = boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_send_arkoor_payment_complete(boltffiFuture, boltffiStatus, &boltffiResult)
             if boltffiError.ptr != nil || Int(boltffiError.len) != 0 {
                 defer { boltffi_free_buf(boltffiError) }
                 throw boltffiDecodeOwnedBuf(boltffiError.ptr, Int(boltffiError.len)) { boltffiErrorReader in BarkError.decode(from: &boltffiErrorReader) }
@@ -4779,6 +5190,7 @@ public final class Wallet {
             guard boltffiStatusCode == 0 else {
                 throw FfiError(message: "FFI failed in async completion with code \(boltffiStatusCode)")
             }
+            return boltffiResult
         }
     }
 
@@ -4811,7 +5223,7 @@ public final class Wallet {
         }
     }
 
-    public func sendOnchain(address: String, amountSats: UInt64) async throws -> String {
+    public func sendOnchain(address: String, amountSats: UInt64) async throws -> OffboardResult {
         let boltffiAddressBytes = boltffiEncode { boltffiAddressWriter in boltffiAddressWriter.writeString(address) }
         let boltffiFuture = boltffiAddressBytes.withUnsafeBufferPointer { boltffiAddressBuffer in
             return boltffi_method_class_bark_bolt_ffi_ffi_wallet_wallet_send_onchain(
@@ -4838,7 +5250,217 @@ public final class Wallet {
                 throw FfiError(message: "FFI failed in async completion with code \(boltffiStatusCode)")
             }
             defer { boltffi_free_buf(boltffiResult) }
-            return boltffiDecodeOwnedBuf(boltffiResult.ptr, Int(boltffiResult.len)) { boltffiReader in boltffiReader.readString() }
+            return boltffiDecodeOwnedBuf(boltffiResult.ptr, Int(boltffiResult.len)) { boltffiReader in OffboardResult.decode(from: &boltffiReader) }
+        }
+    }
+
+    /// Parse any payment string Bark understands: BIP 321 and `lightning:`
+    /// URIs, BOLT11 invoices, BOLT12 offers, Lightning Addresses, LNURL-pay
+    /// links, Ark addresses, bitcoin addresses and hex output scripts.
+    ///
+    /// Problems with individual options are returned in their `errors`. Fails
+    /// with `BarkErrorCode.invalidPaymentRequest` when nothing parses.
+    public func parsePaymentRequest(input: String) async throws -> PaymentRequest {
+        let boltffiInputBytes = boltffiEncode { boltffiInputWriter in boltffiInputWriter.writeString(input) }
+        let boltffiFuture = boltffiInputBytes.withUnsafeBufferPointer { boltffiInputBuffer in
+            return boltffi_method_class_bark_bolt_ffi_ffi_wallet_wallet_parse_payment_request(self.handle, boltffiInputBuffer.baseAddress!, UInt(boltffiInputBuffer.count))
+        }
+        return try await boltffiAsyncCall(
+            futureHandle: boltffiFuture,
+            poll: boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_parse_payment_request_poll,
+            cancel: boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_parse_payment_request_cancel,
+            free: boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_parse_payment_request_free
+        ) { boltffiFuture, boltffiStatus in
+            var boltffiResult: FfiBuf_u8 = FfiBuf_u8()
+            let boltffiError = boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_parse_payment_request_complete(boltffiFuture, boltffiStatus, &boltffiResult)
+            if boltffiError.ptr != nil || Int(boltffiError.len) != 0 {
+                defer { boltffi_free_buf(boltffiError) }
+                throw boltffiDecodeOwnedBuf(boltffiError.ptr, Int(boltffiError.len)) { boltffiErrorReader in BarkError.decode(from: &boltffiErrorReader) }
+            }
+            let boltffiStatusCode = boltffiStatus!.pointee.code
+            guard boltffiStatusCode == 0 else {
+                throw FfiError(message: "FFI failed in async completion with code \(boltffiStatusCode)")
+            }
+            defer { boltffi_free_buf(boltffiResult) }
+            return boltffiDecodeOwnedBuf(boltffiResult.ptr, Int(boltffiResult.len)) { boltffiReader in PaymentRequest.decode(from: &boltffiReader) }
+        }
+    }
+
+    /// Estimate the fee of paying `amount_sats` with one method.
+    public func estimatePaymentFee(method: PaymentMethod, amountSats: UInt64) async throws -> FeeEstimate {
+        let boltffiMethodBytes = boltffiEncode { boltffiMethodWriter in method.encode(to: &boltffiMethodWriter) }
+        let boltffiFuture = boltffiMethodBytes.withUnsafeBufferPointer { boltffiMethodBuffer in
+            return boltffi_method_class_bark_bolt_ffi_ffi_wallet_wallet_estimate_payment_fee(
+                self.handle,
+                boltffiMethodBuffer.baseAddress!,
+                UInt(boltffiMethodBuffer.count),
+                amountSats
+            )
+        }
+        return try await boltffiAsyncCall(
+            futureHandle: boltffiFuture,
+            poll: boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_estimate_payment_fee_poll,
+            cancel: boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_estimate_payment_fee_cancel,
+            free: boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_estimate_payment_fee_free
+        ) { boltffiFuture, boltffiStatus in
+            var boltffiResult: FfiBuf_u8 = FfiBuf_u8()
+            let boltffiError = boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_estimate_payment_fee_complete(boltffiFuture, boltffiStatus, &boltffiResult)
+            if boltffiError.ptr != nil || Int(boltffiError.len) != 0 {
+                defer { boltffi_free_buf(boltffiError) }
+                throw boltffiDecodeOwnedBuf(boltffiError.ptr, Int(boltffiError.len)) { boltffiErrorReader in BarkError.decode(from: &boltffiErrorReader) }
+            }
+            let boltffiStatusCode = boltffiStatus!.pointee.code
+            guard boltffiStatusCode == 0 else {
+                throw FfiError(message: "FFI failed in async completion with code \(boltffiStatusCode)")
+            }
+            defer { boltffi_free_buf(boltffiResult) }
+            return boltffiDecodeOwnedBuf(boltffiResult.ptr, Int(boltffiResult.len)) { boltffiReader in FeeEstimate.decode(from: &boltffiReader) }
+        }
+    }
+
+    /// Estimate every option of `request`, cheapest first. `amount_sats`
+    /// defaults to the request's amount; one of them is required.
+    public func estimatePaymentFees(request: PaymentRequest, amountSats: UInt64?) async throws -> [PaymentMethodFee] {
+        let boltffiRequestBytes = boltffiEncode { boltffiRequestWriter in request.encode(to: &boltffiRequestWriter) }
+        let boltffiFuture = boltffiRequestBytes.withUnsafeBufferPointer { boltffiRequestBuffer in
+            let boltffiAmountSatsBytes = boltffiEncode { boltffiAmountSatsWriter in boltffiAmountSatsWriter.writeOptional(amountSats) { writer, value in writer.writeU64(value) } }
+            return boltffiAmountSatsBytes.withUnsafeBufferPointer { boltffiAmountSatsBuffer in
+                return boltffi_method_class_bark_bolt_ffi_ffi_wallet_wallet_estimate_payment_fees(
+                    self.handle,
+                    boltffiRequestBuffer.baseAddress!,
+                    UInt(boltffiRequestBuffer.count),
+                    boltffiAmountSatsBuffer.baseAddress!,
+                    UInt(boltffiAmountSatsBuffer.count)
+                )
+            }
+        }
+        return try await boltffiAsyncCall(
+            futureHandle: boltffiFuture,
+            poll: boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_estimate_payment_fees_poll,
+            cancel: boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_estimate_payment_fees_cancel,
+            free: boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_estimate_payment_fees_free
+        ) { boltffiFuture, boltffiStatus in
+            var boltffiResult: FfiBuf_u8 = FfiBuf_u8()
+            let boltffiError = boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_estimate_payment_fees_complete(boltffiFuture, boltffiStatus, &boltffiResult)
+            if boltffiError.ptr != nil || Int(boltffiError.len) != 0 {
+                defer { boltffi_free_buf(boltffiError) }
+                throw boltffiDecodeOwnedBuf(boltffiError.ptr, Int(boltffiError.len)) { boltffiErrorReader in BarkError.decode(from: &boltffiErrorReader) }
+            }
+            let boltffiStatusCode = boltffiStatus!.pointee.code
+            guard boltffiStatusCode == 0 else {
+                throw FfiError(message: "FFI failed in async completion with code \(boltffiStatusCode)")
+            }
+            defer { boltffi_free_buf(boltffiResult) }
+            return boltffiDecodeOwnedBuf(boltffiResult.ptr, Int(boltffiResult.len)) { boltffiReader in boltffiReader.readArray { boltffiReader in PaymentMethodFee.decode(from: &boltffiReader) } }
+        }
+    }
+
+    /// Pay with one method of a parsed payment request.
+    ///
+    /// Pass `amount_sats` only when the option's `requiresAmount` is set, and
+    /// prefer the request's own `amountSats`. Bark accepts up to twice an
+    /// invoice's amount when one is passed for an invoice that has an amount.
+    /// `comment` is forwarded only when `supportsComment` is set, and
+    /// `options` applies to Lightning methods only.
+    public func sendPayment(
+        method: PaymentMethod,
+        amountSats: UInt64?,
+        comment: String? = nil,
+        options: LightningSendOptions? = nil
+    ) async throws -> PaymentResult {
+        let boltffiMethodBytes = boltffiEncode { boltffiMethodWriter in method.encode(to: &boltffiMethodWriter) }
+        let boltffiFuture = boltffiMethodBytes.withUnsafeBufferPointer { boltffiMethodBuffer in
+            let boltffiAmountSatsBytes = boltffiEncode { boltffiAmountSatsWriter in boltffiAmountSatsWriter.writeOptional(amountSats) { writer, value in writer.writeU64(value) } }
+            return boltffiAmountSatsBytes.withUnsafeBufferPointer { boltffiAmountSatsBuffer in
+                let boltffiCommentBytes = boltffiEncode { boltffiCommentWriter in boltffiCommentWriter.writeOptional(comment) { boltffiCommentWriter, boltffiValue0 in boltffiCommentWriter.writeString(boltffiValue0) } }
+                return boltffiCommentBytes.withUnsafeBufferPointer { boltffiCommentBuffer in
+                    let boltffiOptionsBytes = boltffiEncode { boltffiOptionsWriter in boltffiOptionsWriter.writeOptional(options) { boltffiOptionsWriter, boltffiValue0 in boltffiValue0.encode(to: &boltffiOptionsWriter) } }
+                    return boltffiOptionsBytes.withUnsafeBufferPointer { boltffiOptionsBuffer in
+                        return boltffi_method_class_bark_bolt_ffi_ffi_wallet_wallet_send_payment(
+                            self.handle,
+                            boltffiMethodBuffer.baseAddress!,
+                            UInt(boltffiMethodBuffer.count),
+                            boltffiAmountSatsBuffer.baseAddress!,
+                            UInt(boltffiAmountSatsBuffer.count),
+                            boltffiCommentBuffer.baseAddress!,
+                            UInt(boltffiCommentBuffer.count),
+                            boltffiOptionsBuffer.baseAddress!,
+                            UInt(boltffiOptionsBuffer.count)
+                        )
+                    }
+                }
+            }
+        }
+        return try await boltffiAsyncCall(
+            futureHandle: boltffiFuture,
+            poll: boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_send_payment_poll,
+            cancel: boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_send_payment_cancel,
+            free: boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_send_payment_free
+        ) { boltffiFuture, boltffiStatus in
+            var boltffiResult: FfiBuf_u8 = FfiBuf_u8()
+            let boltffiError = boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_send_payment_complete(boltffiFuture, boltffiStatus, &boltffiResult)
+            if boltffiError.ptr != nil || Int(boltffiError.len) != 0 {
+                defer { boltffi_free_buf(boltffiError) }
+                throw boltffiDecodeOwnedBuf(boltffiError.ptr, Int(boltffiError.len)) { boltffiErrorReader in BarkError.decode(from: &boltffiErrorReader) }
+            }
+            let boltffiStatusCode = boltffiStatus!.pointee.code
+            guard boltffiStatusCode == 0 else {
+                throw FfiError(message: "FFI failed in async completion with code \(boltffiStatusCode)")
+            }
+            defer { boltffi_free_buf(boltffiResult) }
+            return boltffiDecodeOwnedBuf(boltffiResult.ptr, Int(boltffiResult.len)) { boltffiReader in PaymentResult.decode(from: &boltffiReader) }
+        }
+    }
+
+    /// Build a BIP 321 URI for receiving, generating a new Ark address, an
+    /// onchain address and a BOLT11 invoice as `options` requests.
+    public func bip321Uri(options: Bip321UriOptions? = nil) async throws -> Bip321Uri {
+        let boltffiOptionsBytes = boltffiEncode { boltffiOptionsWriter in boltffiOptionsWriter.writeOptional(options) { boltffiOptionsWriter, boltffiValue0 in boltffiValue0.encode(to: &boltffiOptionsWriter) } }
+        let boltffiFuture = boltffiOptionsBytes.withUnsafeBufferPointer { boltffiOptionsBuffer in
+            return boltffi_method_class_bark_bolt_ffi_ffi_wallet_wallet_bip321_uri(self.handle, boltffiOptionsBuffer.baseAddress!, UInt(boltffiOptionsBuffer.count))
+        }
+        return try await boltffiAsyncCall(
+            futureHandle: boltffiFuture,
+            poll: boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_bip321_uri_poll,
+            cancel: boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_bip321_uri_cancel,
+            free: boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_bip321_uri_free
+        ) { boltffiFuture, boltffiStatus in
+            var boltffiResult: FfiBuf_u8 = FfiBuf_u8()
+            let boltffiError = boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_bip321_uri_complete(boltffiFuture, boltffiStatus, &boltffiResult)
+            if boltffiError.ptr != nil || Int(boltffiError.len) != 0 {
+                defer { boltffi_free_buf(boltffiError) }
+                throw boltffiDecodeOwnedBuf(boltffiError.ptr, Int(boltffiError.len)) { boltffiErrorReader in BarkError.decode(from: &boltffiErrorReader) }
+            }
+            let boltffiStatusCode = boltffiStatus!.pointee.code
+            guard boltffiStatusCode == 0 else {
+                throw FfiError(message: "FFI failed in async completion with code \(boltffiStatusCode)")
+            }
+            defer { boltffi_free_buf(boltffiResult) }
+            return boltffiDecodeOwnedBuf(boltffiResult.ptr, Int(boltffiResult.len)) { boltffiReader in Bip321Uri.decode(from: &boltffiReader) }
+        }
+    }
+
+    /// Network, mailbox id and VTXO xpub, for support requests.
+    public func debugInfo() async throws -> DebugInfo {
+        let boltffiFuture = boltffi_method_class_bark_bolt_ffi_ffi_wallet_wallet_debug_info(self.handle)
+        return try await boltffiAsyncCall(
+            futureHandle: boltffiFuture,
+            poll: boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_debug_info_poll,
+            cancel: boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_debug_info_cancel,
+            free: boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_debug_info_free
+        ) { boltffiFuture, boltffiStatus in
+            var boltffiResult: FfiBuf_u8 = FfiBuf_u8()
+            let boltffiError = boltffi_async_method_class_bark_bolt_ffi_ffi_wallet_wallet_debug_info_complete(boltffiFuture, boltffiStatus, &boltffiResult)
+            if boltffiError.ptr != nil || Int(boltffiError.len) != 0 {
+                defer { boltffi_free_buf(boltffiError) }
+                throw boltffiDecodeOwnedBuf(boltffiError.ptr, Int(boltffiError.len)) { boltffiErrorReader in BarkError.decode(from: &boltffiErrorReader) }
+            }
+            let boltffiStatusCode = boltffiStatus!.pointee.code
+            guard boltffiStatusCode == 0 else {
+                throw FfiError(message: "FFI failed in async completion with code \(boltffiStatusCode)")
+            }
+            defer { boltffi_free_buf(boltffiResult) }
+            return boltffiDecodeOwnedBuf(boltffiResult.ptr, Int(boltffiResult.len)) { boltffiReader in DebugInfo.decode(from: &boltffiReader) }
         }
     }
 
