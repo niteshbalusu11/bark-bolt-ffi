@@ -1,0 +1,38 @@
+{
+  "removed_paths": [
+    "target",
+    "dist",
+    "build",
+    "tests/swift/.build",
+    "sdk/android/build",
+    "sdk/jvm/build",
+    "examples/android/build",
+    "/tmp/bark-upstream",
+    "/tmp/bark-v060-apple-ci.zip",
+    "/tmp/bark-v060/{ci,fresh,consumer,consumer-cache,aarcheck}"
+  ],
+  "allocated_bytes_before_removal": {
+    "target": 37757861888,
+    "dist": 1414516736,
+    "build": 495296512,
+    "tests/swift/.build": 447275008,
+    "sdk/android/build": 316653568,
+    "sdk/jvm/build": 177442816,
+    "examples/android/build": 367964160
+  },
+  "filesystem_available_before_gib": 60,
+  "filesystem_available_after_gib": 97,
+  "tracked_files_in_removed_paths": 0,
+  "task_devices_removed": {
+    "ios_simulator": "Bark v060 iPhone (90FA9DA1-43DD-4999-B45B-3B0B64B05EE4)",
+    "android_avd": "bark-v060 (emulator-5580)"
+  },
+  "task_stack_removed": "Compose project bark-bolt-ffi-v060 and its six volumes",
+  "preserved": [
+    "repository stack bark-bolt-ffi and its volumes",
+    "noah-bark08-* and scripts-* stacks and volumes",
+    "shared iPhone 18 Pro simulator and other agents' devices",
+    "~/.cargo registry and git caches"
+  ],
+  "note": "Other agents' emulator-5592/5594 and noah-sr AVDs were shut down by their own owner during this task, not by this cleanup."
+}

@@ -87,11 +87,14 @@ different claims. Record them separately; do not mark one from evidence of anoth
 - [x] parsePaymentRequest with typed option errors, payment fee estimates and sendPayment.
 - [x] bip321Uri and debugInfo.
 - [x] Rust/Swift/Kotlin live RegTest, both example apps, hosted CI.
-- [ ] Publish v0.6.0 and notify the Noah rewrite thread.
+- [x] Publish v0.6.0 and notify the Noah rewrite thread.
 
 Engineering plan and affected paths: [Bark 0.8.0 plan](plans/24-bark-0.8.0-payments.md).
 Live Rust/Swift/Kotlin and extended app RegTest passed locally on an isolated stack;
 PR and full-matrix main CI passed. [Execution evidence](validation/bark-080-2026-10-22.md).
+[v0.6.0](https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.6.0) is published from the
+main CI artifacts; fresh assets and a public Swift consumer passed; Noah was notified.
+[Release record](validation/v060-release.json), [cleanup](validation/v060-cleanup.json).
 
 ### 21 — Noah prepared boarding, chain status and durable exit listings
 

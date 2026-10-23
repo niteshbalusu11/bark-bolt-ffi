@@ -1,0 +1,66 @@
+{
+  "version": "0.6.0",
+  "tag_commit": "b5aed0bb88a794483e3e0932a5f0dacf3de7c9e7",
+  "native_source_commit": "f4d4bb6e99d424135f7b93a02787be6a5e83aef3",
+  "bark": "0.8.0 (959a489ff4934b181783b41c7d3ee68d85b95cbf)",
+  "release_url": "https://github.com/smolcars/bark-bolt-ffi/releases/tag/v0.6.0",
+  "pull_request": "https://github.com/smolcars/bark-bolt-ffi/pull/5",
+  "pr_ci": "https://github.com/smolcars/bark-bolt-ffi/actions/runs/39870284293",
+  "source_ci": "https://github.com/smolcars/bark-bolt-ffi/actions/runs/39874123211",
+  "source_ci_all_jobs_passed": true,
+  "native_source_equivalence_verified": true,
+  "assets": {
+    "BUILD-INFO.json": "483ae2e8cb29772225d40a27e2cc3ef5a030c1a0bb370fc1eb39f8b9d7222e84",
+    "BarkBoltFFI.xcframework.zip": "72c95272f4d27295b3a2b9e3c2002ada95c8c97f6fbcd9924c9e81af0e6ddca5",
+    "Package.swift": "5816d1c420ca717ddf425caa16e64654cbeba9a2dc2abe11a29d68c871d75e2a",
+    "SHA256SUMS": "8cd0d08fd6b92db173f9053b01c203f70c45200682d634ba8d78baac761b063c",
+    "bark-bolt-ffi-android-0.6.0.aar": "4e6582c8d3c2ca406f1bb7d24c1c53be1ea952f5bde9ef204a8193b551765e12",
+    "bark-bolt-ffi-android-0.6.0.pom": "80920813046bd984e4373cd992454cee4ac06856e0542d12fe17bc6625d7c2a8",
+    "bark-bolt-ffi-jvm-linux-x86_64-0.6.0.jar": "f03dd967570ea77a620fadabd9264ed102b28ac5108692ec15f21dee881b0bd3",
+    "bark-bolt-ffi-jvm-linux-x86_64-0.6.0.pom": "3d7eba148c32debe289c5bcc9ac0ecf3b85eea903884b0ba943b29f276307b0b",
+    "swift-provenance.json": "188dc905d08aa4e316ea417d8b92dd0ad718255bb0883477104b40464db26799"
+  },
+  "android_load_alignment": {
+    "arm64-v8a": "0x4000",
+    "armeabi-v7a": "0x4000",
+    "x86_64": "0x4000"
+  },
+  "live_swift_before_publication": {
+    "tests": 13,
+    "failures": 0,
+    "skips": 0,
+    "seconds": 53.835,
+    "artifact": "same main CI SDK bytes as published"
+  },
+  "review": {
+    "reviewer": "Claude subagent, read-only source review",
+    "confirmed_issues_fixed": 5,
+    "source_review_only": true
+  },
+  "fresh_asset_checksums_verified": true,
+  "public_swift_consumer": {
+    "revision": "b5aed0bb88a794483e3e0932a5f0dacf3de7c9e7",
+    "passed": 13,
+    "failures": 0,
+    "skips": 0,
+    "seconds": 31.423,
+    "live_regtest": true,
+    "note": "SwiftPM's first two resolves hung on a macOS keychain credential lookup (no network activity); resolved with --disable-keychain in 14.3s"
+  },
+  "noah_notification": {
+    "threadId": "4ff9b718-306c-496c-831f-8edfa1484899",
+    "messageId": "message:mcp:c7caf665-d1f9-4ded-991a-2540ec239c5c:thread-send:bark-v060-release-noah-notify-r1",
+    "runId": "run:thread:4ff9b718-306c-496c-831f-8edfa1484899:ordinal:562",
+    "delivery": "started",
+    "acknowledged": "thread started adopting v0.6.0"
+  },
+  "limits": [
+    "LNURL and Lightning Address sends are parse-tested only; the RegTest stack has no LNURL server.",
+    "Bark logs, but does not return, the server's Lightning failure reason.",
+    "An interactive refresh that joins a round at the end of its submit window fails with 'round N failed by server' (upstream, unchanged); retry it.",
+    "Fiat-priced BOLT12 offers are rejected as invalidPaymentRequest (upstream panics while parsing them).",
+    "Darwin JVM is source-buildable; attached JVM artifact is Linux x86_64.",
+    "Physical and minimum-OS devices were not run."
+  ],
+  "cleanup": "v060-cleanup.json"
+}
