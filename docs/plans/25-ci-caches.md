@@ -51,3 +51,25 @@ does not read caches.
 Validation: actionlint on the workflow; PR CI green. Then merge, let the first
 main run save, and rerun that main run to measure warm restore and build times
 against the cold numbers above. Record outcomes here.
+
+## Outcome (2026-10-23)
+
+[PR #6](https://github.com/smolcars/bark-bolt-ffi/pull/6) passed CI with
+`save-if: false` in all three jobs and saved no entries.
+
+After merge, main run
+[39893565932](https://github.com/smolcars/bark-bolt-ffi/actions/runs/39893565932)
+attempt 1 started cold and saved; attempt 2 reran it warm:
+
+| Job | Cold | Warm | Native build / Rust step |
+| --- | --- | --- | --- |
+| android | 33.1 min | 14.2 min | `build-android --release` 22.8 → 6.6 min |
+| apple | 28.8 min | 9.5 min | `build-ios --release` 26.2 → 7.0 min |
+| rust | 3.3 min | 1.0 min | Clippy 1.4 → 0.1 min, tests 1.4 → 0.4 min |
+
+Every warm job restored its exact key and skipped re-saving (`Cache
+up-to-date`). Entry sizes: android 1.83 GB (Rust) + 0.66 GB (Gradle), apple
+1.72 GB, rust 0.46 GB, about 4.7 GB of Blacksmith's 25 GB. Entries persist
+while CI reads them; unused ones are evicted after 7 days. A changed
+Cargo.lock restores the previous entry and saves a new key on the next main
+run. Not measured: a PR run that changes Cargo.lock (partial restore).

@@ -81,10 +81,11 @@ different claims. Record them separately; do not mark one from evidence of anoth
 
 ### 23 — CI caches shared from main
 
-- [ ] Rust dependency caches via rust-cache and Gradle caches, saved only from main.
-- [ ] PR CI green; main saves; a warm main rerun shows the restore and build-time effect.
+- [x] Rust dependency caches via rust-cache and Gradle caches, saved only from main.
+- [x] PR CI green; main saves; a warm main rerun shows the restore and build-time effect.
 
 Engineering plan and findings: [CI caches](plans/25-ci-caches.md).
+Warm main: android 33.1 → 14.2 min, apple 28.8 → 9.5 min, rust 3.3 → 1.0 min; about 4.7 GB cached.
 
 ### 22 — Bark 0.8.0, Lightning send options, payment requests and BIP 321
 
